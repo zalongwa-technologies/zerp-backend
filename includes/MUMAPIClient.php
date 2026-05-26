@@ -13,8 +13,8 @@ class MUMAPIClient {
         include(__DIR__ . '/../config.php');
 
         $this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
-        $this->clientId = $clientId;
-        $this->clientSecret = $clientSecret;
+        $this->clientId = $SARIS_API_CLIENT_ID;
+        $this->clientSecret = $SARIS_API_CLIENT_SECRET;
     }
 
     private function authenticate() {

@@ -163,8 +163,6 @@ $ZERP_ShipVia = '1';
 $SARIS_API_BASE_URL = 'https://xxx.xxx.ac.tz';
 $SARIS_API_CLIENT_ID = 'NMMNXY_ErPii';
 $SARIS_API_CLIENT_SECRET = 'K7@xP4!mZ9qM6#vB6&cR1$eY8uW0h3CX';
-
-
 $REMOTE_ADDR = '127.0.0.1';
 
 

@@ -2,12 +2,140 @@
 
 /* Lists customer account balances in detail or summary in selected currency */
 
+ob_start();
 require(__DIR__ . '/includes/session.php');
 
 use Dompdf\Dompdf;
 
 include(__DIR__ . '/includes/SetDomPDFOptions.php');
 include(__DIR__ . '/includes/SQL_CommonFunctions.php');
+
+$ExtraHeadContent = '
+<style>
+	@media print {
+		@page { size: auto; margin: 0mm; }
+		body { background: white !important; color: black !important; margin: 0px !important; padding: 15mm 20mm !important; }
+		.noPrint, nav, header, footer, aside, .db-sidebar, .db-header-actions, .form-footer-actions, .premium-header, .db-card-header, .custom-range-grid, button, .ScriptTitle, .help-bubble, #mask, .breadcrumb-separator {
+			display: none !important;
+		}
+		.dashboard-container, .dashboard-content, .MainBody, .db-page, .db-main {
+			display: block !important;
+			width: 100% !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			background: transparent !important;
+			box-shadow: none !important;
+			border: none !important;
+		}
+		.db-card, .card-v2, .db-table-wrapper {
+			border: none !important;
+			box-shadow: none !important;
+			background: transparent !important;
+			margin: 0 !important;
+			padding: 0 !important;
+			width: 100% !important;
+		}
+		.db-table {
+			width: 100% !important;
+			border-collapse: collapse !important;
+			margin-top: 20px !important;
+			background: white !important;
+		}
+		.db-table th, .db-table td {
+			border: 1px solid #000 !important;
+			padding: 8px 12px !important;
+			font-size: 10pt !important;
+			color: #000 !important;
+			background: white !important;
+		}
+		.db-table th {
+			font-weight: bold !important;
+			text-align: left !important;
+			background: #f2f2f2 !important;
+		}
+		.db-table th.text-right, .db-table td.text-right {
+			text-align: right !important;
+		}
+		.total_row td {
+			font-weight: bold !important;
+			border-top: 2px solid #000 !important;
+			border-bottom: 2px double #000 !important;
+		}
+		.db-page-header {
+			margin-bottom: 20px !important;
+			border-bottom: 2px solid #000 !important;
+			padding-bottom: 10px !important;
+			text-align: center !important;
+		}
+		.db-page-title {
+			font-size: 18pt !important;
+			font-weight: bold !important;
+			margin: 0 !important;
+			color: #000 !important;
+		}
+		.db-page-subtitle {
+			font-size: 10pt !important;
+			margin-top: 5px !important;
+			color: #555 !important;
+		}
+	}
+	.ScriptTitle { display: none !important; }
+	.MainBody { padding: 0 !important; gap: 0 !important; background: transparent !important; }
+	.db-page { padding: var(--space-8) var(--space-6); background: var(--bg-main); min-height: 100vh; font-family: "Inter", sans-serif; }
+	.premium-header { margin-bottom: 40px; position: relative; }
+	.premium-header::before { display: none !important; }
+	.db-card-header { 
+		background: #f9fafb; 
+		border-bottom: 1px solid #f3f4f6; 
+		padding: 20px 30px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.db-card-title {
+		font-size: 1.1rem;
+		font-weight: 850;
+		color: #064e3b;
+		margin: 0;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+	}
+	.architect-btn {
+		display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+		padding: 12px 28px; border-radius: 50px;
+		background: #059669; color: #ffffff; border: none;
+		font-weight: 700; font-size: 0.85rem; text-decoration: none;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+		cursor: pointer; width: 100%;
+	}
+	.architect-btn:hover { background: #065f46; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
+	.architect-btn i { color: #ffffff !important; }
+	.architect-btn.secondary { background: #e5e7eb; color: #374151; box-shadow: none; }
+	.architect-btn.secondary:hover { background: #d1d5db; color: #111827; }
+	.architect-btn.secondary i { color: #374151 !important; }
+	.custom-bottom-layout { 
+		display: grid; 
+		grid-template-columns: 380px 1fr; 
+		gap: 32px; 
+		align-items: start; 
+	}
+	.custom-range-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 20px;
+		margin-bottom: 24px;
+	}
+	.breadcrumb-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; transition: all 0.2s; }
+	.breadcrumb-item:hover { color: #059669; }
+	.breadcrumb-separator { font-size: 0.6rem; opacity: 0.4; margin: 0 4px; }
+	.db-table th { text-align: left; }
+	.db-table th.text-right, .db-table td.text-right { text-align: right !important; }
+</style>';
+
 
 if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	and isset($_POST['FromCriteria'])
@@ -16,6 +144,13 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	and mb_strlen($_POST['ToCriteria'])>=1) {
 
 	/*Now figure out the aged analysis for the customer range under review */
+	if (!isset($_POST['FromCriteria'])) $_POST['FromCriteria'] = '0';
+	if (!isset($_POST['ToCriteria'])) $_POST['ToCriteria'] = 'zzzzzz';
+	if (!isset($_POST['Salesman'])) $_POST['Salesman'] = '';
+	if (!isset($_POST['All_Or_Overdues'])) $_POST['All_Or_Overdues'] = 'All';
+	if (!isset($_POST['DetailedReport'])) $_POST['DetailedReport'] = 'No';
+	if (!isset($_POST['Currency'])) $_POST['Currency'] = $_SESSION['CompanyRecord']['currencydefault'];
+
 	if ($_SESSION['SalesmanLogin'] !=  '') {
 		$_POST['Salesman'] = $_SESSION['SalesmanLogin'];
 	}
@@ -252,9 +387,25 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	$HTML = '';
 
 	if (isset($_POST['PrintPDF'])) {
+		$Style = '
+			@page { margin: 15mm; }
+			body { font-family: "Helvetica", sans-serif; font-size: 10pt; color: #000; line-height: 1.4; margin: 0; padding: 0; background: white; }
+			.db-page-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
+			.db-page-title { font-size: 18pt; font-weight: bold; margin: 0; }
+			.db-page-subtitle { font-size: 10pt; color: #555; margin-top: 5px; }
+			.db-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+			.db-table th { background: #f2f2f2; border: 1px solid #ddd; padding: 8px 12px; font-weight: bold; text-align: left; font-size: 10pt; }
+			.db-table th.text-right, .db-table td.text-right { text-align: right; }
+			.db-table td { border: 1px solid #ddd; padding: 8px 12px; font-size: 10pt; }
+			.val-bold { font-weight: bold; }
+			.total_row td { font-weight: bold; border-top: 2px solid #000; border-bottom: 2px double #000; }
+			.cust-code { font-weight: bold; color: #333; }
+			.db-header-actions, button, .noPrint { display: none !important; }
+		';
 		$HTML .= '<html>
 					<head>
-						<link href="css/reports.css" rel="stylesheet" type="text/css" />
+						<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+						<style>' . $Style . '</style>
 						<meta name="author" content="WebERP ' . $Version . '">
 						<meta name="Creator" content="webERP https://www.weberp.org">
 					</head>
@@ -279,12 +430,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 						<table class="db-table">
 							<thead>
 								<tr>
-									<th>' . __('Customer') . '</th>
+									<th>' . __('Customer Code') . '</th>
+									<th>' . __('Customer Name') . '</th>
 									<th class="text-right">' . __('Balance') . '</th>
-									<th class="text-right">' . __('Current') . '</th>
-									<th class="text-right">' . __('Due Now') . '</th>
-									<th class="text-right">' . $_SESSION['PastDueDays1'] . ' ' . __('Days Over') . '</th>
-									<th class="text-right">' . $_SESSION['PastDueDays2'] . ' ' . __('Days Over') . '</th>
 								</tr>
 							</thead>
 							<tbody>';
@@ -313,12 +461,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 		$TotOD2 += $AgedAnalysis['overdue2'];
 
 		$HTML .= '<tr>
-					<td class="cust-name">' . $AgedAnalysis['debtorno'] . ' - ' . $AgedAnalysis['name'] . '</td>
+					<td class="cust-code">' . $AgedAnalysis['debtorno'] . '</td>
+					<td class="cust-name">' . $AgedAnalysis['name'] . '</td>
 					<td class="text-right val-bold">' . $DisplayBalance . '</td>
-					<td class="text-right">' . $DisplayCurrent . '</td>
-					<td class="text-right">' . $DisplayDue . '</td>
-					<td class="text-right">' . $DisplayOverdue1 . '</td>
-					<td class="text-right">' . $DisplayOverdue2 . '</td>
 				</tr>';
 
 		if ($_POST['DetailedReport']=='Yes') {
@@ -373,14 +518,13 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 			$DetailResult = DB_query($SQL, $ErrMsg);
 
 			$HTML .= '<tr class="sub-report-row">
-						<td colspan="6">
+						<td colspan="3">
 							<div class="sub-table-wrapper">
 								<table class="db-table-sub">
 									<thead>
 										<tr class="sub-header-row">
 											<th colspan="2">' . __('Transaction Detail') . '</th>
-											<th>' . __('Date') . '</th>
-											<th colspan="3"></th>
+											<th class="text-right">' . __('Date') . '</th>
 										</tr>
 									</thead>
 									<tbody>';
@@ -391,8 +535,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 				$HTML .= '<tr class="sub-data-row-header">
 							<td class="val-bold">' . $DetailTrans['typename'] . '</td>
 							<td class="val-bold">' . $DetailTrans['transno'] . '</td>
-							<td>' . $DisplayTranDate . '</td>
-							<td colspan="3"></td>
+							<td class="text-right">' . $DisplayTranDate . '</td>
 						</tr>';
 
 				$DisplayDue = locale_number_format($DetailTrans['due']-$DetailTrans['overdue1'],$CurrDecimalPlaces);
@@ -402,12 +545,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 				$DisplayOverdue2 = locale_number_format($DetailTrans['overdue2'],$CurrDecimalPlaces);
 
 				$HTML .= '<tr class="sub-data-row">
+							<td colspan="2" class="text-right" style="opacity: 0.7;">' . __('Balance') . ':</td>
 							<td class="text-right val-bold">' . $DisplayBalance . '</td>
-							<td class="text-right">' . $DisplayCurrent . '</td>
-							<td class="text-right">' . $DisplayDue . '</td>
-							<td class="text-right">' . $DisplayOverdue1 . '</td>
-							<td class="text-right">' . $DisplayOverdue2 . '</td>
-							<td></td>
 						</tr>';
 
 			} /*end while there are detail transactions to show */
@@ -430,12 +569,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	$HTML .= '</tbody>
 						<tfoot>
 							<tr class="total_row">
-								<td class="text-right val-bold">' . __('TOTALS') . '</td>
+								<td colspan="2" class="text-right val-bold">' . __('TOTALS') . '</td>
 								<td class="text-right val-bold">' . $DisplayTotBalance . '</td>
-								<td class="text-right val-bold">' . $DisplayTotCurrent . '</td>
-								<td class="text-right val-bold">' . $DisplayTotDue . '</td>
-								<td class="text-right val-bold">' . $DisplayTotOverdue1 . '</td>
-								<td class="text-right val-bold">' . $DisplayTotOverdue2 . '</td>
 							</tr>
 						</tfoot>';
 
@@ -457,6 +592,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	}
 
 	if (isset($_POST['PrintPDF'])) {
+		ob_clean();
 		$DomPDF = new Dompdf($DomPDFOptions); // Pass the options object defined in SetDomPDFOptions.php containing common options
 		$DomPDF->loadHtml($HTML);
 
@@ -483,69 +619,6 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 
 	$ViewTopic = 'ARReports';
 	$BookMark = 'AgedDebtors';
-
-	$ExtraHeadContent = '
-<style>
-	.ScriptTitle { display: none !important; }
-	.MainBody { padding: 0 !important; gap: 0 !important; background: transparent !important; }
-	.db-page { padding: var(--space-8) var(--space-6); background: var(--bg-main); min-height: 100vh; font-family: "Inter", sans-serif; }
-	
-	.premium-header { margin-bottom: 40px; position: relative; }
-	.premium-header::before { display: none !important; }
-	
-	/* Architect Workspace Overrides */
-	.db-card-header { 
-		background: #f9fafb; 
-		border-bottom: 1px solid #f3f4f6; 
-		padding: 20px 30px;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-	.db-card-title {
-		font-size: 1.1rem;
-		font-weight: 850;
-		color: #064e3b;
-		margin: 0;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		text-transform: uppercase;
-		letter-spacing: 1px;
-	}
-	
-	.architect-btn {
-		display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-		padding: 12px 28px; border-radius: 50px;
-		background: #059669; color: #ffffff; border: none;
-		font-weight: 700; font-size: 0.85rem; text-decoration: none;
-		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-		cursor: pointer; width: 100%;
-	}
-	.architect-btn:hover { background: #065f46; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
-	.architect-btn i { color: #ffffff !important; }
-	.architect-btn.secondary { background: #e5e7eb; color: #374151; box-shadow: none; }
-	.architect-btn.secondary:hover { background: #d1d5db; color: #111827; }
-	.architect-btn.secondary i { color: #374151 !important; }
-	
-	.custom-bottom-layout { 
-		display: grid; 
-		grid-template-columns: 380px 1fr; 
-		gap: 32px; 
-		align-items: start; 
-	}
-	.custom-range-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 20px;
-		margin-bottom: 24px;
-	}
-	
-	.breadcrumb-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; transition: all 0.2s; }
-	.breadcrumb-item:hover { color: #059669; }
-	.breadcrumb-separator { font-size: 0.6rem; opacity: 0.4; margin: 0 4px; }
-</style>';
 
 	include(__DIR__ . '/includes/header.php');
 

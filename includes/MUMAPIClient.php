@@ -39,7 +39,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("<br>".$url." <br>Error communicating with MUM API for authentication.");
+            throw new Exception("<br>".$url.";".$clientId.";".$clientSecret."; <br>Error communicating with MUM API for authentication.");
         }
 
         $response = json_decode($result, true);

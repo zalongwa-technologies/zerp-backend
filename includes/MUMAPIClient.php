@@ -18,9 +18,9 @@ class MUMAPIClient {
     }
 
     private function authenticate() {
-        $SARIS_API_CLIENT_ID = '';
-        $SARIS_API_CLIENT_SECRET = '';
-        include(__DIR__ . '/../config.php');
+        $SARIS_API_CLIENT_ID = 'MUM_ERP';
+        $SARIS_API_CLIENT_SECRET = 'K7@xP4!mZ9qT2#vB6&cR1$eY8uW0hF3d';
+        //include(__DIR__ . '/../config.php');
 
         $this->clientId = $SARIS_API_CLIENT_ID;
         $this->clientSecret = $SARIS_API_CLIENT_SECRET;

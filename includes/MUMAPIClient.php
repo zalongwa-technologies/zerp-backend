@@ -46,7 +46,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("Error communicating with MUM API for authentication.");
+            throw new Exception("Error communicating with MUM API for authentication. The credentials are: ".$SARIS_API_CLIENT_ID." & ".$SARIS_API_CLIENT_SECRET);
         }
 
         $response = json_decode($result, true);

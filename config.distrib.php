@@ -148,3 +148,27 @@ if (isset($DirectoryLevelsDeep)) {
 if ($RootPath === '/' or $RootPath === '\\') {
 	$RootPath = '';
 }
+
+// ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
+$ZERP_EndPoint = 'https://zerp.xxx.xxx.tz/api/api_xml-rpc.php';
+$ZERP_Username = 'xcz';
+$ZERP_Password = 'Ap!User@2021';
+$ZERP_BankAccount = '1020'; //Chart of Account of the default Cash on Hand Bank Account 
+$ZERP_SalesArea = '3'; //select * from locations; to get sales area
+$ZERP_SalesPerson = '1';
+$ZERP_SalesType = '1';
+$ZERP_ShipVia = '1';
+
+// ZALONGWA SARIS System Configuration for Exracting both Invoices and Receipts
+$SARIS_API_BASE_URL = 'https://xxx.xxx.ac.tz';
+$SARIS_API_CLIENT_ID = 'NMMNXY_ErPii';
+$SARIS_API_CLIENT_SECRET = 'K7@xP4!mZ9qM6#vB6&cR1$eY8uW0h3CX';
+
+
+$REMOTE_ADDR = '127.0.0.1';
+
+
+// WebSHOP VFD Database Configurations
+$DB_CHARSET = 'utf8msasb4';
+$COUNTERS_SALE = 'COUNTxsER'; //Default counter sale customer
+$DEFAULT_PRODUCT_ID = '0as1';

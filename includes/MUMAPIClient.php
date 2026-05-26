@@ -1,7 +1,7 @@
 <?php
 
 class MUMAPIClient {
-    private $baseUrl = 'https://star.mum.ac.tz';
+    private $baseUrl;
     private $clientId;
     private $clientSecret;
     private $token = null;
@@ -9,6 +9,10 @@ class MUMAPIClient {
     private $timeout = 30; // 30 seconds default timeout
 
     public function __construct($clientId, $clientSecret) {
+        $SARIS_API_BASE_URL = '';
+        include(__DIR__ . '/../config.php');
+
+        $this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
     }

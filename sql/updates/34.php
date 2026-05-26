@@ -40,9 +40,7 @@ CreateTable('api_supplier_invoice_drafts', "CREATE TABLE IF NOT EXISTS api_suppl
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (id),
 	KEY idx_draft_uuid (draft_uuid),
-	CONSTRAINT fk_lines_draft FOREIGN KEY (draft_uuid)
-		REFERENCES api_supplier_invoice_drafts (draft_uuid)
-		ON DELETE CASCADE
+	CONSTRAINT fk_lines_draft FOREIGN KEY (draft_uuid) REFERENCES api_supplier_invoice_drafts (draft_uuid) ON DELETE CASCADE
 	) ENGINE=InnoDB");
 
 	CreateTable('api_supplier_invoice_taxes',"CREATE TABLE IF NOT EXISTS api_supplier_invoice_taxes (
@@ -57,9 +55,7 @@ CreateTable('api_supplier_invoice_drafts', "CREATE TABLE IF NOT EXISTS api_suppl
 	PRIMARY KEY (id),
 	UNIQUE KEY uq_draft_tax (draft_uuid, taxauthid),
 	KEY idx_draft_uuid (draft_uuid),
-	CONSTRAINT fk_taxes_draft FOREIGN KEY (draft_uuid)
-		REFERENCES api_supplier_invoice_drafts (draft_uuid)
-		ON DELETE CASCADE
+	CONSTRAINT fk_taxes_draft FOREIGN KEY (draft_uuid) REFERENCES api_supplier_invoice_drafts (draft_uuid) ON DELETE CASCADE
 	) ENGINE=InnoDB");
 
 	CreateTable('api_idempotency_keys',"CREATE TABLE IF NOT EXISTS api_idempotency_keys (

@@ -452,3 +452,14 @@ WHERE TABLE_SCHEMA = 'zerp_backend'
 ORDER BY CHARACTER_MAXIMUM_LENGTH, TABLE_NAME;
 
 .well-known/acme-challenge/ExY0i23dOyHhz7w1Rwe55JYWIhFYCPIN3UUTJi09QXM
+
+
+
+The table api_supplier_invoice_drafts could not be created
+The table api_supplier_invoice_lines could not be created
+The table api_supplier_invoice_taxes could not be created
+The table api_idempotency_keys could not be created
+The table auditscript could not be created
+The table stockitemnotes could not be created
+The constraint stockitemnotes_ibfk_1 could not be added
+ALTER TABLE stockitemnotes ADD CONSTRAINT stockitemnotes_ibfk_1 FOREIGN KEY (stockid) REFERENCES stockmaster (stockid)

@@ -13,11 +13,18 @@ class MUMAPIClient {
         include(__DIR__ . '/../config.php');
 
         $this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
-        $this->clientId = $SARIS_API_CLIENT_ID;
-        $this->clientSecret = $SARIS_API_CLIENT_SECRET;
+        $this->clientId = $clientId;
+        $this->clientSecret = $clientSecret;
     }
 
     private function authenticate() {
+        $SARIS_API_CLIENT_ID = '';
+        $SARIS_API_CLIENT_SECRET = '';
+        include(__DIR__ . '/../config.php');
+
+        $this->clientId = $SARIS_API_CLIENT_ID;
+        $this->clientSecret = $SARIS_API_CLIENT_SECRET;
+
         $url = $this->baseUrl . '/api_erp/v1/auth';
 
         $data = [
@@ -39,7 +46,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("<br>".$url.";".$SARIS_API_CLIENT_ID.";".$SARIS_API_CLIENT_SECRET."; <br>Error communicating with MUM API for authentication.");
+            throw new Exception("Error communicating with MUM API for authentication.");
         }
 
         $response = json_decode($result, true);

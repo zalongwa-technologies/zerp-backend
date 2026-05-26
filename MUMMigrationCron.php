@@ -6,30 +6,30 @@ if (!$IsCommandLine) {
     die("This script can only be run from the command line.");
 }
 
+// We need to set the PathPrefix because this is run from CLI
+$PathPrefix = __DIR__ . '/';
+include($PathPrefix . 'config.php');
+
 // Define variables necessary to bypass normal session login and auth
 $AllowAnyone = true;
 $PageSecurity = 15;
-$_SESSION['DatabaseName'] = 'weberpdemo'; // Replace with your actual DB name if different
-$_SERVER['HTTP_HOST'] = 'localhost';
-$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+$_SESSION['DatabaseName'] = $DefaultDatabase;
+$_SERVER['HTTP_HOST'] = $Host;
+$_SERVER['REMOTE_ADDR'] = $REMOTE_ADDR;
+$clientId = $SARIS_API_CLIENT_ID;
+$clientSecret = $SARIS_API_CLIENT_SECRET;
 
-// We need to set the PathPrefix because this is run from CLI
-$PathPrefix = __DIR__ . '/';
 include($PathPrefix . 'includes/session.php');
 include($PathPrefix . 'includes/MUMAPIClient.php');
 include($PathPrefix . 'includes/MUMSyncStudents.php');
 include($PathPrefix . 'includes/MUMSyncInvoices.php');
 include($PathPrefix . 'includes/SQL_CommonFunctions.inc');
 
-// Hardcoded for testing. User should update these credentials or load from config.
-$clientId = 'YOUR_CLIENT_ID_HERE';
-$clientSecret = 'YOUR_CLIENT_SECRET_HERE';
-
 function ensureMUMSchemaCLI() {
     global $db;
     $columnsToCheck = [
         'student_programme' => 'VARCHAR(100) DEFAULT NULL',
-        'student_entryyear' => 'VARCHAR(20) DEFAULT NULL',
+        'student_entryyear' => 'VARCHAR(20) DEFAULT NULL', 
         'student_studyyear' => 'INT DEFAULT NULL',
         'student_intake' => 'VARCHAR(50) DEFAULT NULL'
     ];

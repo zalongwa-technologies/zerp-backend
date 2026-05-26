@@ -10,6 +10,18 @@ include('includes/MUMSyncStudents.php');
 include('includes/MUMSyncInvoices.php');
 include('includes/SQL_CommonFunctions.inc'); // For GetNextTransNo, GetPeriod
 
+function getSARISAPICredentialsFromConfig($configFile) {
+    $SARIS_API_CLIENT_ID = '';
+    $SARIS_API_CLIENT_SECRET = '';
+
+    include($configFile);
+
+    return [
+        'client_id' => $SARIS_API_CLIENT_ID,
+        'client_secret' => $SARIS_API_CLIENT_SECRET
+    ];
+}
+
 // Modern ZERP Styles
 echo '<style>
     .migration-card { background: #fff; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 24px; margin: 20px auto; max-width: 800px; }
@@ -25,9 +37,9 @@ echo '<div class="migration-card">';
 echo '<h2 style="color: #1e293b; margin-top: 0; display: flex; align-items: center;"><i class="fas fa-sync-alt" style="margin-right: 12px; color: #059669;"></i> ' . $Title . '</h2>';
 echo '<p style="color: #64748b;">Pull historical data from the MUM API safely into ZERP. Use small date ranges (1 month) to avoid timeouts.</p>';
 
-// Hardcoded for testing. User should update these credentials or load from config.
-$clientId = 'YOUR_CLIENT_ID_HERE';
-$clientSecret = 'YOUR_CLIENT_SECRET_HERE';
+$sarisAPICredentials = getSARISAPICredentialsFromConfig('config.distrib.php');
+$clientId = $sarisAPICredentials['client_id'];
+$clientSecret = $sarisAPICredentials['client_secret'];
 
 function ensureMUMSchema() {
     global $db;

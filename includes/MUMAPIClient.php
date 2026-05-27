@@ -63,7 +63,7 @@ class MUMAPIClient {
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret
         ];
-var_dump($data);
+//var_dump($data);
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -73,24 +73,24 @@ var_dump($data);
             'Content-Type: application/json'
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-        
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+// curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+// curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 
         $result = curl_exec($ch);
 
 
-$result = curl_exec($ch);
-$error = curl_error($ch);
-$errno = curl_errno($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+// $result = curl_exec($ch);
+// $error = curl_error($ch);
+// $errno = curl_errno($ch);
+// $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-// Temporary debug - remove after fixing
-echo "cURL errno: $errno\n";
-echo "cURL error: $error\n";
-var_dump($httpCode);
+// // Temporary debug - remove after fixing
+// echo "cURL errno: $errno\n";
+// echo "cURL error: $error\n";
+// var_dump($httpCode);
 
-curl_close($ch);
+        curl_close($ch);
 
         $error = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

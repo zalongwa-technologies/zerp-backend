@@ -137,7 +137,7 @@ $ExtraHeadContent = '
 </style>';
 
 
-if (isset($_POST['PrintPDF']) or isset($_POST['View'])
+if ((isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['PrintCSV']))
 	and isset($_POST['FromCriteria'])
 	and mb_strlen($_POST['FromCriteria'])>=1
 	and isset($_POST['ToCriteria'])
@@ -384,6 +384,67 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	$ErrMsg = __('The customer details could not be retrieved');
 	$CustomerResult = DB_query($SQL, $ErrMsg);
 
+	if (isset($_POST['PrintCSV'])) {
+		while (ob_get_level() > 0) {
+			ob_end_clean();
+		}
+		header('Content-Type: application/vnd.ms-excel');
+		header("Content-Disposition: attachment; filename=AgedDebtors_" . date('Ymd_His') . '.xls');
+		header("Pragma: public");
+		header("Expires: 0");
+
+		echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+		echo '<head>';
+		echo '<meta http-equiv="Content-type" content="text/html;charset=utf-8" />';
+		echo '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Aged Debtors</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+		echo '<style>';
+		echo 'table { border-collapse: collapse; }';
+		echo 'th { background-color: #f2f2f2; font-weight: bold; border: 0.5pt solid #000000; padding: 6px 12px; }';
+		echo 'td { border: 0.5pt solid #d4d4d4; padding: 6px 12px; }';
+		echo '.text-right { text-align: right; }';
+		echo '.text-center { text-align: center; }';
+		echo '.bold { font-weight: bold; }';
+		echo '</style>';
+		echo '</head>';
+		echo '<body>';
+		echo '<h2>' . __('Aged Debtor Analysis') . '</h2>';
+		echo '<table>';
+		echo '<thead>';
+		echo '<tr>';
+		echo '<th>' . __('S/No.') . '</th>';
+		echo '<th>' . __('Customer Code') . '</th>';
+		echo '<th>' . __('Customer Name') . '</th>';
+		echo '<th class="text-right">' . __('Balance') . '</th>';
+		echo '</tr>';
+		echo '</thead>';
+		echo '<tbody>';
+
+		$SNo = 1;
+		$TotalBalance = 0;
+		while ($AgedAnalysis = DB_fetch_array($CustomerResult)) {
+			$DisplayBalance = locale_number_format($AgedAnalysis['balance'], $AgedAnalysis['decimalplaces']);
+			echo '<tr>';
+			echo '<td class="text-center">' . $SNo . '</td>';
+			echo '<td>' . $AgedAnalysis['debtorno'] . '</td>';
+			echo '<td>' . $AgedAnalysis['name'] . '</td>';
+			echo '<td class="text-right">' . $DisplayBalance . '</td>';
+			echo '</tr>';
+			$SNo++;
+			$TotalBalance += $AgedAnalysis['balance'];
+		}
+
+		$DisplayTotBalance = locale_number_format($TotalBalance, $_SESSION['CompanyRecord']['decimalplaces']);
+		echo '<tr class="bold">';
+		echo '<td colspan="3" class="text-right bold" style="border: 0.5pt solid #000000;">' . __('TOTALS') . '</td>';
+		echo '<td class="text-right bold" style="border: 0.5pt solid #000000;">' . $DisplayTotBalance . '</td>';
+		echo '</tr>';
+		echo '</tbody>';
+		echo '</table>';
+		echo '</body>';
+		echo '</html>';
+		exit();
+	}
+
 	$HTML = '';
 
 	if (isset($_POST['PrintPDF'])) {
@@ -399,6 +460,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 			.db-table td { border: 1px solid #ddd; padding: 8px 12px; font-size: 10pt; }
 			.val-bold { font-weight: bold; }
 			.total_row td { font-weight: bold; border-top: 2px solid #000; border-bottom: 2px double #000; }
+			.total_row { page-break-inside: avoid; }
 			.cust-code { font-weight: bold; color: #333; }
 			.db-header-actions, button, .noPrint { display: none !important; }
 		';
@@ -430,6 +492,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 						<table class="db-table">
 							<thead>
 								<tr>
+									<th style="width: 60px;">' . __('S/No.') . '</th>
 									<th>' . __('Customer Code') . '</th>
 									<th>' . __('Customer Name') . '</th>
 									<th class="text-right">' . __('Balance') . '</th>
@@ -444,7 +507,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	$TotOD2=0;
 
 	$ListCount = DB_num_rows($CustomerResult);
-	$CurrDecimalPlaces =2; //by default
+	$CurrDecimalPlaces = 2; //by default
+	$SNo = 1;
 
 	while ($AgedAnalysis = DB_fetch_array($CustomerResult)) {
 		$CurrDecimalPlaces = $AgedAnalysis['decimalplaces'];
@@ -461,10 +525,12 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 		$TotOD2 += $AgedAnalysis['overdue2'];
 
 		$HTML .= '<tr>
+					<td>' . $SNo . '</td>
 					<td class="cust-code">' . $AgedAnalysis['debtorno'] . '</td>
 					<td class="cust-name">' . $AgedAnalysis['name'] . '</td>
 					<td class="text-right val-bold">' . $DisplayBalance . '</td>
 				</tr>';
+		$SNo++;
 
 		if ($_POST['DetailedReport']=='Yes') {
 
@@ -518,7 +584,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 			$DetailResult = DB_query($SQL, $ErrMsg);
 
 			$HTML .= '<tr class="sub-report-row">
-						<td colspan="3">
+						<td colspan="4">
 							<div class="sub-table-wrapper">
 								<table class="db-table-sub">
 									<thead>
@@ -566,13 +632,11 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 	$DisplayTotOverdue1 = locale_number_format($TotOD1,$CurrDecimalPlaces);
 	$DisplayTotOverdue2 = locale_number_format($TotOD2,$CurrDecimalPlaces);
 
-	$HTML .= '</tbody>
-						<tfoot>
-							<tr class="total_row">
-								<td colspan="2" class="text-right val-bold">' . __('TOTALS') . '</td>
+	$HTML .= '<tr class="total_row">
+								<td colspan="3" class="text-right val-bold">' . __('TOTALS') . '</td>
 								<td class="text-right val-bold">' . $DisplayTotBalance . '</td>
 							</tr>
-						</tfoot>';
+						</tbody>';
 
 	if (isset($_POST['PrintPDF'])) {
 		$HTML .= '</table>
@@ -593,6 +657,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 
 	if (isset($_POST['PrintPDF'])) {
 		ob_clean();
+		ini_set('memory_limit', '1024M');
+		set_time_limit(300);
 		$DomPDF = new Dompdf($DomPDFOptions); // Pass the options object defined in SetDomPDFOptions.php containing common options
 		$DomPDF->loadHtml($HTML);
 
@@ -675,10 +741,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])
 					</div>
 
 					<div style="display: flex; flex-direction: column; gap: 12px;">
-						<button type="submit" name="PrintPDF" class="architect-btn">
-							<i class="fas fa-file-pdf"></i> ' . __('Generate PDF') . '
+						<button type="submit" name="PrintCSV" class="architect-btn secondary" style="background: #10b981; color: white;" onclick="this.form.target=\'_self\';">
+							<i class="fas fa-file-excel" style="color: white !important;"></i> ' . __('Export to Excel') . '
 						</button>
-						<button type="submit" name="View" class="architect-btn secondary">
+						<button type="submit" name="View" class="architect-btn secondary" onclick="this.form.target=\'_self\';">
 							<i class="fas fa-eye"></i> ' . __('View Online') . '
 						</button>
 					</div>

@@ -26,7 +26,7 @@ class MUMAPIClient {
             return $configFile;
         }
 
-        $configFile = __DIR__ . '/../config.distrib.php';
+        $configFile = __DIR__ . '/../config.php';
         if (file_exists($configFile)) {
             return $configFile;
         }

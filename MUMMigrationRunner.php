@@ -41,7 +41,7 @@ echo '<div class="migration-card">';
 echo '<h2 style="color: #1e293b; margin-top: 0; display: flex; align-items: center;"><i class="fas fa-sync-alt" style="margin-right: 12px; color: #059669;"></i> ' . $Title . '</h2>';
 echo '<p style="color: #64748b;">Pull historical data from the MUM API safely into ZERP. Use small date ranges (1 month) to avoid timeouts.</p>';
 
-$sarisAPICredentials = getSARISAPICredentialsFromConfig('config.distrib.php');
+$sarisAPICredentials = getSARISAPICredentialsFromConfig('config.php');
 $clientId = $sarisAPICredentials['client_id'];
 $clientSecret = $sarisAPICredentials['client_secret'];
 

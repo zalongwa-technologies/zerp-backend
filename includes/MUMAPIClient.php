@@ -75,7 +75,20 @@ var_dump($data);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 var_dump($ch);
         $result = curl_exec($ch);
-        var_dump($result);
+
+
+$result = curl_exec($ch);
+$error = curl_error($ch);
+$errno = curl_errno($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+// Temporary debug - remove after fixing
+echo "cURL errno: $errno\n";
+echo "cURL error: $error\n";
+var_dump($httpCode);
+
+curl_close($ch);
+
         $error = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);

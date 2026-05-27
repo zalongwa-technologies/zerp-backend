@@ -741,9 +741,6 @@ if ((isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['PrintCS
 					</div>
 
 					<div style="display: flex; flex-direction: column; gap: 12px;">
-						<button type="submit" name="PrintPDF" class="architect-btn" onclick="this.form.target=\'_blank\';">
-							<i class="fas fa-file-pdf"></i> ' . __('Generate PDF') . '
-						</button>
 						<button type="submit" name="PrintCSV" class="architect-btn secondary" style="background: #10b981; color: white;" onclick="this.form.target=\'_self\';">
 							<i class="fas fa-file-excel" style="color: white !important;"></i> ' . __('Export to Excel') . '
 						</button>

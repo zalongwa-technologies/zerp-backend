@@ -460,6 +460,7 @@ if ((isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['PrintCS
 			.db-table td { border: 1px solid #ddd; padding: 8px 12px; font-size: 10pt; }
 			.val-bold { font-weight: bold; }
 			.total_row td { font-weight: bold; border-top: 2px solid #000; border-bottom: 2px double #000; }
+			.total_row { page-break-inside: avoid; }
 			.cust-code { font-weight: bold; color: #333; }
 			.db-header-actions, button, .noPrint { display: none !important; }
 		';
@@ -656,6 +657,8 @@ if ((isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['PrintCS
 
 	if (isset($_POST['PrintPDF'])) {
 		ob_clean();
+		ini_set('memory_limit', '1024M');
+		set_time_limit(300);
 		$DomPDF = new Dompdf($DomPDFOptions); // Pass the options object defined in SetDomPDFOptions.php containing common options
 		$DomPDF->loadHtml($HTML);
 

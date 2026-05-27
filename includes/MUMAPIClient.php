@@ -57,9 +57,9 @@ class MUMAPIClient {
             $this->clientSecret = $SARIS_API_CLIENT_SECRET;
         }
 
+        // Remove clientSecret from URL — send only via JSON body
         $url = $this->baseUrl . '/api_erp/v1/auth'
-            . '?clientId=' . $this->encodeAuthQueryValue($this->clientId)
-            . '&clientSecret=' . $this->encodeAuthQueryValue($this->clientSecret);
+            . '?clientId=' . $this->encodeAuthQueryValue($this->clientId);
 
         $data = [
             'client_id' => $this->clientId,

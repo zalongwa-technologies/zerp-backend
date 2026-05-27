@@ -73,7 +73,7 @@ var_dump($data);
             'Content-Type: application/json'
         ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-
+var_dump($ch);
         $result = curl_exec($ch);
         var_dump($result);
         $error = curl_error($ch);

@@ -56,9 +56,8 @@ class MUMAPIClient {
         if ($SARIS_API_CLIENT_SECRET !== '') {
             $this->clientSecret = $SARIS_API_CLIENT_SECRET;
         }
-        // Remove clientSecret from URL — send only via JSON body
-        $url = $this->baseUrl . '/api_erp/v1/auth'
-            . '?clientId=' . $this->encodeAuthQueryValue($this->clientId);
+
+        $url = $this->baseUrl . '/api_erp/v1/auth';
 
         $data = [
             'client_id' => $this->clientId,
@@ -82,7 +81,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("Error communicating with MUM API for authentication. URL: ".$url);
+            throw new Exception("Error communicating with MUM API for authentication. URL: " . $url);
         }
 
         $response = json_decode($result, true);

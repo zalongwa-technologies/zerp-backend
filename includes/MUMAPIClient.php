@@ -26,12 +26,20 @@ class MUMAPIClient {
             return $configFile;
         }
 
-        $configFile = __DIR__ . '/../config.php';
+        $configFile = __DIR__ . '/../config.distrib.php';
         if (file_exists($configFile)) {
             return $configFile;
         }
 
         return null;
+    }
+
+    private function encodeAuthQueryValue($value) {
+        return str_replace(
+            ['%', '#', '&'],
+            ['%25', '%23', '%26'],
+            $value
+        );
     }
 
     private function authenticate() {
@@ -49,10 +57,9 @@ class MUMAPIClient {
             $this->clientSecret = $SARIS_API_CLIENT_SECRET;
         }
 
-        $url = $this->baseUrl . '/api_erp/v1/auth?' . http_build_query([
-            'clientId' => $this->clientId,
-            'clientSecret' => $this->clientSecret
-        ], '', '&', PHP_QUERY_RFC3986);
+        $url = $this->baseUrl . '/api_erp/v1/auth'
+            . '?clientId=' . $this->encodeAuthQueryValue($this->clientId)
+            . '&clientSecret=' . $this->encodeAuthQueryValue($this->clientSecret);
 
         $data = [
             'client_id' => $this->clientId,
@@ -76,7 +83,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("Error communicating with MUM API for authentication.".$SARIS_API_CLIENT_SECRET." -> ".$SARIS_API_CLIENT_ID." -> ".$url);
+            throw new Exception("Error communicating with MUM API for authentication.");
         }
 
         $response = json_decode($result, true);

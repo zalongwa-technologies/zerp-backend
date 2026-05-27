@@ -14,8 +14,11 @@ function getSARISAPICredentialsFromConfig($configFile) {
     $SARIS_API_CLIENT_ID = '';
     $SARIS_API_CLIENT_SECRET = '';
 
-    include($configFile);
-    include(__DIR__ . '/../config.php');
+    if (file_exists(__DIR__ . '/config.php')) {
+        include(__DIR__ . '/config.php');
+    } elseif (file_exists(__DIR__ . '/' . $configFile)) {
+        include(__DIR__ . '/' . $configFile);
+    }
 
     return [
         'client_id' => $SARIS_API_CLIENT_ID,

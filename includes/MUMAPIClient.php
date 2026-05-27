@@ -10,22 +10,49 @@ class MUMAPIClient {
 
     public function __construct($clientId, $clientSecret) {
         $SARIS_API_BASE_URL = '';
-        include(__DIR__ . '/../config.php');
+        $configFile = $this->getConfigFile();
+        if ($configFile !== null) {
+            include($configFile);
+        }
 
         $this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
         $this->clientId = $clientId;
         $this->clientSecret = $clientSecret;
     }
 
+    private function getConfigFile() {
+        $configFile = __DIR__ . '/../config.php';
+        if (file_exists($configFile)) {
+            return $configFile;
+        }
+
+        $configFile = __DIR__ . '/../config.php';
+        if (file_exists($configFile)) {
+            return $configFile;
+        }
+
+        return null;
+    }
+
     private function authenticate() {
         $SARIS_API_CLIENT_ID = '';
         $SARIS_API_CLIENT_SECRET = '';
-        include(__DIR__ . '/../config.php');
+        $configFile = $this->getConfigFile();
+        if ($configFile !== null) {
+            include($configFile);
+        }
 
-        $this->clientId = $SARIS_API_CLIENT_ID;
-        $this->clientSecret = $SARIS_API_CLIENT_SECRET;
+        if ($SARIS_API_CLIENT_ID !== '') {
+            $this->clientId = $SARIS_API_CLIENT_ID;
+        }
+        if ($SARIS_API_CLIENT_SECRET !== '') {
+            $this->clientSecret = $SARIS_API_CLIENT_SECRET;
+        }
 
-        $url = $this->baseUrl . '/api_erp/v1/auth';
+        $url = $this->baseUrl . '/api_erp/v1/auth?' . http_build_query([
+            'clientId' => $this->clientId,
+            'clientSecret' => $this->clientSecret
+        ], '', '&', PHP_QUERY_RFC3986);
 
         $data = [
             'client_id' => $this->clientId,
@@ -36,7 +63,10 @@ class MUMAPIClient {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Accept: application/json',
+            'Content-Type: application/json'
+        ]);
         curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 
         $result = curl_exec($ch);
@@ -46,7 +76,7 @@ class MUMAPIClient {
 
         if ($result === false) {
             $this->logError("Authentication cURL Error: $error");
-            throw new Exception("Error communicating with MUM API for authentication. The credentials are: ".$SARIS_API_CLIENT_ID." & ".$SARIS_API_CLIENT_SECRET." URL: ".$url);
+            throw new Exception("Error communicating with MUM API for authentication.");
         }
 
         $response = json_decode($result, true);
@@ -55,8 +85,8 @@ class MUMAPIClient {
             $this->token = $response['token'];
             $this->tokenExpiresAt = time() + (isset($response['expires_in']) ? $response['expires_in'] : 900) - 30;
         } else {
-            $this->logError("Authentication failed HTTP $httpCode: " . json_encode($response));
-            throw new Exception("Authentication failed: " . json_encode($response));
+            $this->logError("Authentication failed HTTP $httpCode: " . ($response === null ? $result : json_encode($response)));
+            throw new Exception("Authentication failed. Please check api_migration_error.log for the API response.");
         }
     }
 

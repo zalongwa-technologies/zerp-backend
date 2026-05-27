@@ -63,7 +63,7 @@ class MUMAPIClient {
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret
         ];
-
+var_dump( $data );
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);

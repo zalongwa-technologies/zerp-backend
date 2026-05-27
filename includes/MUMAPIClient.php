@@ -51,7 +51,7 @@ class MUMAPIClient {
 
         $url = $this->baseUrl . '/api_erp/v1/auth?' . http_build_query([
             'clientId' => $this->clientId,
-            'clientSecret' => $SARIS_API_CLIENT_SECRET
+            'clientSecret' => $this->clientSecret
         ], '', '&', PHP_QUERY_RFC3986);
 
         $data = [

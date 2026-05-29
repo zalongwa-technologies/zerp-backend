@@ -492,7 +492,7 @@ function UploadData($Demo, $AdminPassword, $AdminUser, $Email, $Language, $CoA, 
 
 		/// @todo there is no guarantee that all the db updates have been applied to the single SQL files making up
 		///       the installer - that is left to the person preparing the release to verify...
-		$SQL = "INSERT INTO config VALUES('DBUpdateNumber', " . HighestFileName($Path_To_Root) . ")";
+		$SQL = "INSERT INTO config (`confname`, `confvalue`) VALUES('DBUpdateNumber', '" . HighestFileName($Path_To_Root) . "')";
 		$Result = DB_query($SQL, '', '', false, false);
 		if (DB_error_no() == 0) {
 			echo '<div class="success">' . __('The database update revision has been inserted') . '</div>';
@@ -502,40 +502,71 @@ function UploadData($Demo, $AdminPassword, $AdminUser, $Email, $Language, $CoA, 
 		}
 		flush();
 
-		$SQL ="INSERT INTO `companies` VALUES (1,
-											'" . $CompanyName . "',
-											'not entered yet',
-											'',
-											'',
-											'',
-											'',
-											'',
-											'',
-											'',
-											'',
-											'',
-											'info@weberp.com',
-											'GBP',
-											'1100',
-											'4900',
-											'2100',
-											'2400',
-											'2150',
-											'2150',
-											'4200',
-											'5200',
-											'3500',
-											1,
-											1,
-											1,
-											'5600'
-										)";
+		$SQL ="INSERT INTO `companies` (`coycode`,
+										`coyname`,
+										`gstno`,
+										`companynumber`,
+										`regoffice1`,
+										`regoffice2`,
+										`regoffice3`,
+										`regoffice4`,
+										`regoffice5`,
+										`regoffice6`,
+										`telephone`,
+										`fax`,
+										`email`,
+										`currencydefault`,
+										`debtorsact`,
+										`pytdiscountact`,
+										`creditorsact`,
+										`payrollact`,
+										`grnact`,
+										`commissionsact`,
+										`salesexchangediffact`,
+										`purchasesexchangediffact`,
+										`currencyexchangediffact`,
+										`unrealizedcurrencydiffact`,
+										`retainedearnings`,
+										`gllink_debtors`,
+										`gllink_creditors`,
+										`gllink_stock`,
+										`freightact`)
+									VALUES (1,
+										'" . DB_escape_string($CompanyName) . "',
+										'not entered yet',
+										'',
+										'',
+										'',
+										'',
+										'',
+										'',
+										'',
+										'',
+										'',
+										'info@weberp.com',
+										'GBP',
+										'1100',
+										'4900',
+										'2100',
+										'2400',
+										'2150',
+										'2150',
+										'4200',
+										'5200',
+										'4200',
+										'3500',
+										'3500',
+										1,
+										1,
+										1,
+										'5600'
+									)";
 		$Result = DB_query($SQL, '', '', false, false);
 		if (DB_error_no() == 0) {
 			echo '<div class="success">' . __('The company record has been inserted') . '</div>';
 		} else {
 			$Errors++;
-			echo '<div class="error">' . __('There was an error inserting the DB revision number') . ' - ' . DB_error_msg() . '</div>';
+			echo '<div class="error">' . __('There was an error inserting the company record') . ' - ' . DB_error_msg() . '</div>';
 		}
 		flush();
 
@@ -632,7 +663,7 @@ function UploadData($Demo, $AdminPassword, $AdminUser, $Email, $Language, $CoA, 
 
 		/// @todo there is no guarantee that all the db updates have been applied to the single SQL files making up
 		///       the installer - that is left to the person preparing the release to verify...
-		$SQL = "INSERT INTO config VALUES('DBUpdateNumber', " . HighestFileName($Path_To_Root) . ")";
+		$SQL = "INSERT INTO config (`confname`, `confvalue`) VALUES('DBUpdateNumber', '" . HighestFileName($Path_To_Root) . "')";
 		$Result = DB_query($SQL, '', '', false, false);
 		if (DB_error_no() == 0) {
 			echo '<div class="success">' . __('The database update revision has been inserted') . '</div>';

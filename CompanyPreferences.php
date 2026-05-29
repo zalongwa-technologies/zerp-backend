@@ -75,6 +75,12 @@ $ExtraHeadContent = '
         padding: 0 20px; box-sizing: border-box; background: #ffffff; font-family: inherit; font-size: 0.95rem;
     }
     .db-input:focus { border-color: #059669; outline: none; box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1); }
+    .gl-account-picker { display: flex; flex-direction: column; gap: 8px; }
+    .gl-account-search {
+        height: 42px;
+        font-size: 0.85rem;
+        background: #f8fffb;
+    }
     
     .db-bottom-layout { 
         display: grid; 
@@ -191,11 +197,25 @@ $ExtraHeadContent = '
         window.scrollTo({ top: 0, behavior: \'smooth\' });
     }
 
+    function filterGLAccountSelect(searchInput) {
+        const select = document.getElementById(searchInput.dataset.target);
+        if (!select) return;
+
+        const query = searchInput.value.trim().toLowerCase();
+        Array.from(select.options).forEach(option => {
+            const optionText = (option.dataset.search || option.textContent).toLowerCase();
+            option.hidden = option.value !== \'\' && !option.selected && query !== \'\' && !optionText.includes(query);
+        });
+    }
+
     document.addEventListener(\'DOMContentLoaded\', () => {
         updateWizardState();
         document.querySelectorAll(\'.db-input\').forEach(input => {
             input.addEventListener(\'input\', updateWizardState);
             input.addEventListener(\'change\', updateWizardState);
+        });
+        document.querySelectorAll(\'.gl-account-search\').forEach(input => {
+            input.addEventListener(\'input\', () => filterGLAccountSelect(input));
         });
     });
 </script>';
@@ -217,13 +237,17 @@ function ModernGLSelect($Name, $Value, $Filter, $Label, $Help) {
             ORDER BY chartmaster.accountcode";
     $Result = DB_query($SQL);
     
-    $HTML = '<div><label class="db-form-label">' . $Label . '</label><select name="' . $Name . '" class="db-input">';
+    $SelectID = 'GLSelect_' . preg_replace('/[^A-Za-z0-9_-]/', '', $Name);
+    $HTML = '<div><label class="db-form-label">' . $Label . '</label><div class="gl-account-picker">';
+    $HTML .= '<input type="search" class="db-input gl-account-search" data-target="' . $SelectID . '" placeholder="' . __('Search account code or name') . '" autocomplete="off" />';
+    $HTML .= '<select id="' . $SelectID . '" name="' . $Name . '" class="db-input">';
     $HTML .= '<option value="">' . __('Not Yet Selected') . '</option>';
     while ($Row = DB_fetch_array($Result)) {
         $Selected = ($Row['accountcode'] == $Value) ? 'selected="selected"' : '';
-        $HTML .= '<option ' . $Selected . ' value="' . $Row['accountcode'] . '">' . $Row['accountcode'] . ' - ' . htmlspecialchars($Row['accountname'], ENT_QUOTES, 'UTF-8') . '</option>';
+        $OptionText = $Row['accountcode'] . ' - ' . $Row['accountname'];
+        $HTML .= '<option ' . $Selected . ' value="' . htmlspecialchars($Row['accountcode'], ENT_QUOTES, 'UTF-8') . '" data-search="' . htmlspecialchars($OptionText, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($OptionText, ENT_QUOTES, 'UTF-8') . '</option>';
     }
-    $HTML .= '</select><span class="field-help">' . $Help . '</span></div>';
+    $HTML .= '</select></div><span class="field-help">' . $Help . '</span></div>';
     return $HTML;
 }
 

@@ -497,9 +497,8 @@ function UploadData($Demo, $AdminPassword, $AdminUser, $Email, $Language, $CoA, 
 		if (DB_error_no() == 0) {
 			echo '<div class="success">' . __('The database update revision has been inserted') . '</div>';
 		} else {
-			echo $SQL;
 			$Errors++;
-			echo '<div class="error">' . __('There was an error inserting the DB revision number') . ' - ' . DB_error_msg() . '</div>';
+			echo '<div class="error">' . __('There was an error inserting the DB revision number') . ' - ' . DB_error_msg() . '</div>'.$SQL;
 		}
 		flush();
 

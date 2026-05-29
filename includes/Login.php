@@ -52,7 +52,15 @@ echo '</head>';
 $_SESSION['FormID'] = sha1(uniqid(mt_rand(), true));
 
 // Default to the first available company or cookie
-$DefaultCompany = $_COOKIE['Login'] ?? $DefaultDatabase;
+$DefaultCompany = $_COOKIE['Login'] ?? $_COOKIE['Company'] ?? $DefaultDatabase;
+$LoginLogoFile = $RootPath . '/images/default_logo.jpg';
+foreach (['png', 'jpeg', 'jpg', 'gif'] as $LogoExtension) {
+	$CompanyLogoFile = 'companies/' . basename($DefaultCompany) . '/logo.' . $LogoExtension;
+	if (file_exists(__DIR__ . '/../' . $CompanyLogoFile)) {
+		$LoginLogoFile = $RootPath . '/' . $CompanyLogoFile;
+		break;
+	}
+}
 
 echo '<body>
 	<div id="container">
@@ -67,7 +75,7 @@ echo '<body>
 
 				<div class="login-branding">
 					<div class="login-brand-mark">
-						<img src="' . $_SESSION['LogoFile'] . '" alt="Company Logo" />
+						<img src="' . htmlspecialchars($LoginLogoFile, ENT_QUOTES, 'UTF-8') . '" alt="Company Logo" />
 					</div>
 					<div class="login-card-header">
 						<p class="login-card-kicker">' . __('AUTHENTICATION') . '</p>

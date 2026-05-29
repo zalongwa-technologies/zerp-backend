@@ -80,7 +80,7 @@ echo '<body>
 					<div class="login-card-header">
 						<p class="login-card-kicker">' . __('AUTHENTICATION') . '</p>
 						<h2>' . __('Welcome back') . '</h2>
-						<p class="login-card-copy">' . __('Please sign in to access your business workstation.') . '</p>
+						<p class="login-card-copy">' . __('Please sign in.') . '</p>
 					</div>
 				</div>';
 

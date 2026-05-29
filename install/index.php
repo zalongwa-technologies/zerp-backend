@@ -72,6 +72,7 @@ if (!$_SESSION['Installer']['License_Agreed'] && $_SESSION['Installer']['Current
 
 /// @todo review - do we need MiscFunctions.php?
 include($PathPrefix . 'includes/MiscFunctions.php');
+include($PathPrefix . 'includes/LanguagesArray.php');
 
 // Need the language in this variable as this is the variable used elsewhere in webERP
 /// @todo is that true? There seems to be no usage of $DefaultLanguage in the installer code, nor in any other functions it uses...

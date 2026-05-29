@@ -67,7 +67,7 @@ echo '<body>
 
 				<div class="login-branding">
 					<div class="login-brand-mark">
-						<img src="css/modern-zerp/images/logo.png" alt="Zerp ERP" />
+						<img src="' . $_SESSION['LogoFile'] . '" alt="Company Logo" />
 					</div>
 					<div class="login-card-header">
 						<p class="login-card-kicker">' . __('AUTHENTICATION') . '</p>

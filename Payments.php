@@ -59,6 +59,30 @@ if ((isset($_POST['UpdateHeader']) AND $_POST['BankAccount'] == '') OR (isset($_
 	$BankAccountEmpty = false;
 }
 
+// --- MODERN UX PRE-SYNC ---
+// Because we bypass the "Update" step and submit directly, we must sync POST to SESSION before processing.
+if (isset($_POST['CommitBatch'])) {
+    if (isset($_POST['Amount'])) $_SESSION['PaymentDetail' . $identifier]->Amount = filter_number_format($_POST['Amount']);
+    if (isset($_POST['Discount'])) $_SESSION['PaymentDetail' . $identifier]->Discount = filter_number_format($_POST['Discount']);
+    if (isset($_POST['BankAccount'])) $_SESSION['PaymentDetail' . $identifier]->Account = $_POST['BankAccount'];
+    if (isset($_POST['DatePaid']) AND Is_Date($_POST['DatePaid'])) $_SESSION['PaymentDetail' . $identifier]->DatePaid = $_POST['DatePaid'];
+    if (isset($_POST['Paymenttype'])) $_SESSION['PaymentDetail' . $identifier]->Paymenttype = $_POST['Paymenttype'];
+    if (isset($_POST['Currency'])) $_SESSION['PaymentDetail' . $identifier]->Currency = $_POST['Currency'];
+    if (isset($_POST['ExRate'])) $_SESSION['PaymentDetail' . $identifier]->ExRate = filter_number_format($_POST['ExRate']);
+    if (isset($_POST['FunctionalExRate'])) $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate = filter_number_format($_POST['FunctionalExRate']);
+    if (isset($_POST['BankTransRef'])) $_SESSION['PaymentDetail' . $identifier]->BankTransRef = $_POST['BankTransRef'];
+    if (isset($_POST['Narrative'])) $_SESSION['PaymentDetail' . $identifier]->Narrative = $_POST['Narrative'];
+    if (isset($_POST['gltrans_narrative'])) {
+        $_SESSION['PaymentDetail' . $identifier]->GLTransNarrative = $_POST['gltrans_narrative'] == '' ? ($_POST['Narrative'] ?? '') : $_POST['gltrans_narrative'];
+    }
+    if (isset($_POST['supptrans_suppreference'])) {
+        $_SESSION['PaymentDetail' . $identifier]->SuppTransSuppReference = $_POST['supptrans_suppreference'] == '' ? ($_POST['Paymenttype'] ?? '') : $_POST['supptrans_suppreference'];
+    }
+    if (isset($_POST['supptrans_transtext'])) {
+        $_SESSION['PaymentDetail' . $identifier]->SuppTransTransText = $_POST['supptrans_transtext'] == '' ? ($_POST['Narrative'] ?? '') : $_POST['supptrans_transtext'];
+    }
+}
+
 if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 	/* once the GL analysis of the payment is entered (if the Creditors_GLLink is active),
 	process all the data in the session cookie into the DB creating a banktrans record for
@@ -287,6 +311,8 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 			unset($_SESSION['PaymentDetail' . $identifier]);
 			$_SESSION['PaymentDetail' . $identifier] = new Payment;
 			$_SESSION['PaymentDetail' . $identifier]->GLItemCounter = 1;
+			
+			unset($_POST['Amount'], $_POST['Discount'], $_POST['BankTransRef'], $_POST['Narrative'], $_POST['gltrans_narrative'], $_POST['supptrans_suppreference'], $_POST['supptrans_transtext'], $_POST['ChequeNum']);
 			// Do not exit, let the page render behind the modal
 		}
 	}
@@ -622,6 +648,14 @@ function updateAllocationTotal() {
 	var ttlDisplay = document.getElementById("ttl");
 	if (ttlDisplay) ttlDisplay.value = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 	
+	var amtInput = document.getElementById("Amount");
+	if (amtInput) {
+		var currentAmt = parseFloat(amtInput.value.replace(/[^-0-9.]/g, "")) || 0;
+		if (currentAmt === 0 && total > 0) {
+			amtInput.value = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+		}
+	}
+
 	updateRemaining();
 }
 
@@ -636,6 +670,12 @@ function updateRemaining() {
 		remDisplay.innerText = remaining.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 		remDisplay.style.color = Math.abs(remaining) < 0.01 ? "var(--success)" : "var(--danger)";
 	}
+	
+	var summaryDisplay = document.getElementById("summary-total-amount");
+	if (summaryDisplay) {
+	    var currencyStr = summaryDisplay.innerText.split(" ")[0] || "";
+	    summaryDisplay.innerText = currencyStr + " " + principal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+	}
 }
 
 function payFull(id, amount) {
@@ -643,6 +683,32 @@ function payFull(id, amount) {
 	if (input) {
 		input.value = amount;
 		updateAllocationTotal();
+		
+		// As a modern UX enhancement, automatically sync the principal Amount 
+		// when using the quick-action Pay Full/Clear buttons
+		var amtInput = document.getElementById("Amount");
+		var ttlDisplay = document.getElementById("ttl");
+		if (amtInput && ttlDisplay) {
+		    amtInput.value = ttlDisplay.value;
+		    updateRemaining();
+		    updateFinalSummary();
+		}
+	}
+}
+
+function payClear(id) {
+	var input = document.getElementById(id);
+	if (input) {
+		input.value = "";
+		updateAllocationTotal();
+		
+		var amtInput = document.getElementById("Amount");
+		var ttlDisplay = document.getElementById("ttl");
+		if (amtInput && ttlDisplay) {
+		    amtInput.value = ttlDisplay.value;
+		    updateRemaining();
+		    updateFinalSummary();
+		}
 	}
 }
 
@@ -714,6 +780,14 @@ function payVerify(amountId, totalId) {
 window.addEventListener("load", function() {
 	updateAllocationTotal();
 	updateFinalSummary();
+	
+	var amtInput = document.getElementById("Amount");
+	if (amtInput) {
+		amtInput.addEventListener("input", function() {
+			updateRemaining();
+			updateFinalSummary();
+		});
+	}
 });
 </script>';
 
@@ -730,7 +804,7 @@ echo '<div class="pay-summary-bar">
 			</div>
 			<div class="pay-summary-item" style="text-align: right;">
 				<div class="pay-summary-label">' . __('Total Amount') . '</div>
-				<div class="pay-summary-value" style="color: #34d399;">' . $_SESSION['PaymentDetail' . $identifier]->Currency . ' ' . locale_number_format($_SESSION['PaymentDetail' . $identifier]->Amount, $_SESSION['PaymentDetail' . $identifier]->CurrDecimalPlaces) . '</div>
+				<div class="pay-summary-value" id="summary-total-amount" style="color: #34d399;">' . $_SESSION['PaymentDetail' . $identifier]->Currency . ' ' . locale_number_format($_SESSION['PaymentDetail' . $identifier]->Amount, $_SESSION['PaymentDetail' . $identifier]->CurrDecimalPlaces) . '</div>
 			</div>
 		</div>
 	</div>';
@@ -1186,18 +1260,18 @@ foreach ($PaytTypes as $PaytType) {
 echo '</select></div>
 		<div class="db-form-group">
 			<label class="db-form-label">' . __('Cheque/Ref Number') . '</label>
-			<input class="db-form-input" type="text" name="ChequeNum" value="' . $_POST['ChequeNum'] . '" placeholder="' . __('e.g. 104523') . '" />
+			<input class="db-form-input" type="text" name="ChequeNum" value="' . ($_POST['ChequeNum'] ?? '') . '" placeholder="' . __('e.g. 104523') . '" />
 		</div>
 	</div>';
 
 echo '<div class="db-form-group">
 		<label class="db-form-label">', __('Bank Statement Reference') , '</label>
-		<input class="db-form-input" maxlength="50" name="BankTransRef" type="text" value="', stripslashes($_POST['BankTransRef']) , '" placeholder="' . __('Appears on bank reconcile') . '" />
+		<input class="db-form-input" maxlength="50" name="BankTransRef" type="text" value="', stripslashes($_POST['BankTransRef'] ?? '') , '" placeholder="' . __('Appears on bank reconcile') . '" />
 	</div>';
 
 echo '<div class="db-form-group">
 		<label class="db-form-label">', __('General Ledger Narrative') , '</label>
-		<input class="db-form-input" maxlength="200" name="Narrative" type="text" value="', stripslashes($_POST['Narrative']) , '" placeholder="' . __('Historical audit trail comment') . '" />
+		<input class="db-form-input" maxlength="200" name="Narrative" type="text" value="', stripslashes($_POST['Narrative'] ?? '') , '" placeholder="' . __('Historical audit trail comment') . '" />
 	</div>';
 
 echo '<div style="margin-top: auto; display: flex; justify-content: flex-end; gap: 12px; padding-top: var(--space-4); border-top: 1px solid var(--border-soft);">
@@ -1406,6 +1480,7 @@ if ($_SESSION['CompanyRecord']['gllink_creditors'] == 1 AND $_SESSION['PaymentDe
 					<td style="text-align: center;">
 						<div style="display: flex; gap: 8px; justify-content: center;">
 							<button type="button" class="db-btn db-btn-icon" onclick="payFull(' . $MyRow['id'] . ', ' . $MyRow['amount'] . ')" title="' . __('Pay Full') . '" style="color: var(--primary); background: var(--primary-soft);"><i class="fas fa-arrow-right"></i></button>
+							<button type="button" class="db-btn db-btn-icon" onclick="payClear(' . $MyRow['id'] . ')" title="' . __('Clear') . '" style="color: var(--danger); background: #fee2e2;"><i class="fas fa-times"></i></button>
 						</div>
 					</td>
 					<td class="text-right">

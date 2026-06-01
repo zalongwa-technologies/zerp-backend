@@ -34,17 +34,31 @@ class Payment {
 	function __construct(){
 	/*Constructor function initialises a new Payment batch */
 		$this->GLItems = array();
-		$this->GLItemCounter=0;
-		$this->SupplierID ="";
-		$this->SuppName ="";
-		$this->Address1 ="";
-		$this->Address2 ="";
-		$this->Address3 ="";
-		$this->Address4 ="";
-		$this->Address5 ="";
-		$this->Address6 ="";
-		$this->Narrative ="";
-
+		$this->GLItemCounter = 0;
+		$this->SupplierID = "";
+		$this->SuppName = "";
+		$this->Address1 = "";
+		$this->Address2 = "";
+		$this->Address3 = "";
+		$this->Address4 = "";
+		$this->Address5 = "";
+		$this->Address6 = "";
+		$this->Narrative = "";
+		$this->BankTransRef = "";
+		$this->GLTransNarrative = "";
+		$this->SuppTransSuppReference = "";
+		$this->SuppTransTransText = "";
+		$this->Amount = 0;
+		$this->Discount = 0;
+		$this->Currency = "";
+		$this->CurrDecimalPlaces = 2;
+		$this->ExRate = 1;
+		$this->FunctionalExRate = 1;
+		$this->DatePaid = "";
+		$this->Paymenttype = "";
+		$this->Account = "";
+		$this->AccountCurrency = "";
+		$this->BankAccountName = "";
 	}
 
 	function Payment() {

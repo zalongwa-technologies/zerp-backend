@@ -672,9 +672,10 @@ function updateRemaining() {
 	}
 	
 	var summaryDisplay = document.getElementById("summary-total-amount");
+	var currencyCode = document.getElementById("summary-currency-code");
 	if (summaryDisplay) {
-	    var currencyStr = summaryDisplay.innerText.split(" ")[0] || "";
-	    summaryDisplay.innerText = currencyStr + " " + principal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+	    var code = (currencyCode ? currencyCode.innerText.trim() : "");
+	    summaryDisplay.innerText = (code ? code + " " : "") + principal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 	}
 }
 
@@ -804,7 +805,10 @@ echo '<div class="pay-summary-bar">
 			</div>
 			<div class="pay-summary-item" style="text-align: right;">
 				<div class="pay-summary-label">' . __('Total Amount') . '</div>
-				<div class="pay-summary-value" id="summary-total-amount" style="color: #34d399;">' . $_SESSION['PaymentDetail' . $identifier]->Currency . ' ' . locale_number_format($_SESSION['PaymentDetail' . $identifier]->Amount, $_SESSION['PaymentDetail' . $identifier]->CurrDecimalPlaces) . '</div>
+				<div class="pay-summary-value" style="color: #34d399;">
+					<span id="summary-currency-code" style="font-size: 0.8em; opacity: 0.8;">' . htmlspecialchars($_SESSION['PaymentDetail' . $identifier]->Currency ?? '', ENT_QUOTES) . '</span>
+					<span id="summary-total-amount">' . locale_number_format($_SESSION['PaymentDetail' . $identifier]->Amount ?? 0, $_SESSION['PaymentDetail' . $identifier]->CurrDecimalPlaces ?? 2) . '</span>
+				</div>
 			</div>
 		</div>
 	</div>';

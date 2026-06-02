@@ -29,7 +29,24 @@ if (isset($_GET['NewPayment']) AND $_GET['NewPayment'] == 'Yes') {
 	unset($_SESSION['PaymentDetail' . $identifier]);
 }
 
-if (!isset($_SESSION['PaymentDetail' . $identifier])) {
+// ---- New: Capture Supplier ID early ----
+$supplierId = filter_input(INPUT_GET, 'SupplierID', FILTER_VALIDATE_INT)
+            ?: filter_input(INPUT_POST, 'SupplierID', FILTER_VALIDATE_INT);
+if ($supplierId) {
+    $sqlSup = "SELECT supplierid, suppname, currency FROM suppliers WHERE supplierid = ?";
+    $stmtSup = DB_prepare($sqlSup);
+    DB_execute($stmtSup, [$supplierId]);
+    $supRow = DB_fetch_array($stmtSup);
+    if ($supRow) {
+        $_SESSION['PaymentDetail' . $identifier]->SupplierID = $supRow['supplierid'];
+        $_SESSION['PaymentDetail' . $identifier]->SuppName  = $supRow['suppname'];
+        $_SESSION['PaymentDetail' . $identifier]->Currency  = $supRow['currency'];
+    } else {
+        prnMsg(__('Invalid supplier selected'), 'error');
+    }
+}
+
+    if (!isset($_SESSION['PaymentDetail' . $identifier])) {
 	$_SESSION['PaymentDetail' . $identifier] = new Payment;
 	$_SESSION['PaymentDetail' . $identifier]->GLItemCounter = 1;
 }
@@ -91,16 +108,30 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 	account credit.
 	*/
 
-	$TotalAmount = 0;
-	foreach ($_SESSION['PaymentDetail' . $identifier]->GLItems AS $PaymentItem) {
-		$TotalAmount += $PaymentItem->Amount;
+	// ---- New: Server‑side allocation total validation ----
+	$allocTotal = 0;
+	foreach ($_POST as $k => $v) {
+		if (strpos($k, 'paid') === 0) {
+			$allocTotal += floatval($v);
+		}
 	}
-
-	if ($TotalAmount == 0 AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) / $_SESSION['PaymentDetail' . $identifier]->ExRate == 0) {
-		prnMsg(__('This payment has no amounts entered and will not be processed'), 'warn');
-	} elseif ($_POST['BankAccount'] == '') {
-		prnMsg(__('No bank account has been selected so this payment cannot be processed'), 'warn');
+	$principal = floatval($_POST['Amount'] ?? 0);
+	if (abs($principal - $allocTotal) > 0.01) {
+		prnMsg(__('Allocated total does not match the payment amount.'), 'error');
+		// Keep user on allocation step
+		$page = 'allocation';
 	} else {
+
+		$TotalAmount = 0;
+		foreach ($_SESSION['PaymentDetail' . $identifier]->GLItems AS $PaymentItem) {
+			$TotalAmount += $PaymentItem->Amount;
+		}
+
+		if ($TotalAmount == 0 AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) / $_SESSION['PaymentDetail' . $identifier]->ExRate == 0) {
+			prnMsg(__('This payment has no amounts entered and will not be processed'), 'warn');
+		} elseif ($_POST['BankAccount'] == '') {
+			prnMsg(__('No bank account has been selected so this payment cannot be processed'), 'warn');
+		} else {
 
 		/*Make an array of the defined bank accounts */
 		$SQL = "SELECT bankaccounts.accountcode FROM bankaccounts INNER JOIN chartmaster ON bankaccounts.accountcode=chartmaster.accountcode";
@@ -356,7 +387,7 @@ if (isset($_POST['Cancel'])) {
 // ===== ALL HTML OUTPUT STARTS BELOW =====
 
 // Determine the active tab label for allocation/analysis
-$allocationTabLabel = $_SESSION['PaymentDetail' . $identifier]->SupplierID ? __('2. Allocation') : __('2. Analysis');
+$allocationTabLabel = !empty($_SESSION['PaymentDetail' . $identifier]->SupplierID) ? __('2. Allocation') : __('2. Analysis');
 
 // --- OUTER PAGE & FORM OPEN ---
 echo '<div class="db-page">';
@@ -367,9 +398,9 @@ echo '<div class="pay-steps">
 			<div class="pay-step-label">' . __('Setup') . '</div>
 		</div>
 		<div class="pay-step-item">
-			<div class="pay-step-dot">2</div>
-			<div class="pay-step-label">' . __('Allocation') . '</div>
-		</div>
+            <div class="pay-step-dot">2</div>
+            <div class="pay-step-label">' . $allocationTabLabel . '</div>
+        </div>
 		<div class="pay-step-item">
 			<div class="pay-step-dot">3</div>
 			<div class="pay-step-label">' . __('Review') . '</div>
@@ -390,8 +421,10 @@ echo '<div class="db-page-header">
 			</div>
 		</div>';
 
-echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post" id="PaymentForm">
-	<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post" id="PaymentForm">';
+// Hidden supplier ID to persist across steps
+echo '<input type="hidden" name="SupplierID" value="' . (int)($_SESSION['PaymentDetail' . $identifier]->SupplierID ?? 0) . '">';
+echo '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '">';
 
 // ===== TAB SWITCHING SCRIPT =====
 echo '<style>

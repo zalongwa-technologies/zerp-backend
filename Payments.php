@@ -96,7 +96,11 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 		$TotalAmount += $PaymentItem->Amount;
 	}
 
-	if ($TotalAmount == 0 AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) / $_SESSION['PaymentDetail' . $identifier]->ExRate == 0) {
+	if ($TotalAmount == 0 AND $_SESSION['PaymentDetail' . $identifier]->ExRate != 0
+		AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) / $_SESSION['PaymentDetail' . $identifier]->ExRate == 0) {
+		prnMsg(__('This payment has no amounts entered and will not be processed'), 'warn');
+	} elseif ($TotalAmount == 0 AND $_SESSION['PaymentDetail' . $identifier]->ExRate == 0
+		AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) == 0) {
 		prnMsg(__('This payment has no amounts entered and will not be processed'), 'warn');
 	} elseif ($_POST['BankAccount'] == '') {
 		prnMsg(__('No bank account has been selected so this payment cannot be processed'), 'warn');
@@ -393,404 +397,243 @@ echo '<div class="db-page-header">
 echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post" id="PaymentForm">
 	<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 
-// ===== TAB SWITCHING SCRIPT =====
 echo '<style>
 	#Header_SubBreadcrumb, .legacy-footer { display: none !important; }
-
-	/* ---- Unified Page Layout ---- */
-	.db-page {
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 24px;
-	}
-	
-	/* ---- Vertical Accordion Sections ---- */
-	.pay-section {
-		width: 100%;
-		box-sizing: border-box;
-		background: #ffffff;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		margin-bottom: 24px;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-		overflow: hidden;
-	}
-	.pay-section-header-banner {
-		padding: 20px 24px;
-		background: #f8fafc;
-		border-bottom: 1px solid #e5e7eb;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		cursor: pointer;
-		user-select: none;
-		transition: background 0.2s ease;
-	}
-	.pay-section-header-banner:hover {
-		background: #f1f5f9;
-	}
-	.pay-section-title {
-		font-size: 1.15rem;
-		font-weight: 800;
-		color: #0f172a;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-	.pay-section-icon {
-		width: 32px;
-		height: 32px;
-		border-radius: 8px;
-		background: #e2e8f0;
-		color: #475569;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.9rem;
-		font-weight: 800;
-		transition: all 0.3s ease;
-	}
-	.pay-section.active .pay-section-header-banner {
-		background: #ffffff;
-		border-bottom: 2px solid #059669;
-	}
-	.pay-section.active .pay-section-icon {
-		background: #dcfce7;
-		color: #059669;
-	}
-	.pay-section-body {
-		display: none;
-		padding: 32px;
-		animation: slideDown 0.3s ease-out forwards;
-	}
-	.pay-section.active .pay-section-body {
-		display: block;
-	}
-	@keyframes slideDown {
-		from { opacity: 0; transform: translateY(-10px); }
-		to { opacity: 1; transform: translateY(0); }
-	}
-
-	/* ---- Session Summary Header ---- */
-	.pay-summary-bar {
-		position: sticky;
-		top: 16px;
-		z-index: 100;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		background: #064e3b;
-		color: #ffffff;
-		padding: 16px 32px;
-		border-radius: 12px;
-		margin-bottom: 24px;
-		box-shadow: 0 10px 15px -3px rgba(6, 78, 59, 0.2);
-	}
-	.pay-summary-item {
-		display: flex;
-		flex-direction: column;
-	}
-	.pay-summary-label {
-		font-size: 0.65rem;
-		text-transform: uppercase;
-		font-weight: 800;
-		letter-spacing: 0.05em;
-		opacity: 0.7;
-	}
-	.pay-summary-value {
-		font-size: 1.25rem;
-		font-weight: 900;
-	}
-
-	/* ---- Professional Card Overrides ---- */
-	.db-card { 
-		border: none !important;
-		background: transparent !important;
-		box-shadow: none !important;
-		margin-bottom: 0 !important;
-		width: 100%;
-		box-sizing: border-box;
-	}
-	.db-card-header {
-		padding: 0 0 20px 0 !important;
-		background: transparent !important;
-		border: none !important;
-	}
-	.db-card-title {
-		font-size: 1.1rem !important;
-		color: #111827 !important;
-		font-weight: 850 !important;
-	}
-	
-	/* ---- Responsive Table Wrapper ---- */
-	.db-table-wrapper {
-		width: 100%;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-		margin-bottom: 1.5rem;
-		border-radius: 8px;
-		border: 1px solid #f3f4f6;
-	}
-	.db-table {
-		width: 100%;
-		min-width: 800px; /* Force minimum width to enable horizontal scroll on mobile */
-		border-collapse: collapse;
-	}
-
-	/* ---- Step Progress Indicator ---- */
-	.pay-steps {
-		display: flex;
-		justify-content: space-between;
-		margin-bottom: 32px;
-		background: #fff;
-		padding: 24px;
-		border-radius: 16px;
-		border: 1px solid #e5e7eb;
-		position: relative;
-	}
-	.pay-step-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		flex: 1;
-		position: relative;
-		z-index: 2;
-	}
-	.pay-step-dot {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		background: #fff;
-		border: 2px solid #e5e7eb;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-weight: 800;
-		font-size: 0.85rem;
-		color: #94a3b8;
-		margin-bottom: 8px;
-		transition: all 0.3s ease;
-	}
-	.pay-step-item.active .pay-step-dot {
-		background: #059669;
-		border-color: #059669;
-		color: #fff;
-		box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
-	}
-	.pay-step-label {
-		font-size: 0.65rem;
-		font-weight: 800;
-		text-transform: uppercase;
-		color: #94a3b8;
-		letter-spacing: 0.05em;
-		text-align: center;
-	}
+	.db-page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+	.pay-section { width: 100%; box-sizing: border-box; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); overflow: hidden; }
+	.pay-section-header-banner { padding: 20px 24px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; transition: background .2s ease; }
+	.pay-section-header-banner:hover { background: #f1f5f9; }
+	.pay-section-title { font-size: 1.15rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 12px; }
+	.pay-section-icon { width: 32px; height: 32px; border-radius: 8px; background: #e2e8f0; color: #475569; display: flex; align-items: center; justify-content: center; font-size: .9rem; font-weight: 800; transition: all .3s ease; }
+	.pay-section.active .pay-section-header-banner { background: #fff; border-bottom: 2px solid #059669; }
+	.pay-section.active .pay-section-icon { background: #dcfce7; color: #059669; }
+	.pay-section-body { display: none; padding: 32px; animation: slideDown .3s ease-out forwards; }
+	.pay-section.active .pay-section-body { display: block; }
+	@keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+	.pay-summary-bar { position: sticky; top: 16px; z-index: 100; display: flex; align-items: center; justify-content: space-between; background: #064e3b; color: #fff; padding: 16px 32px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 10px 15px -3px rgba(6,78,59,.2); }
+	.pay-summary-item { display: flex; flex-direction: column; }
+	.pay-summary-label { font-size: .65rem; text-transform: uppercase; font-weight: 800; letter-spacing: .05em; opacity: .7; }
+	.pay-summary-value { font-size: 1.25rem; font-weight: 900; }
+	.db-card { border: none !important; background: transparent !important; box-shadow: none !important; margin-bottom: 0 !important; width: 100%; box-sizing: border-box; }
+	.db-card-header { padding: 0 0 20px 0 !important; background: transparent !important; border: none !important; }
+	.db-card-title { font-size: 1.1rem !important; color: #111827 !important; font-weight: 850 !important; }
+	.db-table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1.5rem; border-radius: 8px; border: 1px solid #f3f4f6; }
+	.db-table { width: 100%; min-width: 800px; border-collapse: collapse; }
+	.pay-steps { display: flex; justify-content: space-between; margin-bottom: 32px; background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #e5e7eb; position: relative; }
+	.pay-step-item { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; z-index: 2; }
+	.pay-step-dot { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 2px solid #e5e7eb; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .85rem; color: #94a3b8; margin-bottom: 8px; transition: all .3s ease; }
+	.pay-step-item.active .pay-step-dot { background: #059669; border-color: #059669; color: #fff; box-shadow: 0 0 0 4px rgba(5,150,105,.1); }
+	.pay-step-label { font-size: .65rem; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: .05em; text-align: center; }
 	.pay-step-item.active .pay-step-label { color: #059669; }
-
-	.pay-steps::before {
-		content: "";
-		position: absolute;
-		top: 40px;
-		left: 10%;
-		right: 10%;
-		height: 2px;
-		background: #f1f5f9;
-		z-index: 1;
-	}
-
-    /* ---- Responsive UI ---- */
-    @media (max-width: 768px) {
+	.pay-steps::before { content: ""; position: absolute; top: 40px; left: 10%; right: 10%; height: 2px; background: #f1f5f9; z-index: 1; }
+	@media (max-width: 768px) {
 		.db-page { padding: 16px; }
-		.pay-steps { display: none; } /* Hide steps on mobile for space */
-        .pay-summary-bar { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px 20px; }
-        .pay-tab-content { padding: 20px; }
-        .pay-tabs-nav { 
-			padding: 4px; 
-			justify-content: flex-start; /* Ensure scroll works correctly */
-		}
-    }
-</style>
+		.pay-steps { display: none; }
+		.pay-summary-bar { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px 20px; }
+	}
+</style>';
+
+$jsNoPaymentMsg = addslashes(__('No payment amount or allocations have been entered. Please fill in the principal amount or allocate invoices.'));
+$jsMismatchMsg  = addslashes(__('The principal amount does not match the total allocation. Proceed anyway?'));
+$jsNoBankMsg    = addslashes(__('Please select a Bank Account before posting.'));
+
+// Output JS message constants before the main script block
+echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMismatchMsg}';var PAY_MSG_NOBANK='{$jsNoBankMsg}';</script>";
+
+?>
 <script>
-function payToggleStep(stepId) {
-	var step = document.getElementById(stepId);
-	if (step) {
-		if (step.classList.contains(\'active\')) {
-			step.classList.remove(\'active\');
-		} else {
-			step.classList.add(\'active\');
-		}
-	}
-}
+(function() {
+    'use strict';
 
-function payNextStep(currentId, nextId) {
-	if (currentId) {
-		var curr = document.getElementById(currentId);
-		if (curr) curr.classList.remove(\'active\');
-	}
-	if (nextId) {
-		var next = document.getElementById(nextId);
-		if (next) {
-			next.classList.add(\'active\');
-			next.scrollIntoView({ behavior: \'smooth\', block: \'start\' });
-			setTimeout(function() {
-				var focusField = next.querySelector("input:not([type=hidden]):not([readonly]), select, textarea");
-				if (focusField) focusField.focus();
-			}, 300);
-		}
-	}
-}
+    // ---- accordion toggle ----
+    window.payToggleStep = function(stepId) {
+        var el = document.getElementById(stepId);
+        if (el) el.classList.toggle('active');
+    };
 
-function updateAllocationTotal() {
-	var total = 0;
-	document.querySelectorAll(".allocation-input").forEach(function(input) {
-		total += parseFloat(input.value.replace(/[^-0-9.]/g, "")) || 0;
-	});
-	var ttlDisplay = document.getElementById("ttl");
-	if (ttlDisplay) ttlDisplay.value = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-	
-	var amtInput = document.getElementById("Amount");
-	if (amtInput) {
-		var currentAmt = parseFloat(amtInput.value.replace(/[^-0-9.]/g, "")) || 0;
-		if (currentAmt === 0 && total > 0) {
-			amtInput.value = total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-		}
-	}
+    // ---- numeric parser helper ----
+    function parseNum(str) {
+        return parseFloat((str || '').replace(/[^\-0-9.]/g, '')) || 0;
+    }
 
-	updateRemaining();
-}
+    // ---- format helper ----
+    function fmt(n) {
+        return n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
 
-function updateRemaining() {
-	var amtInput = document.getElementById("Amount");
-	var totalAlloc = parseFloat(document.getElementById("ttl")?.value?.replace(/[^-0-9.]/g, "")) || 0;
-	var principal = parseFloat(amtInput?.value?.replace(/[^-0-9.]/g, "")) || 0;
-	var remaining = principal - totalAlloc;
-	
-	var remDisplay = document.getElementById("remaining-alloc");
-	if (remDisplay) {
-		remDisplay.innerText = remaining.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-		remDisplay.style.color = Math.abs(remaining) < 0.01 ? "var(--success)" : "var(--danger)";
-	}
-	
-	var summaryDisplay = document.getElementById("summary-total-amount");
-	var currencyCode = document.getElementById("summary-currency-code");
-	if (summaryDisplay) {
-	    var code = (currencyCode ? currencyCode.innerText.trim() : "");
-	    summaryDisplay.innerText = (code ? code + " " : "") + principal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-	}
-}
+    // ---- update the allocation total and sync principal Amount ----
+    window.updateAllocationTotal = function() {
+        var total = 0;
+        document.querySelectorAll('.allocation-input').forEach(function(inp) {
+            total += parseNum(inp.value);
+        });
+        var ttl = document.getElementById('ttl');
+        if (ttl) ttl.value = fmt(total);
+        var amt = document.getElementById('Amount');
+        if (amt && total > 0) { amt.value = fmt(total); }
+        updateRemaining();
+    };
 
-function payFull(id, amount) {
-	var input = document.getElementById(id);
-	if (input) {
-		input.value = amount;
-		updateAllocationTotal();
-		
-		// As a modern UX enhancement, automatically sync the principal Amount 
-		// when using the quick-action Pay Full/Clear buttons
-		var amtInput = document.getElementById("Amount");
-		var ttlDisplay = document.getElementById("ttl");
-		if (amtInput && ttlDisplay) {
-		    amtInput.value = ttlDisplay.value;
-		    updateRemaining();
-		    updateFinalSummary();
-		}
-	}
-}
+    // ---- update remaining display ----
+    window.updateRemaining = function() {
+        var ttlEl  = document.getElementById('ttl');
+        var amtEl  = document.getElementById('Amount');
+        var remEl  = document.getElementById('remaining-alloc');
+        var sumEl  = document.getElementById('summary-total-amount');
+        var ccEl   = document.getElementById('summary-currency-code');
+        var principal = parseNum(amtEl ? amtEl.value : '0');
+        var allocated = parseNum(ttlEl ? ttlEl.value : '0');
+        var remaining = principal - allocated;
+        if (remEl) {
+            remEl.innerText = fmt(remaining);
+            remEl.style.color = Math.abs(remaining) < 0.01 ? 'var(--success)' : 'var(--danger)';
+        }
+        if (sumEl) {
+            var code = ccEl ? ccEl.innerText.trim() : '';
+            sumEl.innerText = (code ? code + ' ' : '') + fmt(principal);
+        }
+    };
 
-function payClear(id) {
-	var input = document.getElementById(id);
-	if (input) {
-		input.value = "";
-		updateAllocationTotal();
-		
-		var amtInput = document.getElementById("Amount");
-		var ttlDisplay = document.getElementById("ttl");
-		if (amtInput && ttlDisplay) {
-		    amtInput.value = ttlDisplay.value;
-		    updateRemaining();
-		    updateFinalSummary();
-		}
-	}
-}
+    // ---- pay full / clear helpers ----
+    window.payFull = function(id, amount) {
+        var inp = document.getElementById(id);
+        if (inp) { inp.value = amount; updateAllocationTotal(); updateFinalSummary(); }
+    };
+    window.payClear = function(id) {
+        var inp = document.getElementById(id);
+        if (inp) { inp.value = ''; updateAllocationTotal(); updateFinalSummary(); }
+    };
 
-function updateFinalSummary() {
-	var summaryBody = document.getElementById("final-summary-body");
-	if (!summaryBody) return;
-	summaryBody.innerHTML = "";
-	
-	var hasItems = false;
-	// Check GL Items
-	document.querySelectorAll(".gl-item-row").forEach(function(row) {
-		hasItems = true;
-		var cells = row.querySelectorAll("td");
-		var amt = cells[1] ? cells[1].innerText.replace(/[^-0-9.]/g, "") : "0";
-		summaryBody.innerHTML += "<tr><td>" + (cells[2] ? cells[2].innerText : "GL Item") + "</td><td class=\"text-right\">" + (parseFloat(amt) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "</td><td>GL Analysis</td></tr>";
-	});
-	
-	// Check Allocations
-	document.querySelectorAll(".allocation-input").forEach(function(input) {
-		var val = parseFloat(input.value.replace(/[^-0-9.]/g, "")) || 0;
-		if (val !== 0) {
-			hasItems = true;
-			var row = input.closest("tr");
-			var refCell = row ? row.querySelector("td:nth-child(3)") : null;
-			var ref = refCell ? refCell.innerText.split("\n")[0] : "Invoice";
-			summaryBody.innerHTML += "<tr><td>" + ref + "</td><td class=\"text-right\">" + val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "</td><td>Invoice Allocation</td></tr>";
-		}
-	});
-	
-	if (!hasItems) {
-		summaryBody.innerHTML = "<tr><td colspan=\"3\" class=\"text-center\" style=\"padding:20px; color:var(--text-muted);\">No allocations or GL lines added yet.</td></tr>";
-	}
-}
+    // ---- build the final remittance summary table ----
+    window.updateFinalSummary = function() {
+        var body = document.getElementById('final-summary-body');
+        if (!body) return;
+        body.innerHTML = '';
+        var hasRows = false;
+        document.querySelectorAll('.gl-item-row').forEach(function(row) {
+            var cells = row.querySelectorAll('td');
+            var amt   = parseNum(cells[1] ? cells[1].innerText : '0');
+            var desc  = cells[2] ? cells[2].innerText.trim() : 'GL Item';
+            body.innerHTML += '<tr><td>' + desc + '</td><td class="text-right">' + fmt(amt) + '</td><td>GL Analysis</td></tr>';
+            hasRows = true;
+        });
+        document.querySelectorAll('.allocation-input').forEach(function(inp) {
+            var val = parseNum(inp.value);
+            if (val === 0) return;
+            var row     = inp.closest('tr');
+            var refCell = row ? row.querySelector('td:nth-child(3)') : null;
+            var ref = 'Invoice';
+            if (refCell) {
+                var parts = refCell.innerText.trim().split(/\n/);
+                ref = (parts[0] || '').trim();
+                if (parts[1] && parts[1].trim()) ref += ' / ' + parts[1].trim();
+            }
+            body.innerHTML += '<tr><td>' + ref + '</td><td class="text-right">' + fmt(val) + '</td><td>Invoice Allocation</td></tr>';
+            hasRows = true;
+        });
+        if (!hasRows) {
+            body.innerHTML = '<tr><td colspan="3" class="text-center" style="padding:20px;color:var(--text-muted);">No allocations or GL lines added yet.</td></tr>';
+        }
+    };
 
-function payVerify(amountId, totalId) {
-    var amtInput = document.getElementById(amountId);
-    var ttlInput = document.getElementById(totalId);
-
-    if (amtInput && ttlInput) {
-        var amt = parseFloat(amtInput.value.replace(/[^-0-9.]/g, "")) || 0;
-        var ttl = parseFloat(ttlInput.value.replace(/[^-0-9.]/g, "")) || 0;
-
-        if (ttl !== 0 && Math.abs(amt - ttl) > 0.01) {
-            if (!confirm("' . __('The principal amount does not match the total allocation. Proceed anyway?') . '")) {
-                return false;
+    // ---- auto-fill review section fields ----
+    function autoFillReview() {
+        updateAllocationTotal();
+        var extRef = document.querySelector('input[name=supptrans_suppreference]');
+        if (extRef && extRef.value.trim() === '') {
+            var firstRow = null;
+            document.querySelectorAll('.allocation-input').forEach(function(inp) {
+                if (!firstRow && parseNum(inp.value) !== 0) firstRow = inp.closest('tr');
+            });
+            if (firstRow) {
+                var rc = firstRow.querySelector('td:nth-child(3)');
+                if (rc) {
+                    var lines = rc.innerText.trim().split(/\n/);
+                    extRef.value = (lines[1] || lines[0] || '').trim();
+                }
             }
         }
+        updateFinalSummary();
+        updateRemaining();
     }
-	
-	// Prevent double click
-	var btn = document.querySelector("button[name=CommitBatch]");
-	if (btn) {
-		btn.disabled = true;
-		btn.innerHTML = "<i class=\'fas fa-spinner fa-spin\'></i> Processing...";
-		var form = btn.closest("form");
-		
-		// Add a hidden input to ensure CommitBatch is sent
-		var hidden = document.createElement("input");
-		hidden.type = "hidden";
-		hidden.name = "CommitBatch";
-		hidden.value = "1";
-		form.appendChild(hidden);
-		
-		form.submit();
-	}
-    return true;
-}
 
-window.addEventListener("load", function() {
-	updateAllocationTotal();
-	updateFinalSummary();
-	
-	var amtInput = document.getElementById("Amount");
-	if (amtInput) {
-		amtInput.addEventListener("input", function() {
-			updateRemaining();
-			updateFinalSummary();
-		});
-	}
-});
-</script>';
+    // ---- navigate to next step ----
+    window.payNextStep = function(currentId, nextId) {
+        if (currentId) {
+            var cur = document.getElementById(currentId);
+            if (cur) cur.classList.remove('active');
+        }
+        if (!nextId) return;
+        var nxt = document.getElementById(nextId);
+        if (!nxt) return;
+        nxt.classList.add('active');
+        nxt.scrollIntoView({behavior: 'smooth', block: 'start'});
+        if (nextId === 'pay-section-finalize') { autoFillReview(); }
+        setTimeout(function() {
+            var f = nxt.querySelector('input:not([type=hidden]):not([readonly]),select,textarea');
+            if (f) f.focus();
+        }, 350);
+    };
+
+    // ---- verify and submit ----
+    window.payVerify = function() {
+        autoFillReview();
+        var amtEl = document.getElementById('Amount');
+        var ttlEl = document.getElementById('ttl');
+        var amt   = parseNum(amtEl ? amtEl.value : '0');
+        var ttl   = parseNum(ttlEl ? ttlEl.value : '0');
+        if (amt === 0 && ttl === 0) {
+            alert(PAY_MSG_EMPTY);
+            return false;
+        }
+        var bankSel = document.getElementById('BankAccount');
+        if (bankSel && bankSel.value === '') {
+            alert(PAY_MSG_NOBANK);
+            return false;
+        }
+        if (amt === 0 && ttl > 0 && amtEl) { amtEl.value = fmt(ttl); amt = ttl; }
+        if (ttl !== 0 && Math.abs(amt - ttl) > 0.01) {
+            if (!confirm(PAY_MSG_MISMATCH)) return false;
+        }
+        var btn = document.querySelector('button[name=CommitBatch]');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        }
+        var form = document.getElementById('PaymentForm');
+        if (form) {
+            var hid = document.createElement('input');
+            hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
+            form.appendChild(hid);
+            form.submit();
+        }
+        return true;
+    };
+
+    // ---- boot on page load ----
+    window.addEventListener('load', function() {
+        updateAllocationTotal();
+        updateFinalSummary();
+        var amtEl = document.getElementById('Amount');
+        if (amtEl) {
+            amtEl.addEventListener('input', function() { updateRemaining(); updateFinalSummary(); });
+        }
+        var finSec = document.getElementById('pay-section-finalize');
+        if (finSec) {
+            new MutationObserver(function(mutations) {
+                mutations.forEach(function(m) {
+                    if (m.attributeName === 'class' && finSec.classList.contains('active')) {
+                        autoFillReview();
+                    }
+                });
+            }).observe(finSec, {attributes: true});
+        }
+    });
+
+}());
+</script>
+<?php
+
 
 // --- SUMMARY BAR ---
 echo '<div class="pay-summary-bar">
@@ -1572,7 +1415,7 @@ echo '<!-- SECTION 3: REVIEW & FINALIZE -->
 						<i class="fas fa-info-circle" style="margin-right: 6px;"></i> ' . __('Please verify all allocations before finalizing.') . '<br>
 						' . __('Once posted, these ledger entries cannot be edited directly.') . '
 					</div>
-					<button type="button" name="CommitBatch" onClick="payVerify(\'Amount\',\'ttl\')" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+					<button type="button" name="CommitBatch" onclick="payVerify()" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
 						<i class="fas fa-check-double" style="margin-right: 12px;"></i>
 						' . __('Confirm & Post Payment') . '
 					</button>

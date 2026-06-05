@@ -467,6 +467,43 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
 (function() {
     'use strict';
 
+    // ---- inject toast styles ----
+    var styleEl = document.createElement('style');
+    styleEl.innerHTML = '@keyframes slideIn { from { transform: translateX(120%) translateY(-10px); opacity: 0; } to { transform: translateX(0) translateY(0); opacity: 1; } } @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }';
+    document.head.appendChild(styleEl);
+
+    // ---- show toast notification ----
+    window.showToast = function(message, type) {
+        var container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; pointer-events: none;';
+            document.body.appendChild(container);
+        }
+        var toast = document.createElement('div');
+        toast.style.cssText = 'background: #ffffff; color: var(--text-main); padding: 16px 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px; min-width: 300px; max-width: 450px; pointer-events: auto; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.3s ease 4.7s forwards; font-family: inherit; font-size: 0.9rem; font-weight: 600; line-height: 1.4;';
+        
+        var iconHtml = '<i class="fas fa-info-circle" style="color: var(--primary); font-size: 1.25rem;"></i>';
+        if (type === 'error') {
+            toast.style.borderLeftColor = 'var(--danger)';
+            iconHtml = '<i class="fas fa-exclamation-circle" style="color: var(--danger); font-size: 1.25rem;"></i>';
+        } else if (type === 'warning') {
+            toast.style.borderLeftColor = '#f59e0b';
+            iconHtml = '<i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>';
+        } else if (type === 'success') {
+            toast.style.borderLeftColor = 'var(--success)';
+            iconHtml = '<i class="fas fa-check-circle" style="color: var(--success); font-size: 1.25rem;"></i>';
+        }
+        
+        toast.innerHTML = iconHtml + '<div style="flex: 1;">' + message + '</div>';
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            toast.remove();
+        }, 5000);
+    };
+
     // ---- accordion toggle ----
     window.payToggleStep = function(stepId) {
         var el = document.getElementById(stepId);
@@ -475,7 +512,24 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
 
     // ---- numeric parser helper ----
     function parseNum(str) {
-        return parseFloat((str || '').replace(/[^\-0-9.]/g, '')) || 0;
+        if (typeof str === 'number') return str;
+        if (!str) return 0;
+        var cleaned = str.toString().trim().replace(/\s/g, '');
+        if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
+            if (cleaned.indexOf(',') > cleaned.indexOf('.')) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else {
+                cleaned = cleaned.replace(/,/g, '');
+            }
+        } else if (cleaned.indexOf(',') !== -1) {
+            var parts = cleaned.split(',');
+            if (parts[1] && parts[1].length <= 2) {
+                cleaned = parts[0] + '.' + parts[1];
+            } else {
+                cleaned = cleaned.replace(/,/g, '');
+            }
+        }
+        return parseFloat(cleaned.replace(/[^\-0-9.]/g, '')) || 0;
     }
 
     // ---- format helper ----
@@ -492,7 +546,7 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
         var ttl = document.getElementById('ttl');
         if (ttl) ttl.value = fmt(total);
         var amt = document.getElementById('Amount');
-        if (amt && total > 0) { amt.value = fmt(total); }
+        if (amt && total > 0) { amt.value = total.toFixed(2); }
         updateRemaining();
     };
 
@@ -511,7 +565,7 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             remEl.style.color = Math.abs(remaining) < 0.01 ? 'var(--success)' : 'var(--danger)';
         }
         if (sumEl) {
-            var code = ccEl ? ccEl.innerText.trim() : '';
+            var code = ccEl ? (ccEl.innerText || ccEl.textContent || '').trim() : '';
             sumEl.innerText = (code ? code + ' ' : '') + fmt(principal);
         }
     };
@@ -534,8 +588,8 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
         var hasRows = false;
         document.querySelectorAll('.gl-item-row').forEach(function(row) {
             var cells = row.querySelectorAll('td');
-            var amt   = parseNum(cells[1] ? cells[1].innerText : '0');
-            var desc  = cells[2] ? cells[2].innerText.trim() : 'GL Item';
+            var amt   = parseNum(cells[1] ? (cells[1].innerText || cells[1].textContent || '0') : '0');
+            var desc  = cells[2] ? (cells[2].innerText || cells[2].textContent || '').trim() : 'GL Item';
             body.innerHTML += '<tr><td>' + desc + '</td><td class="text-right">' + fmt(amt) + '</td><td>GL Analysis</td></tr>';
             hasRows = true;
         });
@@ -546,7 +600,8 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             var refCell = row ? row.querySelector('td:nth-child(3)') : null;
             var ref = 'Invoice';
             if (refCell) {
-                var parts = refCell.innerText.trim().split(/\n/);
+                var text = refCell.innerText || refCell.textContent || '';
+                var parts = text.trim().split(/\n/);
                 ref = (parts[0] || '').trim();
                 if (parts[1] && parts[1].trim()) ref += ' / ' + parts[1].trim();
             }
@@ -570,7 +625,8 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             if (firstRow) {
                 var rc = firstRow.querySelector('td:nth-child(3)');
                 if (rc) {
-                    var lines = rc.innerText.trim().split(/\n/);
+                    var text = rc.innerText || rc.textContent || '';
+                    var lines = text.trim().split(/\n/);
                     extRef.value = (lines[1] || lines[0] || '').trim();
                 }
             }
@@ -599,37 +655,50 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
 
     // ---- verify and submit ----
     window.payVerify = function() {
-        autoFillReview();
-        var amtEl = document.getElementById('Amount');
-        var ttlEl = document.getElementById('ttl');
-        var amt   = parseNum(amtEl ? amtEl.value : '0');
-        var ttl   = parseNum(ttlEl ? ttlEl.value : '0');
-        if (amt === 0 && ttl === 0) {
-            alert(PAY_MSG_EMPTY);
+        try {
+            autoFillReview();
+            var amtEl = document.getElementById('Amount');
+            var amt   = parseNum(amtEl ? amtEl.value : '0');
+            var ttl   = 0;
+            document.querySelectorAll('.allocation-input').forEach(function(inp) {
+                ttl += parseNum(inp.value);
+            });
+            if (amt === 0 && ttl === 0) {
+                showToast(PAY_MSG_EMPTY, 'warning');
+                return false;
+            }
+            var bankSel = document.getElementById('BankAccount');
+            if (bankSel && bankSel.value === '') {
+                showToast(PAY_MSG_NOBANK, 'warning');
+                return false;
+            }
+            if (amt === 0 && ttl > 0 && amtEl) { amtEl.value = ttl.toFixed(2); amt = ttl; }
+            if (ttl !== 0 && Math.abs(amt - ttl) > 0.01) {
+                if (!confirm(PAY_MSG_MISMATCH)) return false;
+            }
+            var btn = document.querySelector('button[name=CommitBatch]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
+            var form = document.getElementById('PaymentForm');
+            if (form) {
+                var hid = document.createElement('input');
+                hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
+                form.appendChild(hid);
+                form.submit();
+            }
+            return true;
+        } catch (err) {
+            showToast('JavaScript Error: ' + err.message, 'error');
+            console.error(err);
+            var btn = document.querySelector('button[name=CommitBatch]');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-double" style="margin-right: 12px;"></i> Confirm & Post Payment';
+            }
             return false;
         }
-        var bankSel = document.getElementById('BankAccount');
-        if (bankSel && bankSel.value === '') {
-            alert(PAY_MSG_NOBANK);
-            return false;
-        }
-        if (amt === 0 && ttl > 0 && amtEl) { amtEl.value = fmt(ttl); amt = ttl; }
-        if (ttl !== 0 && Math.abs(amt - ttl) > 0.01) {
-            if (!confirm(PAY_MSG_MISMATCH)) return false;
-        }
-        var btn = document.querySelector('button[name=CommitBatch]');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        }
-        var form = document.getElementById('PaymentForm');
-        if (form) {
-            var hid = document.createElement('input');
-            hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
-            form.appendChild(hid);
-            form.submit();
-        }
-        return true;
     };
 
     // ---- boot on page load ----

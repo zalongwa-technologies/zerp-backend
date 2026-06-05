@@ -81,7 +81,16 @@ if (isset($_POST['CommitBatch'])) {
     if (isset($_POST['supptrans_transtext'])) {
         $_SESSION['PaymentDetail' . $identifier]->SuppTransTransText = $_POST['supptrans_transtext'] == '' ? ($_POST['Narrative'] ?? '') : $_POST['supptrans_transtext'];
     }
+
+    // Ensure exchange rates are not zero or negative to prevent DivisionByZeroError
+    if (empty($_SESSION['PaymentDetail' . $identifier]->ExRate) OR $_SESSION['PaymentDetail' . $identifier]->ExRate <= 0) {
+        $_SESSION['PaymentDetail' . $identifier]->ExRate = 1.0;
+    }
+    if (empty($_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) OR $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate <= 0) {
+        $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate = 1.0;
+    }
 }
+
 
 if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 	/* once the GL analysis of the payment is entered (if the Creditors_GLLink is active),
@@ -137,7 +146,7 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 					$PaidArray = array();
 					foreach ($_POST as $Name => $Value) {
 						if (substr($Name, 0, 4) == 'paid' AND filter_number_format($Value) > 0) {
-							$PaidArray[substr($Name, 4)] = filter_number_format($Value);
+							$PaidArray[(int)substr($Name, 4)] = (double)filter_number_format($Value);
 						}
 					}
 					$PaidInput = !empty($PaidArray) ? '<input type="hidden" name="PaidArray" value="' . base64_encode(serialize($PaidArray)) . '" />' : '';
@@ -176,6 +185,16 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 		} else {
 			// Perform Actual Commitment
 			DB_Txn_Begin();
+
+			// Sanitize, truncate, and escape string inputs to prevent SQL statement breakage (quotes, etc.)
+			$EscapedSuppTransSuppReference = DB_escape_string(mb_substr((string)($_SESSION['PaymentDetail' . $identifier]->SuppTransSuppReference ?? ''), 0, 20));
+			$EscapedSuppTransTransText = DB_escape_string((string)($_SESSION['PaymentDetail' . $identifier]->SuppTransTransText ?? ''));
+			$EscapedChequeNum = DB_escape_string(mb_substr((string)($_POST['ChequeNum'] ?? ''), 0, 16));
+			$EscapedNarrative = DB_escape_string(mb_substr((string)($_SESSION['PaymentDetail' . $identifier]->Narrative ?? ''), 0, 200));
+			$EscapedGLTransNarrative = DB_escape_string(mb_substr((string)($_SESSION['PaymentDetail' . $identifier]->GLTransNarrative ?? ''), 0, 200));
+			$EscapedGLCreditorsNarrative = DB_escape_string(mb_substr((string)($_SESSION['PaymentDetail' . $identifier]->SupplierID . ' - ' . ($_SESSION['PaymentDetail' . $identifier]->GLTransNarrative ?? '')), 0, 200));
+			$EscapedBankTransRef = DB_escape_string(mb_substr((string)($_SESSION['PaymentDetail' . $identifier]->BankTransRef ?? ''), 0, 50));
+
 			if ($_SESSION['PaymentDetail' . $identifier]->SupplierID == '') {
 				$TransNo = GetNextTransNo(1);
 				$TransType = 1;
@@ -183,9 +202,10 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 					$TotalAmount = 0;
 					foreach ($_SESSION['PaymentDetail' . $identifier]->GLItems as $PaymentItem) {
 						if ($PaymentItem->Cheque == '') $PaymentItem->Cheque = 0;
+						$PaymentItemNarrative = DB_escape_string(mb_substr($PaymentItem->Narrative, 0, 200));
 						$SQL = "INSERT INTO gltrans (type, typeno, trandate, periodno, account, narrative, amount, chequeno)
 								VALUES (1, '" . $TransNo . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PeriodNo . "',
-										'" . $PaymentItem->GLCode . "', '" . mb_substr($PaymentItem->Narrative, 0, 200) . "',
+										'" . $PaymentItem->GLCode . "', '" . $PaymentItemNarrative . "',
 										'" . ($PaymentItem->Amount / $_SESSION['PaymentDetail' . $identifier]->ExRate / $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) . "',
 										'" . $PaymentItem->Cheque . "')";
 						DB_query($SQL, '', '', true);
@@ -199,8 +219,8 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 					if (in_array($PaymentItem->GLCode, $BankAccounts)) {
 						$SQL = "SELECT currcode, rate FROM bankaccounts INNER JOIN currencies ON bankaccounts.currcode = currencies.currabrev WHERE accountcode='" . $PaymentItem->GLCode . "'";
 						$Row = DB_fetch_array(DB_query($SQL));
-						$TrfToBankExRate = $Row['rate'];
-						$ExRate = ($_SESSION['PaymentDetail' . $identifier]->ExRate * $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) / $Row['rate'];
+						$TrfToBankExRate = (empty($Row['rate']) OR $Row['rate'] <= 0) ? 1.0 : $Row['rate'];
+						$ExRate = ($_SESSION['PaymentDetail' . $identifier]->ExRate * $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) / $TrfToBankExRate;
 						
 						$ReceiptTransNo = GetNextTransNo(2);
 						$SQL = "INSERT INTO banktrans (transno, type, bankact, ref, exrate, functionalexrate, transdate, banktranstype, amount, currcode)
@@ -216,7 +236,7 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 					$PaidArray = array();
 					foreach ($_POST as $Name => $Value) {
 						if (substr($Name, 0, 4) == 'paid' AND filter_number_format($Value) > 0) {
-							$PaidArray[substr($Name, 4)] = filter_number_format($Value);
+							$PaidArray[(int)substr($Name, 4)] = (double)filter_number_format($Value);
 						}
 					}
 				}
@@ -226,14 +246,16 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 
 				$SQL = "INSERT INTO supptrans (transno, type, supplierno, trandate, inputdate, suppreference, rate, ovamount, transtext, chequeno)
 						VALUES ('" . $TransNo . "', 22, '" . $_SESSION['PaymentDetail' . $identifier]->SupplierID . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "',
-								'" . date('Y-m-d H:i:s') . "', '" . $_SESSION['PaymentDetail' . $identifier]->SuppTransSuppReference . "',
+								'" . date('Y-m-d H:i:s') . "', '" . $EscapedSuppTransSuppReference . "',
 								'" . ($_SESSION['PaymentDetail' . $identifier]->FunctionalExRate * $_SESSION['PaymentDetail' . $identifier]->ExRate) . "',
 								'" . (-$_SESSION['PaymentDetail' . $identifier]->Amount - $_SESSION['PaymentDetail' . $identifier]->Discount) . "',
-								'" . $_SESSION['PaymentDetail' . $identifier]->SuppTransTransText . "', '" . $_POST['ChequeNum'] . "')";
+								'" . $EscapedSuppTransTransText . "', '" . $EscapedChequeNum . "')";
 				DB_query($SQL, '', '', true);
 				
 				$PaymentID = DB_Last_Insert_ID('supptrans', 'id');
 				foreach ($PaidArray as $PaidID => $PaidAmount) {
+					$PaidID = (int)$PaidID;
+					$PaidAmount = (double)$PaidAmount;
 					DB_query("UPDATE supptrans SET alloc=alloc-" . $PaidAmount . " WHERE id='" . $PaymentID . "'", '', '', true);
 					DB_query("UPDATE supptrans SET alloc=alloc+" . $PaidAmount . " WHERE id='" . $PaidID . "'", '', '', true);
 					DB_query("INSERT INTO suppallocs (amt, datealloc, transid_allocfrom, transid_allocto) VALUES ('" . $PaidAmount . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PaymentID . "', '" . $PaidID . "')", '', '', true);
@@ -244,11 +266,11 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 				if ($_SESSION['CompanyRecord']['gllink_creditors'] == 1) {
 					DB_query("INSERT INTO gltrans (type, typeno, trandate, periodno, account, narrative, amount)
 							VALUES (22, '" . $TransNo . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PeriodNo . "',
-									'" . $_SESSION['CompanyRecord']['creditorsact'] . "', '" . mb_substr($_SESSION['PaymentDetail' . $identifier]->SupplierID . ' - ' . $_SESSION['PaymentDetail' . $identifier]->GLTransNarrative, 0, 200) . "', '" . $CreditorTotal . "')", '', '', true);
+									'" . $_SESSION['CompanyRecord']['creditorsact'] . "', '" . $EscapedGLCreditorsNarrative . "', '" . $CreditorTotal . "')", '', '', true);
 					if ($_SESSION['PaymentDetail' . $identifier]->Discount != 0) {
 						DB_query("INSERT INTO gltrans (type, typeno, trandate, periodno, account, narrative, amount)
 								VALUES (22, '" . $TransNo . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PeriodNo . "',
-										'" . $_SESSION['CompanyRecord']['pytdiscountact'] . "', '" . mb_substr($_SESSION['PaymentDetail' . $identifier]->GLTransNarrative, 0, 200) . "',
+										'" . $_SESSION['CompanyRecord']['pytdiscountact'] . "', '" . $EscapedGLTransNarrative . "',
 										'" . (-$_SESSION['PaymentDetail' . $identifier]->Discount / $_SESSION['PaymentDetail' . $identifier]->ExRate / $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) . "')", '', '', true);
 					}
 				}
@@ -257,15 +279,15 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 			if ($_SESSION['CompanyRecord']['gllink_creditors'] == 1 AND $_SESSION['PaymentDetail' . $identifier]->Amount != 0) {
 				DB_query("INSERT INTO gltrans (type, typeno, trandate, periodno, account, narrative, amount)
 						VALUES ('" . $TransType . "', '" . $TransNo . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PeriodNo . "',
-								'" . $_SESSION['PaymentDetail' . $identifier]->Account . "', '" . mb_substr($_SESSION['PaymentDetail' . $identifier]->Narrative, 0, 200) . "',
+								'" . $_SESSION['PaymentDetail' . $identifier]->Account . "', '" . $EscapedNarrative . "',
 								'" . (-$_SESSION['PaymentDetail' . $identifier]->Amount / $_SESSION['PaymentDetail' . $identifier]->ExRate / $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) . "')", '', '', true);
 				EnsureGLEntriesBalance($TransType, $TransNo);
 			}
 
 			DB_query("INSERT INTO banktrans (transno, type, bankact, ref, exrate, functionalexrate, transdate, banktranstype, amount, currcode, chequeno)
-					VALUES ('" . $TransNo . "', '" . $TransType . "', '" . $_SESSION['PaymentDetail' . $identifier]->Account . "', '" . $_SESSION['PaymentDetail' . $identifier]->BankTransRef . "',
+					VALUES ('" . $TransNo . "', '" . $TransType . "', '" . $_SESSION['PaymentDetail' . $identifier]->Account . "', '" . $EscapedBankTransRef . "',
 							'" . $_SESSION['PaymentDetail' . $identifier]->ExRate . "', '" . $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "',
-							'" . $_SESSION['PaymentDetail' . $identifier]->Paymenttype . "', '" . -$_SESSION['PaymentDetail' . $identifier]->Amount . "', '" . $_SESSION['PaymentDetail' . $identifier]->Currency . "', '" . $_POST['ChequeNum'] . "')", '', '', true);
+							'" . $_SESSION['PaymentDetail' . $identifier]->Paymenttype . "', '" . -$_SESSION['PaymentDetail' . $identifier]->Amount . "', '" . $_SESSION['PaymentDetail' . $identifier]->Currency . "', '" . $EscapedChequeNum . "')", '', '', true);
 
 			DB_Txn_Commit();
 

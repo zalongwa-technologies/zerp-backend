@@ -1,5 +1,5 @@
 <?php
-
+require_once __DIR__ . '/vendor/autoload.php';
 $PageSecurity = 0;
 
 require(__DIR__ . '/includes/session.php');

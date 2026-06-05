@@ -1,69 +1,25 @@
 {
-	"name": "timschofield/weberp",
-	"type": "project",
-	"description": "Accounting and Business Administration ERP System",
-	"license": "GPL-2.0-only",
-	"homepage": "https://www.weberp.org/",
-	"keywords": [ "erp" ],
-	"_comment": "We use a patched version of phplot, while we wait for upstream to remove warnings with php 8",
-	"repositories": [
-		{
-			"type": "github",
-			"url": "https://github.com/gggeek/phplot"
-		}
-	],
-	"_note": "the mysqli extension is required by the installer. Once we add to it support for pgsql and pdo, it can be demoted to suggested",
-	"require": {
-		"php": "^8.1",
-		"ext-ctype": "*",
-		"ext-mbstring": "*",
-		"ext-mysqli": "*",
-		"ext-xml": "*",
-		"dompdf/dompdf": "^3.1",
-		"gggeek/barcodepack": "^1.0.1",
-		"gggeek/polyfill-gettext": "dev-main as 1.99.99",
-		"phplot/phplot": "8.0.1-rc2",
-		"phpmailer/phpmailer": "^6.9",
-		"phpoffice/phpspreadsheet": "^5.0",
-		"phpxmlrpc/phpxmlrpc": "^4.11.0",
-		"tecnickcom/tcpdf": "=6.8.0"
-	},
-	"require-dev": {
-		"ext-bcmath": "*",
-		"ext-calendar": "*",
-		"ext-ftp": "*",
-		"ext-gd": "*",
-		"ext-iconv": "*",
-		"ext-simplexml": "*",
-		"ext-sqlite3": "*",
-		"ext-zip": "*",
-		"ext-zlib": "*",
-		"phpunit/phpunit": "^10.5.55",
-		"symfony/browser-kit": "^6.4.24",
-		"symfony/css-selector": "^6.4.24",
-		"symfony/http-client": "^6.4.25",
-		"symfony/mime": "^6.4.24"
-	},
-	"suggest": {
-		"ext-bcmath": "Required to print barcode labels in PDFs",
-		"ext-calendar": "Required to print some reports",
-		"ext-curl": "used by the automatic translation component",
-		"ext-ftp": "",
-		"ext-gd": "Required to print barcode labels",
-		"ext-gettext": "Recommended for translations. A slower, pure-php implementation will be used if this is not available",
-		"ext-iconv": "Required to print barcode labels in PDFs",
-		"ext-simplexml": "Required for geocoding integration",
-		"ext-sqlite3": "For POS data creation",
-		"ext-zip": "For POS data creation",
-		"ext-zlib": "Improves the support for PDF files and XMLRPC API calls"
-	},
-	"autoload": {
-		"psr-4": {"webERP\\": "src/"}
-	},
-	"_comment_2": "Since we ship dependecies, force Composer not to download anything which requires a bigger php version",
-	"config": {
-		"platform": {
-			"php": "8.1.0"
-		}
-	}
+    "name": "root/zerp-backend",
+    "description": "Accounting System",
+    "type": "library",
+    "require": {
+        "ext-xml": "*"
+    },
+    "license": "GPL-3.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Root\\ZerpBackend\\": "src/"
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Zalongwa Technologies Limited",
+            "email": "support@zalongwa.co.tz"
+        }
+    ]
 }

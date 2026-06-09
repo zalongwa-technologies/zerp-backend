@@ -259,6 +259,16 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 					DB_query("UPDATE supptrans SET alloc=alloc-" . $PaidAmount . " WHERE id='" . $PaymentID . "'", '', '', true);
 					DB_query("UPDATE supptrans SET alloc=alloc+" . $PaidAmount . " WHERE id='" . $PaidID . "'", '', '', true);
 					DB_query("INSERT INTO suppallocs (amt, datealloc, transid_allocfrom, transid_allocto) VALUES ('" . $PaidAmount . "', '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', '" . $PaymentID . "', '" . $PaidID . "')", '', '', true);
+
+					// After updating the invoice's alloc, check if it is now fully settled
+					// and update the settled flag accordingly (mirrors SupplierAllocations.php logic)
+					$InvRow = DB_fetch_array(DB_query("SELECT ovamount+ovgst AS total, alloc FROM supptrans WHERE id='" . $PaidID . "'"));
+					if ($InvRow) {
+						$InvTotal   = (double)$InvRow['total'];
+						$InvAlloc   = (double)$InvRow['alloc'];
+						$Settled    = (abs($InvAlloc - $InvTotal) < CurrencyTolerance($_SESSION['PaymentDetail' . $identifier]->Currency)) ? 1 : 0;
+						DB_query("UPDATE supptrans SET settled='" . $Settled . "' WHERE id='" . $PaidID . "'", '', '', true);
+					}
 				}
 
 				DB_query("UPDATE suppliers SET lastpaiddate = '" . FormatDateForSQL($_SESSION['PaymentDetail' . $identifier]->DatePaid) . "', lastpaid='" . $_SESSION['PaymentDetail' . $identifier]->Amount . "' WHERE supplierid='" . $_SESSION['PaymentDetail' . $identifier]->SupplierID . "'", '', '', true);

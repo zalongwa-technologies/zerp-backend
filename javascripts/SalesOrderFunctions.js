@@ -12,7 +12,8 @@ const SalesOrderSearch = {
         this.formId = document.querySelector('input[name="FormID"]')?.value || '';
 
         // Load initial data if none exists
-        if (document.querySelector('.so-table tbody').children.length === 0) {
+        const tableBody = document.getElementById('OrdersTableBody');
+        if (tableBody && tableBody.children.length === 0) {
             this.fetchResults();
         }
     },
@@ -36,7 +37,9 @@ const SalesOrderSearch = {
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 const panel = document.getElementById('AdvancedFiltersPanel');
-                panel.style.display = panel.style.display === 'none' ? 'grid' : 'none';
+                const isHidden = panel.style.display === 'none' || panel.style.display === '';
+                panel.style.display = isHidden ? 'grid' : 'none';
+                toggleBtn.classList.toggle('active', isHidden);
             });
         }
 
@@ -50,6 +53,22 @@ const SalesOrderSearch = {
                 this.updateBulkBar();
             }
         });
+
+        // Intercept form submissions
+        const form = document.getElementById('SalesOrderForm');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                const submitter = e.submitter;
+                if (submitter && submitter.name === 'PlacePO') {
+                    // Let bulk purchase orders form submit normally
+                    return;
+                }
+                // Otherwise prevent reload and search via AJAX
+                e.preventDefault();
+                clearTimeout(this.debounceTimer);
+                this.fetchResults();
+            });
+        }
     },
 
     debounce(func, delay) {
@@ -58,10 +77,12 @@ const SalesOrderSearch = {
     },
 
     async fetchResults() {
-        const tableBody = document.querySelector('.so-table tbody');
-        const container = document.querySelector('.so-table-container');
+        const tableBody = document.getElementById('OrdersTableBody');
+        const container = document.querySelector('.db-table-wrapper');
 
-        container.classList.add('table-loading-overlay');
+        if (container) {
+            container.classList.add('table-loading-overlay');
+        }
 
         const formData = new FormData(document.getElementById('SalesOrderForm'));
         formData.append('AjaxSearch', '1');
@@ -74,14 +95,40 @@ const SalesOrderSearch = {
 
             if (!response.ok) throw new Error('Search failed');
 
-            const html = await response.text();
-            tableBody.innerHTML = html;
+            const data = await response.json();
+
+            // Update table body
+            if (tableBody) {
+                tableBody.innerHTML = data.html;
+            }
+
+            // Update card title if element exists
+            const cardTitle = document.getElementById('CardHeaderTitle');
+            if (cardTitle && data.title) {
+                cardTitle.innerHTML = data.title;
+            }
+
+            // Update count tag if element exists
+            const countTag = document.getElementById('ResultsCountTag');
+            if (countTag && data.count) {
+                countTag.textContent = data.count;
+            }
+
+            // Update footer total if element exists
+            const footerTotal = document.getElementById('FooterTotalValue');
+            if (footerTotal && data.total) {
+                footerTotal.textContent = data.total;
+            }
 
         } catch (error) {
             console.error('Search error:', error);
-            tableBody.innerHTML = '<tr><td colspan="100%" class="text-center p-8 text-red-500">Error loading results. Please try again.</td></tr>';
+            if (tableBody) {
+                tableBody.innerHTML = '<tr><td colspan="100%" class="text-center p-8 text-red-500">Error loading results. Please try again.</td></tr>';
+            }
         } finally {
-            container.classList.remove('table-loading-overlay');
+            if (container) {
+                container.classList.remove('table-loading-overlay');
+            }
             this.updateBulkBar();
         }
     },

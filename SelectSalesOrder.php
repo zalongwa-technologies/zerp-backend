@@ -468,19 +468,37 @@ echo '<div class="db-page">
 				<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                 
                 <!-- Modern Search Dashboard -->
-                <div class="search-dashboard card-v2">
-                    <div class="smart-search-wrapper">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" name="SmartSearch" id="SmartSearch" 
-                               class="smart-search-input" 
-                               placeholder="' . __('Search by Order #, Customer Name, or Part Code...') . '" 
-                               value="' . (isset($_POST['SmartSearch']) ? $_POST['SmartSearch'] : '') . '" />
+                <div class="search-dashboard">
+                    <div class="search-main-row">
+                        <div class="smart-search-wrapper">
+                            <span class="search-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </span>
+                            <input type="text" name="SmartSearch" id="SmartSearch" 
+                                   class="smart-search-input" 
+                                   placeholder="' . __('Search by Order #, Customer Name, or Part Code...') . '" 
+                                   autocomplete="off"
+                                   value="' . (isset($_POST['SmartSearch']) ? htmlspecialchars($_POST['SmartSearch'], ENT_QUOTES, 'UTF-8') : '') . '" />
+                        </div>
+                        <button type="submit" name="SearchOrders" id="SearchButton" class="search-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            ' . __('Search') . '
+                        </button>
+                        <button type="button" id="ToggleFilters" class="advanced-filters-trigger-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="6" x2="20" y2="6"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                                <line x1="11" y1="18" x2="13" y2="18"></line>
+                            </svg>
+                            ' . __('Filters') . '
+                        </button>
                     </div>
-                    
-                    <button type="button" id="ToggleFilters" class="advanced-filters-trigger">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2L10 12.46V19L14 21V12.46L22 3Z"></path></svg>
-                        ' . __('Advanced Filters') . '
-                    </button>
                     
                     <div id="AdvancedFiltersPanel" class="advanced-filters-panel" style="display: none;">
                         <div class="form-group">
@@ -657,8 +675,8 @@ if (DB_num_rows($SalesOrdersResult) > 0) {
 
 	echo '<div class="card-v2" style="margin-top: var(--space-6);">
 				<div class="card-header-v2">
-					<h3>' . ($_POST['Quotations'] == 'Quotes_Only' ? __('Quotations') : __('Outstanding Orders')) . ' ' . $StatusBadge . '</h3>
-					<span class="tag">' . DB_num_rows($SalesOrdersResult) . ' ' . __('Found') . '</span>
+					<h3 id="CardHeaderTitle">' . ($_POST['Quotations'] == 'Quotes_Only' ? __('Quotations') : __('Outstanding Orders')) . ' ' . $StatusBadge . '</h3>
+					<span id="ResultsCountTag" class="tag">' . DB_num_rows($SalesOrdersResult) . ' ' . __('Found') . '</span>
 				</div>
 				<div class="db-table-wrapper">
 					<table class="db-table">';
@@ -684,6 +702,10 @@ if (DB_num_rows($SalesOrdersResult) > 0) {
                 </tr>
             </thead>
 			<tbody id="OrdersTableBody">';
+
+	if (isset($_POST['AjaxSearch'])) {
+		ob_clean();
+	}
 
 	$OrdersTotal = 0;
 
@@ -789,6 +811,30 @@ if (DB_num_rows($SalesOrdersResult) > 0) {
 		}
 	}//end while loop through orders to display
 
+	if (isset($_POST['AjaxSearch'])) {
+		$html = ob_get_clean();
+		$FormattedTotal = (!isset($PricesSecurity) or !in_array($PricesSecurity, $_SESSION['AllowedPageSecurityTokens'])) ? '---------' : locale_number_format($OrdersTotal, $_SESSION['CompanyRecord']['decimalplaces']);
+		
+		$StatusBadge = '';
+		if ($_POST['Quotations'] == 'Quotes_Only') {
+			$StatusBadge = '<span class="db-badge db-badge-success">' . __('Quotation') . '</span>';
+		} elseif ($_POST['Quotations'] == 'Overdue_Only') {
+			$StatusBadge = '<span class="db-badge db-badge-danger">' . __('Overdue') . '</span>';
+		} else {
+			$StatusBadge = '<span class="db-badge db-badge-success">' . __('Order') . '</span>';
+		}
+		$TitleText = ($_POST['Quotations'] == 'Quotes_Only' ? __('Quotations') : __('Outstanding Orders')) . ' ' . $StatusBadge;
+		
+		header('Content-Type: application/json');
+		echo json_encode([
+			'html' => $html,
+			'count' => DB_num_rows($SalesOrdersResult) . ' ' . __('Found'),
+			'total' => $_SESSION['CompanyRecord']['currencydefault'] . ': ' . $FormattedTotal,
+			'title' => $TitleText
+		]);
+		exit();
+	}
+
 	echo '</tbody>
 			<tfoot>
 				<tr>
@@ -804,20 +850,78 @@ if (DB_num_rows($SalesOrdersResult) > 0) {
 	}
 
 	echo ' ' . $_SESSION['CompanyRecord']['currencydefault'] . ':</b></td>
-			<td class="text-right val-bold" style="font-size: 1.1rem; color: var(--so-primary);">' . locale_number_format($OrdersTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+			<td id="FooterTotalValue" class="text-right val-bold" style="font-size: 1.1rem; color: var(--so-primary);">' . locale_number_format($OrdersTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
             <td colspan="2"></td>
         </tr>
 			</tfoot>
 		</table>';
 
+	echo '</div>
+		</div>';
+} else {
 	if (isset($_POST['AjaxSearch'])) {
-		$TableRows = ob_get_clean();
-		echo $TableRows;
+		ob_clean();
+		$StatusBadge = '';
+		if ($_POST['Quotations'] == 'Quotes_Only') {
+			$StatusBadge = '<span class="db-badge db-badge-success">' . __('Quotation') . '</span>';
+		} elseif ($_POST['Quotations'] == 'Overdue_Only') {
+			$StatusBadge = '<span class="db-badge db-badge-danger">' . __('Overdue') . '</span>';
+		} else {
+			$StatusBadge = '<span class="db-badge db-badge-success">' . __('Order') . '</span>';
+		}
+		$TitleText = ($_POST['Quotations'] == 'Quotes_Only' ? __('Quotations') : __('Outstanding Orders')) . ' ' . $StatusBadge;
+		
+		header('Content-Type: application/json');
+		echo json_encode([
+			'html' => '<tr><td colspan="8" class="text-center">' . __('No records found') . '</td></tr>',
+			'count' => '0 ' . __('Found'),
+			'total' => $_SESSION['CompanyRecord']['currencydefault'] . ': 0.00',
+			'title' => $TitleText
+		]);
 		exit();
 	}
 
-	echo '</div>
-		</div>';
+	$StatusBadge = '';
+	if ($_POST['Quotations'] == 'Quotes_Only') {
+		$StatusBadge = '<span class="db-badge db-badge-success">' . __('Quotation') . '</span>';
+	} elseif ($_POST['Quotations'] == 'Overdue_Only') {
+		$StatusBadge = '<span class="db-badge db-badge-danger">' . __('Overdue') . '</span>';
+	} else {
+		$StatusBadge = '<span class="db-badge db-badge-success">' . __('Order') . '</span>';
+	}
+
+	echo '<div class="card-v2" style="margin-top: var(--space-6);">
+				<div class="card-header-v2">
+					<h3 id="CardHeaderTitle">' . ($_POST['Quotations'] == 'Quotes_Only' ? __('Quotations') : __('Outstanding Orders')) . ' ' . $StatusBadge . '</h3>
+					<span id="ResultsCountTag" class="tag">0 ' . __('Found') . '</span>
+				</div>
+				<div class="db-table-wrapper">
+					<table class="db-table">
+						<thead>
+							<tr>
+								<th width="40"><input type="checkbox" class="so-check-all custom-checkbox" disabled></th>
+								<th>' . __('Order') . '</th>
+								<th>' . __('Customer') . '</th>
+								<th>' . __('Ref') . '</th>
+								<th>' . __('Dates') . '</th>
+								<th class="text-right">' . __('Value') . '</th>
+								<th>' . __('Status') . '</th>
+								<th class="text-right">' . __('Actions') . '</th>
+							</tr>
+						</thead>
+						<tbody id="OrdersTableBody">
+							<tr><td colspan="8" class="text-center">' . __('No records found') . '</td></tr>
+						</tbody>
+						<tfoot>
+							<tr>
+								<td colspan="5" class="text-right"><b>' . $_SESSION['CompanyRecord']['currencydefault'] . ':</b></td>
+								<td id="FooterTotalValue" class="text-right val-bold" style="font-size: 1.1rem; color: var(--so-primary);">0.00</td>
+								<td colspan="2"></td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			</div>';
 } //end if there are some orders to show
 
 echo '		</div> <!-- End MainBody -->

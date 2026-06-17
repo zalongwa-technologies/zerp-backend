@@ -165,6 +165,7 @@ $ModuleList = array(
 	__('Manufacturing'),
 	__('General Ledger'),
 	__('Asset Manager'),
+	__('SARIS Integration'),
 	__('Petty Cash'),
 	__('Setup'),
 	__('Utilities')
@@ -178,6 +179,7 @@ $ModuleListLabel = array(
 	__('Display Manufacturing module'),
 	__('Display General Ledger module'),
 	__('Display Asset Manager module'),
+	__('Display SARIS Integration module'),
 	__('Display Petty Cash module'),
 	__('Display Setup module'),
 	__('Display Utilities module')

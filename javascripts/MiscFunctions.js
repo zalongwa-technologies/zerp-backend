@@ -286,16 +286,14 @@ function initial() {
 		document.getElementById('MessageContainerFoot').style["display"] = "block";
 	}
 
-	/* Close button dynamic styling*/
-	var close = document.getElementsByClassName("MessageCloseButton");
-	var i;
-	for (i = 0; i < close.length; i++) {
-		close[i].onclick = function(){
-			var div = this.parentElement;
+	/* Close button dynamic styling using event delegation */
+	document.addEventListener('click', function(e) {
+		if (e.target && e.target.className == 'MessageCloseButton') {
+			var div = e.target.parentElement;
 			div.style.opacity = "0";
 			setTimeout(function(){ div.style.display = "none"; }, 600);
 		}
-	}
+	});
 }
 
 function AddAmount(t, Target, d) {

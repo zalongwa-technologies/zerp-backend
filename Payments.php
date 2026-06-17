@@ -337,7 +337,7 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 							</div>
 							
 							<div style="display: flex; gap: 16px;">
-								<button type="button" onclick="window.close()" class="db-btn db-btn-primary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>' . __('Close') . '</button>
+								<button type="button" onclick="window.close(); setTimeout(function() { window.location.href = \'' . $RootPath . '/index.php\'; }, 50);" class="db-btn db-btn-primary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>' . __('Close') . '</button>
 								<button type="button" onclick="document.getElementById(\'success-modal-overlay\').style.display=\'none\'" class="db-btn db-btn-secondary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; background: #f1f5f9; color: #475569; border: none;">' . __('New Payment') . '</button>
 							</div>
 						</div>

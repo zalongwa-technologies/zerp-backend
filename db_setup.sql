@@ -68,6 +68,8 @@ WHERE `sequence` > 8
     ) AS existing_saris_module
   );
 
+ALTER TABLE modules MODIFY COLUMN reportlink VARCHAR(6);
+
 INSERT INTO `modules` (`secroleid`, `modulelink`, `reportlink`, `modulename`, `sequence`)
 SELECT `secroleid`, 'SARIS', 'saris', 'SARIS Integration', 9
 FROM (SELECT DISTINCT `secroleid` FROM `modules`) AS roles
@@ -116,6 +118,15 @@ WHERE NOT EXISTS (
     AND mi.`modulelink` = 'SARIS'
     AND mi.`url` = '/SARIS_Payments.php'
 );
+
+INSERT INTO `scripts` (`script`, `pagesecurity`, `description`) VALUES
+('SARIS_Settings.php', 15, 'SARIS Integration settings'),
+('SARIS_Students.php', 15, 'SARIS Integration students sync and listing'),
+('SARIS_Invoices.php', 15, 'SARIS Integration invoices listing'),
+('SARIS_Payments.php', 15, 'SARIS Integration payments sync and listing')
+ON DUPLICATE KEY UPDATE
+  `pagesecurity` = VALUES(`pagesecurity`),
+  `description` = VALUES(`description`);
 
 -- Crontab examples:
 -- 10 min: */10 * * * * php /Users/user/Documents/Projects2/zerp-backend/saris_cron.php

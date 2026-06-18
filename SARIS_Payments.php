@@ -3,7 +3,6 @@
 $PageSecurity = 15;
 require(__DIR__ . '/includes/session.php');
 $Title = __('SARIS Integration - Payments');
-include(__DIR__ . '/includes/header.php');
 include(__DIR__ . '/includes/SARISIntegration.php');
 
 $settings = saris_get_settings();
@@ -66,6 +65,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 	exit;
 }
 
+include(__DIR__ . '/includes/header.php');
 echo '<div class="db-page">';
 echo '<div class="db-page-header"><h1 class="db-page-title">' . __('SARIS Payments') . '</h1><p class="db-page-subtitle">' . __('Payment records imported from SARIS') . '</p></div>';
 saris_render_tabs('Payments', 'Payments', $searchTerm);

@@ -105,7 +105,19 @@ class ZERPSync {
 					$existingBranch = $this->client->getBranch($code, $branchCode);
 					if ($existingBranch === null) {
 						$this->currentMethod = 'weberp.xmlrpc_InsertBranch';
-						$this->client->insertBranch($this->branchPayload($row, $code, $branchCode));
+						try {
+							$this->client->insertBranch($this->branchPayload($row, $code, $branchCode));
+						} catch (Throwable $exception) {
+							throw new RuntimeException(
+								'Branch creation failed with configured area "'
+								. $this->config['branch_area']
+								. '", salesperson "' . $this->config['salesperson']
+								. '", location "' . $this->config['default_location']
+								. '": ' . $exception->getMessage(),
+								0,
+								$exception
+							);
+						}
 					}
 					$this->updateStudentBranch($row['id']);
 				}
@@ -460,30 +472,25 @@ class ZERPSync {
 	}
 
 	private function errorSummary() {
+		$stmt = $this->pdo->prepare(
+			"SELECT record_type, message, COUNT(*) AS total
+			FROM zerp_sync_log
+			WHERE run_id = ?
+			  AND sync_status IN ('partial', 'failed')
+			GROUP BY record_type, message
+			ORDER BY total DESC
+			LIMIT 5"
+		);
+		$stmt->execute([$this->runId]);
 		$summary = [];
-		foreach (['students', 'invoices', 'payments'] as $table) {
-			$stmt = $this->pdo->query(
-				"SELECT sync_error, COUNT(*) AS total
-				FROM `" . $table . "`
-				WHERE sync_status IN ('partial', 'failed')
-				  AND sync_error IS NOT NULL
-				  AND sync_error <> ''
-				GROUP BY sync_error
-				ORDER BY total DESC
-				LIMIT 3"
-			);
-			foreach ($stmt->fetchAll() as $row) {
-				$summary[] = [
-					'record_type' => rtrim($table, 's'),
-					'count' => (int)$row['total'],
-					'message' => $this->sanitizeError($row['sync_error']),
-				];
-			}
+		foreach ($stmt->fetchAll() as $row) {
+			$summary[] = [
+				'record_type' => $row['record_type'],
+				'count' => (int)$row['total'],
+				'message' => $this->sanitizeError($row['message']),
+			];
 		}
-		usort($summary, function($left, $right) {
-			return $right['count'] <=> $left['count'];
-		});
-		return array_slice($summary, 0, 5);
+		return $summary;
 	}
 
 	private function log($type, $recordId, $reference, $status, $attempt, Throwable $exception) {

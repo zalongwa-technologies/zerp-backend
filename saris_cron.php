@@ -34,6 +34,13 @@ try {
 			. ', Payments: ' . $result['zerp']['payments_synced']
 			. ', Partial: ' . $result['zerp']['partial']
 			. ', Failed: ' . $result['zerp']['failed'] . '.';
+		if (!empty($result['zerp']['error_summary'])) {
+			$errors = [];
+			foreach ($result['zerp']['error_summary'] as $error) {
+				$errors[] = ucfirst($error['record_type']) . ' (' . $error['count'] . '): ' . $error['message'];
+			}
+			$message .= ' Errors: ' . implode(' | ', $errors);
+		}
 	}
 	saris_log_sync($message, 'success');
 	echo $message . "\n";

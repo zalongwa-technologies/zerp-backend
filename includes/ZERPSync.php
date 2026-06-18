@@ -24,6 +24,7 @@ class ZERPSync {
 			'failed' => 0,
 			'skipped' => 0,
 			'locked' => false,
+			'error_summary' => [],
 		];
 	}
 
@@ -39,6 +40,7 @@ class ZERPSync {
 			$this->syncStudents();
 			$this->syncInvoices();
 			$this->syncPayments();
+			$this->stats['error_summary'] = $this->errorSummary();
 		} finally {
 			$this->releaseLock();
 		}
@@ -455,6 +457,33 @@ class ZERPSync {
 				  AND sync_locked_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)"
 			);
 		}
+	}
+
+	private function errorSummary() {
+		$summary = [];
+		foreach (['students', 'invoices', 'payments'] as $table) {
+			$stmt = $this->pdo->query(
+				"SELECT sync_error, COUNT(*) AS total
+				FROM `" . $table . "`
+				WHERE sync_status IN ('partial', 'failed')
+				  AND sync_error IS NOT NULL
+				  AND sync_error <> ''
+				GROUP BY sync_error
+				ORDER BY total DESC
+				LIMIT 3"
+			);
+			foreach ($stmt->fetchAll() as $row) {
+				$summary[] = [
+					'record_type' => rtrim($table, 's'),
+					'count' => (int)$row['total'],
+					'message' => $this->sanitizeError($row['sync_error']),
+				];
+			}
+		}
+		usort($summary, function($left, $right) {
+			return $right['count'] <=> $left['count'];
+		});
+		return array_slice($summary, 0, 5);
 	}
 
 	private function log($type, $recordId, $reference, $status, $attempt, Throwable $exception) {

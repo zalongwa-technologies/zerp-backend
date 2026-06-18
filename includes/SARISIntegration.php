@@ -387,50 +387,106 @@ function saris_normalize_datetime($value) {
 	return $timestamp === false ? null : date('Y-m-d H:i:s', $timestamp);
 }
 
-function saris_count_rows($table) {
+function saris_count_rows($table, $searchTerm = '') {
 	$allowedTables = ['students', 'invoices', 'payments'];
 	if (!in_array($table, $allowedTables, true)) {
 		throw new Exception('Invalid SARIS table requested.');
 	}
-	$row = saris_fetch_one("SELECT COUNT(*) AS total FROM `" . $table . "`");
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		if ($table === 'students') {
+			$where = " WHERE student_fullname LIKE ? OR student_regnumber LIKE ?";
+			$params = ["%$searchTerm%", "%$searchTerm%"];
+		} elseif ($table === 'invoices') {
+			$where = " WHERE student_name LIKE ? OR invoice_reference_number LIKE ? OR student_regnumber LIKE ?";
+			$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+		} elseif ($table === 'payments') {
+			$where = " WHERE student_name LIKE ? OR student_regnumber LIKE ? OR payment_receipt_number LIKE ? OR payment_transaction_ref LIKE ?";
+			$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+		}
+	}
+	$row = saris_fetch_one("SELECT COUNT(*) AS total FROM `" . $table . "`" . $where, $params);
 	return (int)$row['total'];
 }
 
-function saris_list_students($limit, $offset) {
+function saris_list_students($limit, $offset, $searchTerm = '', $sort = 'student_regnumber', $dir = 'ASC') {
+	$allowedSorts = ['id', 'student_regnumber', 'student_fullname', 'student_email', 'student_phone', 'student_programme', 'student_entryyear', 'student_studyyear', 'student_intake', 'created_at'];
+	if (!in_array($sort, $allowedSorts, true)) {
+		$sort = 'student_regnumber';
+	}
+	$dir = strtoupper($dir) === 'DESC' ? 'DESC' : 'ASC';
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		$where = "WHERE student_fullname LIKE ? OR student_regnumber LIKE ? ";
+		$params = ["%$searchTerm%", "%$searchTerm%"];
+	}
+	$params[] = (int)$limit;
+	$params[] = (int)$offset;
 	return saris_fetch_all(
 		"SELECT id, student_regnumber, student_fullname, student_email, student_phone,
 			student_programme, student_entryyear, student_studyyear, student_intake, created_at
 		FROM students
-		ORDER BY student_regnumber
+		$where
+		ORDER BY `$sort` $dir
 		LIMIT ? OFFSET ?",
-		[(int)$limit, (int)$offset]
+		$params
 	);
 }
 
-function saris_list_invoices($limit, $offset) {
+function saris_list_invoices($limit, $offset, $searchTerm = '', $sort = 'invoice_date', $dir = 'DESC') {
+	$allowedSorts = ['id', 'student_name', 'invoice_reference_number', 'student_regnumber', 'invoice_amount', 'invoice_amount_type', 'invoice_desciption', 'invoice_date', 'created_at'];
+	if (!in_array($sort, $allowedSorts, true)) {
+		$sort = 'invoice_date';
+	}
+	$dir = strtoupper($dir) === 'ASC' ? 'ASC' : 'DESC';
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		$where = "WHERE student_name LIKE ? OR invoice_reference_number LIKE ? OR student_regnumber LIKE ? ";
+		$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+	}
+	$params[] = (int)$limit;
+	$params[] = (int)$offset;
 	return saris_fetch_all(
 		"SELECT id, student_name, invoice_reference_number, student_regnumber, invoice_amount,
 			invoice_amount_type, invoice_desciption, invoice_date, created_at
 		FROM invoices
-		ORDER BY invoice_date DESC, id DESC
+		$where
+		ORDER BY `$sort` $dir, id DESC
 		LIMIT ? OFFSET ?",
-		[(int)$limit, (int)$offset]
+		$params
 	);
 }
 
-function saris_list_payments($limit, $offset) {
+function saris_list_payments($limit, $offset, $searchTerm = '', $sort = 'payment_date', $dir = 'DESC') {
+	$allowedSorts = ['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'created_at'];
+	if (!in_array($sort, $allowedSorts, true)) {
+		$sort = 'payment_date';
+	}
+	$dir = strtoupper($dir) === 'ASC' ? 'ASC' : 'DESC';
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		$where = "WHERE student_name LIKE ? OR student_regnumber LIKE ? OR payment_receipt_number LIKE ? OR payment_transaction_ref LIKE ? ";
+		$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+	}
+	$params[] = (int)$limit;
+	$params[] = (int)$offset;
 	return saris_fetch_all(
 		"SELECT id, student_name, student_regnumber, payment_desciption, payment_amount,
 			payment_amount_type, payment_currency, payment_receipt_number, payment_transaction_ref,
 			payment_date, payment_reference_number, payment_source, created_at
 		FROM payments
-		ORDER BY payment_date DESC, id DESC
+		$where
+		ORDER BY `$sort` $dir, id DESC
 		LIMIT ? OFFSET ?",
-		[(int)$limit, (int)$offset]
+		$params
 	);
 }
 
-function saris_render_tabs($active) {
+function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	global $RootPath;
 	$tabs = [
 		'Settings' => '/SARIS_Settings.php',
@@ -438,25 +494,153 @@ function saris_render_tabs($active) {
 		'Invoices' => '/SARIS_Invoices.php',
 		'Payments' => '/SARIS_Payments.php'
 	];
-	echo '<div class="noPrint" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px 0;">';
+	echo '<div class="noPrint" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:0 0 24px 0;">';
+	echo '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
 	foreach ($tabs as $caption => $url) {
 		$class = $caption === $active ? 'db-btn db-btn-primary' : 'db-btn db-btn-secondary';
 		echo '<a class="' . $class . '" href="' . $RootPath . $url . '">' . __($caption) . '</a>';
 	}
 	echo '</div>';
-}
 
-function saris_render_pagination($totalRows, $page, $perPage, $baseUrl) {
-	$totalPages = max(1, (int)ceil($totalRows / $perPage));
-	if ($totalPages <= 1) {
-		return;
-	}
-	echo '<div class="noPrint" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:16px;">';
-	for ($i = 1; $i <= $totalPages; $i++) {
-		$class = $i === $page ? 'db-btn db-btn-primary' : 'db-btn db-btn-secondary';
-		echo '<a class="' . $class . '" href="' . htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $i . '">' . $i . '</a>';
+	if ($searchContext !== null) {
+		echo '<form id="saris-search-form" method="get" action="" style="display:flex;gap:8px;align-items:center;">';
+		echo '<input type="text" id="saris-search-input" class="db-form-input" name="Search" placeholder="' . __('Search ' . $searchContext . '...') . '" value="' . htmlspecialchars($searchTerm, ENT_QUOTES, 'UTF-8') . '" style="min-width:250px;" />';
+		echo '<button class="db-btn db-btn-primary" type="submit">' . __('Search') . '</button>';
+		echo '<a id="saris-clear-btn" class="db-btn db-btn-secondary" href="?" style="' . ($searchTerm === '' ? 'display:none;' : '') . '">' . __('Clear') . '</a>';
+		echo '</form>';
 	}
 	echo '</div>';
 }
 
+function saris_render_pagination($totalRows, $page, $perPage, $baseUrl, $extraParams = '') {
+	$totalPages = max(1, (int)ceil($totalRows / $perPage));
+	if ($totalPages <= 1) {
+		echo '<div id="saris-pagination-container"></div>';
+		return;
+	}
+	echo '<div id="saris-pagination-container" class="noPrint" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:16px;">';
+	for ($i = 1; $i <= $totalPages; $i++) {
+		$class = $i === $page ? 'db-btn db-btn-primary' : 'db-btn db-btn-secondary';
+		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $i;
+		if ($extraParams !== '') {
+			$url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
+		}
+		echo '<a class="' . $class . ' saris-page-link" href="' . $url . '" data-page="' . $i . '">' . $i . '</a>';
+	}
+	echo '</div>';
+}
+
+function saris_render_sort_header($label, $column, $currentSort, $currentDir) {
+	$isCurrent = $column === $currentSort;
+	$nextDir = $isCurrent && $currentDir === 'ASC' ? 'DESC' : 'ASC';
+	$icon = '';
+	if ($isCurrent) {
+		$icon = $currentDir === 'ASC' ? ' &uarr;' : ' &darr;';
+	}
+	echo '<th style="position:sticky;top:0;background-color:#f8f9fa;z-index:10;box-shadow:0 1px 2px rgba(0,0,0,0.1);"><a href="?Sort=' . $column . '&amp;Dir=' . $nextDir . '" class="saris-sort-link" data-sort="' . $column . '" data-dir="' . $nextDir . '" style="color:inherit;text-decoration:none;display:block;">' . __($label) . $icon . '</a></th>';
+}
+
+function saris_render_scripts($baseUrl) {
+	echo '<script>
+	document.addEventListener("DOMContentLoaded", function() {
+		var searchInput = document.getElementById("saris-search-input");
+		var searchForm = document.getElementById("saris-search-form");
+		var clearBtn = document.getElementById("saris-clear-btn");
+		var tableBody = document.querySelector(".db-table tbody");
+		
+		var currentSort = new URLSearchParams(window.location.search).get("Sort") || "";
+		var currentDir = new URLSearchParams(window.location.search).get("Dir") || "";
+		var currentPage = new URLSearchParams(window.location.search).get("Page") || 1;
+		var timer = null;
+
+		function loadData(search, page, sort, dir, pushState) {
+			var url = "' . $baseUrl . '?ajax=1&Search=" + encodeURIComponent(search) + "&Page=" + page;
+			if (sort) url += "&Sort=" + encodeURIComponent(sort) + "&Dir=" + encodeURIComponent(dir);
+			
+			fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+			.then(res => res.json())
+			.then(data => {
+				tableBody.innerHTML = data.tbody;
+				var existingPagination = document.getElementById("saris-pagination-container");
+				if (existingPagination) {
+					existingPagination.outerHTML = data.pagination;
+				}
+				
+				if (clearBtn) {
+					clearBtn.style.display = search ? "inline-flex" : "none";
+				}
+				
+				document.querySelectorAll(".saris-sort-link").forEach(function(link) {
+					var col = link.getAttribute("data-sort");
+					var text = link.innerText.replace(/ ↑| ↓/g, "");
+					var nextDir = "ASC";
+					if (col === sort) {
+						nextDir = dir === "ASC" ? "DESC" : "ASC";
+						text += dir === "ASC" ? " ↑" : " ↓";
+					}
+					link.setAttribute("data-dir", nextDir);
+					var newUrl = "?Sort=" + col + "&Dir=" + nextDir;
+					if (search) newUrl += "&Search=" + encodeURIComponent(search);
+					link.setAttribute("href", newUrl);
+					link.innerText = text;
+				});
+
+				if (pushState) {
+					var stateUrl = "?Page=" + page;
+					if (search) stateUrl += "&Search=" + encodeURIComponent(search);
+					if (sort) stateUrl += "&Sort=" + encodeURIComponent(sort) + "&Dir=" + encodeURIComponent(dir);
+					window.history.pushState({search: search, page: page, sort: sort, dir: dir}, "", stateUrl);
+				}
+			});
+		}
+
+		if (searchInput) {
+			searchInput.addEventListener("keyup", function(e) {
+				clearTimeout(timer);
+				timer = setTimeout(function() {
+					currentPage = 1;
+					loadData(searchInput.value, currentPage, currentSort, currentDir, true);
+				}, 300);
+			});
+		}
+
+		if (searchForm) {
+			searchForm.addEventListener("submit", function(e) {
+				e.preventDefault();
+				clearTimeout(timer);
+				currentPage = 1;
+				loadData(searchInput.value, currentPage, currentSort, currentDir, true);
+			});
+		}
+
+		document.addEventListener("click", function(e) {
+			var pageLink = e.target.closest(".saris-page-link");
+			if (pageLink) {
+				e.preventDefault();
+				currentPage = pageLink.getAttribute("data-page");
+				loadData(searchInput ? searchInput.value : "", currentPage, currentSort, currentDir, true);
+			}
+
+			var sortLink = e.target.closest(".saris-sort-link");
+			if (sortLink) {
+				e.preventDefault();
+				currentSort = sortLink.getAttribute("data-sort");
+				currentDir = sortLink.getAttribute("data-dir");
+				currentPage = 1;
+				loadData(searchInput ? searchInput.value : "", currentPage, currentSort, currentDir, true);
+			}
+		});
+
+		window.addEventListener("popstate", function(e) {
+			if (e.state) {
+				if (searchInput) searchInput.value = e.state.search || "";
+				currentPage = e.state.page || 1;
+				currentSort = e.state.sort || "";
+				currentDir = e.state.dir || "";
+				loadData(searchInput ? searchInput.value : "", currentPage, currentSort, currentDir, false);
+			}
+		});
+	});
+	</script>';
+}
 ?>

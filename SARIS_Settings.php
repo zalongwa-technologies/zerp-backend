@@ -35,7 +35,7 @@ echo '</select></div>';
 echo '</div><div class="db-card-footer"><button class="db-btn db-btn-primary" type="submit" name="SaveSettings">' . __('Save') . '</button></div></div>';
 echo '</form>';
 
-echo '<div class="db-card" style="max-width:760px;margin-top:24px;"><div class="db-card-header"><h3 class="db-card-title">' . __('Current Settings') . '</h3></div><div class="db-table-wrapper">';
+echo '<div class="db-card" style="max-width:760px;margin-top:24px;"><div class="db-card-header"><h3 class="db-card-title">' . __('Current Settings') . '</h3></div><div class="db-table-wrapper" style="overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;">';
 echo '<table class="db-table"><thead><tr><th>' . __('Sync Mode') . '</th><th>' . __('Sync Interval') . '</th><th>' . __('Updated At') . '</th></tr></thead><tbody><tr>';
 echo '<td>' . htmlspecialchars(ucfirst($settings['sync_mode']), ENT_QUOTES, 'UTF-8') . '</td>';
 echo '<td>' . htmlspecialchars($settings['sync_interval'] ?: '-', ENT_QUOTES, 'UTF-8') . '</td>';

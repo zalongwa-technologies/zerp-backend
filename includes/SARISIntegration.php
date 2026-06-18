@@ -37,19 +37,32 @@ class SARISAPIClient {
 			'client_secret' => $this->clientSecret
 		]);
 
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, [
-			'Accept: application/json',
-			'Content-Type: application/json'
-		]);
-		curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-		$result = curl_exec($ch);
-		$error = curl_error($ch);
-		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		$maxAttempts = 3;
+		$result = false;
+		$error = '';
+		$httpCode = 0;
+		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+			$ch = curl_init($url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_POST, true);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, [
+				'Accept: application/json',
+				'Content-Type: application/json'
+			]);
+			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			$result = curl_exec($ch);
+			$error = curl_error($ch);
+			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+
+			if ($result !== false) {
+				break;
+			}
+			if ($attempt < $maxAttempts) {
+				sleep(5 * $attempt);
+			}
+		}
 
 		if ($result === false) {
 			throw new Exception('Could not authenticate with SARIS: ' . $error);
@@ -77,17 +90,30 @@ class SARISAPIClient {
 			$url .= '?' . http_build_query($params);
 		}
 
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, [
-			'Authorization: Bearer ' . $this->getToken(),
-			'Content-Type: application/json'
-		]);
-		curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-		$result = curl_exec($ch);
-		$error = curl_error($ch);
-		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		$maxAttempts = 3;
+		$result = false;
+		$error = '';
+		$httpCode = 0;
+		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+			$ch = curl_init($url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, [
+				'Authorization: Bearer ' . $this->getToken(),
+				'Content-Type: application/json'
+			]);
+			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			$result = curl_exec($ch);
+			$error = curl_error($ch);
+			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+
+			if ($result !== false) {
+				break;
+			}
+			if ($attempt < $maxAttempts) {
+				sleep(5 * $attempt);
+			}
+		}
 
 		if ($result === false) {
 			throw new Exception('SARIS API request failed: ' . $error);

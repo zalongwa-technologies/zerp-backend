@@ -1,8 +1,8 @@
 <?php
 
-if (php_sapi_name() !== 'cli') {
-	die("This script can only be run from the command line.\n");
-}
+// if (php_sapi_name() !== 'cli') {
+// 	die("This script can only be run from the command line.\n");
+// }
 
 $PathPrefix = __DIR__ . '/';
 include($PathPrefix . 'config.php');

@@ -518,15 +518,57 @@ function saris_render_pagination($totalRows, $page, $perPage, $baseUrl, $extraPa
 		echo '<div id="saris-pagination-container"></div>';
 		return;
 	}
-	echo '<div id="saris-pagination-container" class="noPrint" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:16px;">';
-	for ($i = 1; $i <= $totalPages; $i++) {
+	echo '<div id="saris-pagination-container" class="noPrint" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;margin-top:16px;">';
+	
+	$page = (int)$page;
+	
+	// Prev Button
+	if ($page > 1) {
+		$prevUrl = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . ($page - 1);
+		if ($extraParams !== '') $prevUrl .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
+		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $prevUrl . '" data-page="' . ($page - 1) . '" style="padding: 6px 12px;">&laquo; ' . __('Prev') . '</a>';
+	}
+
+	$startPage = max(1, $page - 2);
+	$endPage = min($totalPages, $page + 2);
+
+	// First page and ellipsis
+	if ($startPage > 1) {
+		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=1';
+		if ($extraParams !== '') $url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
+		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $url . '" data-page="1" style="padding: 6px 12px;">1</a>';
+		if ($startPage > 2) {
+			echo '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
+		}
+	}
+
+	// Window of pages
+	for ($i = $startPage; $i <= $endPage; $i++) {
 		$class = $i === $page ? 'db-btn db-btn-primary' : 'db-btn db-btn-secondary';
 		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $i;
 		if ($extraParams !== '') {
 			$url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
 		}
-		echo '<a class="' . $class . ' saris-page-link" href="' . $url . '" data-page="' . $i . '">' . $i . '</a>';
+		echo '<a class="' . $class . ' saris-page-link" href="' . $url . '" data-page="' . $i . '" style="padding: 6px 12px;">' . $i . '</a>';
 	}
+
+	// Last page and ellipsis
+	if ($endPage < $totalPages) {
+		if ($endPage < $totalPages - 1) {
+			echo '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
+		}
+		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $totalPages;
+		if ($extraParams !== '') $url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
+		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $url . '" data-page="' . $totalPages . '" style="padding: 6px 12px;">' . $totalPages . '</a>';
+	}
+
+	// Next Button
+	if ($page < $totalPages) {
+		$nextUrl = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . ($page + 1);
+		if ($extraParams !== '') $nextUrl .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
+		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $nextUrl . '" data-page="' . ($page + 1) . '" style="padding: 6px 12px;">' . __('Next') . ' &raquo;</a>';
+	}
+
 	echo '</div>';
 }
 

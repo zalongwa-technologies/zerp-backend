@@ -55,13 +55,15 @@ if (isset($_SESSION['AccessLevel'])) {
 			__('Settings'),
 			__('Students'),
 			__('Invoices'),
-			__('Payments')
+			__('Payments'),
+			__('Sync History')
 		);
 		$MenuItems['SARIS']['Transactions']['URL'] = array(
 			'/SARIS_Settings.php',
 			'/SARIS_Students.php',
 			'/SARIS_Invoices.php',
-			'/SARIS_Payments.php'
+			'/SARIS_Payments.php',
+			'/SARIS_SyncHistory.php'
 		);
 	}
 
@@ -69,7 +71,8 @@ if (isset($_SESSION['AccessLevel'])) {
 		'SARIS_Settings.php' => 15,
 		'SARIS_Students.php' => 15,
 		'SARIS_Invoices.php' => 15,
-		'SARIS_Payments.php' => 15
+		'SARIS_Payments.php' => 15,
+		'SARIS_SyncHistory.php' => 15
 	);
 	foreach ($SARISScriptSecurity as $ScriptName => $SecurityToken) {
 		if (!isset($_SESSION['PageSecurityArray'][$ScriptName])) {

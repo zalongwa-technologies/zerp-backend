@@ -453,11 +453,75 @@ function saris_full_sync_with_zerp($client, $startDate, $endDate) {
 	];
 }
 
-function saris_log_sync($message, $status = 'success') {
+function saris_sync_run_id() {
+	$bytes = random_bytes(16);
+	$bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+	$bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+	$hex = bin2hex($bytes);
+	return substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-' . substr($hex, 12, 4)
+		. '-' . substr($hex, 16, 4) . '-' . substr($hex, 20);
+}
+
+function saris_sync_history_status($zerpStats) {
+	if (!is_array($zerpStats) || empty($zerpStats['enabled'])) {
+		return 'success';
+	}
+	if ((int)($zerpStats['failed'] ?? 0) > 0) {
+		return 'failed';
+	}
+	if ((int)($zerpStats['partial'] ?? 0) > 0) {
+		return 'partial';
+	}
+	return 'success';
+}
+
+function saris_record_sync_history($history) {
+	$saris = isset($history['saris']) && is_array($history['saris']) ? $history['saris'] : [];
+	$zerp = isset($history['zerp']) && is_array($history['zerp']) ? $history['zerp'] : [];
+	$errorSummary = $history['error_summary'] ?? ($zerp['error_summary'] ?? []);
+	if (is_array($errorSummary)) {
+		$errorSummary = json_encode($errorSummary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	}
+
 	saris_execute(
-		"INSERT INTO saris_sync_log (sync_status, message, created_at) VALUES (?, ?, NOW())",
-		[$status, $message]
+		"INSERT INTO saris_sync_log (
+			run_id, trigger_type, sync_status, date_from, date_to, iterations,
+			saris_invoices, saris_students, saris_payments, zerp_enabled,
+			zerp_students, zerp_invoices, zerp_payments, zerp_partial,
+			zerp_failed, zerp_skipped, error_summary, message, started_at,
+			completed_at, duration_seconds, created_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+		[
+			$history['run_id'] ?? saris_sync_run_id(),
+			$history['trigger_type'] ?? 'automatic',
+			$history['sync_status'] ?? 'success',
+			$history['date_from'] ?? null,
+			$history['date_to'] ?? null,
+			(int)($history['iterations'] ?? 0),
+			(int)($saris['invoices'] ?? 0),
+			(int)($saris['students'] ?? 0),
+			(int)($saris['payments'] ?? 0),
+			!empty($zerp['enabled']) ? 1 : 0,
+			(int)($zerp['students_synced'] ?? 0),
+			(int)($zerp['invoices_synced'] ?? 0),
+			(int)($zerp['payments_synced'] ?? 0),
+			(int)($zerp['partial'] ?? 0),
+			(int)($zerp['failed'] ?? 0),
+			(int)($zerp['skipped'] ?? 0),
+			$errorSummary ?: null,
+			$history['message'] ?? null,
+			$history['started_at'] ?? null,
+			$history['completed_at'] ?? date('Y-m-d H:i:s'),
+			isset($history['duration_seconds']) ? round((float)$history['duration_seconds'], 3) : null,
+		]
 	);
+}
+
+function saris_log_sync($message, $status = 'success') {
+	saris_record_sync_history([
+		'sync_status' => $status,
+		'message' => $message,
+	]);
 }
 
 function saris_normalize_datetime($value) {
@@ -570,13 +634,58 @@ function saris_list_payments($limit, $offset, $searchTerm = '', $sort = 'payment
 	);
 }
 
+function saris_count_sync_history($searchTerm = '') {
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		$where = " WHERE run_id LIKE ? OR trigger_type LIKE ? OR sync_status LIKE ? OR message LIKE ? OR error_summary LIKE ?";
+		$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+	}
+	$row = saris_fetch_one("SELECT COUNT(*) AS total FROM saris_sync_log" . $where, $params);
+	return (int)$row['total'];
+}
+
+function saris_list_sync_history($limit, $offset, $searchTerm = '', $sort = 'created_at', $dir = 'DESC') {
+	$allowedSorts = [
+		'id', 'trigger_type', 'sync_status', 'date_from', 'date_to', 'iterations',
+		'saris_invoices', 'saris_students', 'saris_payments', 'zerp_students',
+		'zerp_invoices', 'zerp_payments', 'zerp_partial', 'zerp_failed',
+		'duration_seconds', 'created_at'
+	];
+	if (!in_array($sort, $allowedSorts, true)) {
+		$sort = 'created_at';
+	}
+	$dir = strtoupper($dir) === 'ASC' ? 'ASC' : 'DESC';
+	$where = '';
+	$params = [];
+	if ($searchTerm !== '') {
+		$where = "WHERE run_id LIKE ? OR trigger_type LIKE ? OR sync_status LIKE ? OR message LIKE ? OR error_summary LIKE ? ";
+		$params = ["%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%", "%$searchTerm%"];
+	}
+	$params[] = (int)$limit;
+	$params[] = (int)$offset;
+	return saris_fetch_all(
+		"SELECT id, run_id, trigger_type, sync_status, date_from, date_to, iterations,
+			saris_invoices, saris_students, saris_payments, zerp_enabled,
+			zerp_students, zerp_invoices, zerp_payments, zerp_partial,
+			zerp_failed, zerp_skipped, error_summary, message, started_at,
+			completed_at, duration_seconds, created_at
+		FROM saris_sync_log
+		$where
+		ORDER BY `$sort` $dir, id DESC
+		LIMIT ? OFFSET ?",
+		$params
+	);
+}
+
 function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	global $RootPath;
 	$tabs = [
 		'Settings' => '/SARIS_Settings.php',
 		'Students' => '/SARIS_Students.php',
 		'Invoices' => '/SARIS_Invoices.php',
-		'Payments' => '/SARIS_Payments.php'
+		'Payments' => '/SARIS_Payments.php',
+		'Sync History' => '/SARIS_SyncHistory.php'
 	];
 	echo '<div class="noPrint" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:0 0 24px 0;">';
 	echo '<div style="display:flex;gap:8px;flex-wrap:wrap;">';

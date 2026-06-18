@@ -13,6 +13,9 @@ if (isset($_POST['SyncPayments'])) {
 	if (!saris_validate_date_range($startDate, $endDate)) {
 		prnMsg(__('Please enter a valid date range. End Date must be greater than or equal to Start Date.'), 'error');
 	} else {
+		$historyRunId = saris_sync_run_id();
+		$historyStartedAt = date('Y-m-d H:i:s');
+		$historyStartedTimer = microtime(true);
 		try {
 			$count = saris_sync_payments(new SARISAPIClient(), $startDate, $endDate);
 			$zerpStats = saris_run_zerp_sync();
@@ -22,8 +25,40 @@ if (isset($_POST['SyncPayments'])) {
 					. ', ' . __('Partial') . ': ' . $zerpStats['partial']
 					. ', ' . __('Failed') . ': ' . $zerpStats['failed'] . '.';
 			}
-			prnMsg($message, 'success');
+			$historyStatus = saris_sync_history_status($zerpStats);
+			saris_record_sync_history([
+				'run_id' => $historyRunId,
+				'trigger_type' => 'manual-payments',
+				'sync_status' => $historyStatus,
+				'date_from' => $startDate,
+				'date_to' => $endDate,
+				'iterations' => 1,
+				'saris' => ['payments' => $count],
+				'zerp' => $zerpStats,
+				'message' => $message,
+				'started_at' => $historyStartedAt,
+				'completed_at' => date('Y-m-d H:i:s'),
+				'duration_seconds' => microtime(true) - $historyStartedTimer,
+			]);
+			prnMsg(
+				__('Synchronization completed and was saved to history.')
+					. ' <a href="SARIS_SyncHistory.php">' . __('View Sync History') . '</a>',
+				$historyStatus === 'success' ? 'success' : 'warn'
+			);
 		} catch (Exception $e) {
+			saris_record_sync_history([
+				'run_id' => $historyRunId,
+				'trigger_type' => 'manual-payments',
+				'sync_status' => 'error',
+				'date_from' => $startDate,
+				'date_to' => $endDate,
+				'iterations' => 1,
+				'error_summary' => [['record_type' => 'run', 'count' => 1, 'message' => $e->getMessage()]],
+				'message' => $e->getMessage(),
+				'started_at' => $historyStartedAt,
+				'completed_at' => date('Y-m-d H:i:s'),
+				'duration_seconds' => microtime(true) - $historyStartedTimer,
+			]);
 			prnMsg(htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'), 'error');
 		}
 	}

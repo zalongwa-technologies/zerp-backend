@@ -179,6 +179,7 @@ $ZERP_SyncBatchSize = 100;
 $SARIS_API_BASE_URL = 'https://saris.example.ac.tz';
 $SARIS_API_CLIENT_ID = '';
 $SARIS_API_CLIENT_SECRET = '';
+$SARIS_AUTO_SYNC_START_DATE = '2025-10-01';
 $REMOTE_ADDR = '127.0.0.1';
 
 

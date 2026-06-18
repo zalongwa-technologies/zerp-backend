@@ -95,9 +95,30 @@ CREATE TABLE IF NOT EXISTS `zerp_sync_log` (
 
 CREATE TABLE IF NOT EXISTS `saris_sync_log` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `run_id` VARCHAR(36) NULL,
+  `trigger_type` VARCHAR(20) NOT NULL DEFAULT 'automatic',
   `sync_status` VARCHAR(20) NOT NULL,
+  `date_from` DATE NULL,
+  `date_to` DATE NULL,
+  `iterations` INT NOT NULL DEFAULT 0,
+  `saris_invoices` INT NOT NULL DEFAULT 0,
+  `saris_students` INT NOT NULL DEFAULT 0,
+  `saris_payments` INT NOT NULL DEFAULT 0,
+  `zerp_enabled` TINYINT(1) NOT NULL DEFAULT 0,
+  `zerp_students` INT NOT NULL DEFAULT 0,
+  `zerp_invoices` INT NOT NULL DEFAULT 0,
+  `zerp_payments` INT NOT NULL DEFAULT 0,
+  `zerp_partial` INT NOT NULL DEFAULT 0,
+  `zerp_failed` INT NOT NULL DEFAULT 0,
+  `zerp_skipped` INT NOT NULL DEFAULT 0,
+  `error_summary` TEXT NULL,
   `message` TEXT,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `started_at` DATETIME NULL,
+  `completed_at` DATETIME NULL,
+  `duration_seconds` DECIMAL(12,3) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_saris_sync_log_run` (`run_id`),
+  KEY `idx_saris_sync_log_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO `saris_settings` (`id`, `sync_mode`, `sync_interval`)
@@ -164,11 +185,22 @@ WHERE NOT EXISTS (
     AND mi.`url` = '/SARIS_Payments.php'
 );
 
+INSERT INTO `menuitems` (`secroleid`, `modulelink`, `menusection`, `caption`, `url`, `sequence`)
+SELECT `secroleid`, 'SARIS', 'Transactions', 'Sync History', '/SARIS_SyncHistory.php', 5
+FROM (SELECT DISTINCT `secroleid` FROM `modules`) AS roles
+WHERE NOT EXISTS (
+  SELECT 1 FROM `menuitems` mi
+  WHERE mi.`secroleid` = roles.`secroleid`
+    AND mi.`modulelink` = 'SARIS'
+    AND mi.`url` = '/SARIS_SyncHistory.php'
+);
+
 INSERT INTO `scripts` (`script`, `pagesecurity`, `description`) VALUES
 ('SARIS_Settings.php', 15, 'SARIS Integration settings'),
 ('SARIS_Students.php', 15, 'SARIS Integration students sync and listing'),
 ('SARIS_Invoices.php', 15, 'SARIS Integration invoices listing'),
-('SARIS_Payments.php', 15, 'SARIS Integration payments sync and listing')
+('SARIS_Payments.php', 15, 'SARIS Integration payments sync and listing'),
+('SARIS_SyncHistory.php', 15, 'SARIS and ZERP synchronization history')
 ON DUPLICATE KEY UPDATE
   `pagesecurity` = VALUES(`pagesecurity`),
   `description` = VALUES(`description`);

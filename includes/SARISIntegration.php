@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__ . '/ZERPSync.php');
+
 class SARISAPIClient {
 	private $baseUrl = 'https://star.mum.ac.tz';
 	private $clientId = '';
@@ -372,6 +374,85 @@ function saris_full_sync($client, $startDate, $endDate) {
 	return $stats;
 }
 
+function saris_zerp_config() {
+	global $ZERP_EndPoint, $ZERP_Username, $ZERP_Password, $ZERP_BankAccount;
+	global $ZERP_SalesArea, $ZERP_SalesPerson, $ZERP_SalesType, $ZERP_ShipVia;
+	global $ZERP_SyncEnabled, $ZERP_DefaultBranch, $ZERP_Currency, $ZERP_PaymentMethod;
+	global $ZERP_DefaultLocation, $ZERP_BranchArea, $ZERP_TaxGroup, $ZERP_XMLRPC_Timeout;
+	global $ZERP_PaymentTerms, $ZERP_HoldReason, $ZERP_CustomerType, $ZERP_InvoicePartCode;
+	global $ZERP_InvoiceLocation, $ZERP_InvoiceRate, $ZERP_SyncMaxAttempts, $ZERP_SyncBatchSize;
+	global $DEFAULT_PRODUCT_ID;
+	$legacyLocation = isset($ZERP_SalesArea) ? $ZERP_SalesArea : '';
+
+	return [
+		'enabled' => isset($ZERP_SyncEnabled) ? (bool)$ZERP_SyncEnabled : false,
+		'url' => isset($ZERP_EndPoint) ? $ZERP_EndPoint : '',
+		'username' => isset($ZERP_Username) ? $ZERP_Username : '',
+		'password' => isset($ZERP_Password) ? $ZERP_Password : '',
+		'timeout' => isset($ZERP_XMLRPC_Timeout) ? (int)$ZERP_XMLRPC_Timeout : 60,
+		'branch_code' => isset($ZERP_DefaultBranch) ? $ZERP_DefaultBranch : 'MAIN',
+		'currency' => isset($ZERP_Currency) ? $ZERP_Currency : 'TZS',
+		'sales_type' => isset($ZERP_SalesType) ? $ZERP_SalesType : '1',
+		'payment_terms' => isset($ZERP_PaymentTerms) ? $ZERP_PaymentTerms : '1',
+		'hold_reason' => isset($ZERP_HoldReason) ? (int)$ZERP_HoldReason : 1,
+		'customer_type' => isset($ZERP_CustomerType) ? (int)$ZERP_CustomerType : 1,
+		'branch_area' => isset($ZERP_BranchArea) ? $ZERP_BranchArea : '1',
+		'salesperson' => isset($ZERP_SalesPerson) ? $ZERP_SalesPerson : '1',
+		'default_location' => isset($ZERP_DefaultLocation) ? $ZERP_DefaultLocation : $legacyLocation,
+		'tax_group' => isset($ZERP_TaxGroup) ? (int)$ZERP_TaxGroup : 1,
+		'ship_via' => isset($ZERP_ShipVia) ? (int)$ZERP_ShipVia : 1,
+		'invoice_part_code' => isset($ZERP_InvoicePartCode)
+			? $ZERP_InvoicePartCode
+			: (isset($DEFAULT_PRODUCT_ID) ? $DEFAULT_PRODUCT_ID : ''),
+		'invoice_location' => isset($ZERP_InvoiceLocation) ? $ZERP_InvoiceLocation : $legacyLocation,
+		'invoice_rate' => isset($ZERP_InvoiceRate) ? (float)$ZERP_InvoiceRate : 1,
+		'bank_account' => isset($ZERP_BankAccount) ? $ZERP_BankAccount : '',
+		'payment_method' => isset($ZERP_PaymentMethod) ? $ZERP_PaymentMethod : '1',
+		'max_attempts' => isset($ZERP_SyncMaxAttempts) ? (int)$ZERP_SyncMaxAttempts : 5,
+		'batch_size' => isset($ZERP_SyncBatchSize) ? (int)$ZERP_SyncBatchSize : 100,
+	];
+}
+
+function saris_run_zerp_sync() {
+	$config = saris_zerp_config();
+	if (!$config['enabled']) {
+		return [
+			'enabled' => false,
+			'students_synced' => 0,
+			'invoices_synced' => 0,
+			'payments_synced' => 0,
+			'partial' => 0,
+			'failed' => 0,
+			'skipped' => 0,
+		];
+	}
+
+	foreach ([
+		'url', 'username', 'password', 'branch_code', 'currency', 'sales_type', 'payment_terms',
+		'branch_area', 'salesperson', 'default_location', 'invoice_part_code', 'invoice_location',
+		'bank_account', 'payment_method'
+	] as $required) {
+		if (trim((string)$config[$required]) === '') {
+			throw new RuntimeException('ZERP synchronization is enabled, but configuration "' . $required . '" is empty.');
+		}
+	}
+
+	$client = new ZERPXMLRPCClient($config);
+	$sync = new ZERPSync(saris_pdo(), $client, $config);
+	$result = $sync->run();
+	$result['enabled'] = true;
+	return $result;
+}
+
+function saris_full_sync_with_zerp($client, $startDate, $endDate) {
+	$sarisStats = saris_full_sync($client, $startDate, $endDate);
+	$zerpStats = saris_run_zerp_sync();
+	return [
+		'saris' => $sarisStats,
+		'zerp' => $zerpStats,
+	];
+}
+
 function saris_log_sync($message, $status = 'success') {
 	saris_execute(
 		"INSERT INTO saris_sync_log (sync_status, message, created_at) VALUES (?, ?, NOW())",
@@ -411,7 +492,7 @@ function saris_count_rows($table, $searchTerm = '') {
 }
 
 function saris_list_students($limit, $offset, $searchTerm = '', $sort = 'student_regnumber', $dir = 'ASC') {
-	$allowedSorts = ['id', 'student_regnumber', 'student_fullname', 'student_email', 'student_phone', 'student_programme', 'student_entryyear', 'student_studyyear', 'student_intake', 'created_at'];
+	$allowedSorts = ['id', 'student_regnumber', 'student_fullname', 'student_email', 'student_phone', 'student_programme', 'student_entryyear', 'student_studyyear', 'student_intake', 'sync_status', 'zerp_customer_code', 'created_at'];
 	if (!in_array($sort, $allowedSorts, true)) {
 		$sort = 'student_regnumber';
 	}
@@ -426,7 +507,8 @@ function saris_list_students($limit, $offset, $searchTerm = '', $sort = 'student
 	$params[] = (int)$offset;
 	return saris_fetch_all(
 		"SELECT id, student_regnumber, student_fullname, student_email, student_phone,
-			student_programme, student_entryyear, student_studyyear, student_intake, created_at
+			student_programme, student_entryyear, student_studyyear, student_intake,
+			sync_status, zerp_customer_code, sync_error, created_at
 		FROM students
 		$where
 		ORDER BY `$sort` $dir
@@ -436,7 +518,7 @@ function saris_list_students($limit, $offset, $searchTerm = '', $sort = 'student
 }
 
 function saris_list_invoices($limit, $offset, $searchTerm = '', $sort = 'invoice_date', $dir = 'DESC') {
-	$allowedSorts = ['id', 'student_name', 'invoice_reference_number', 'student_regnumber', 'invoice_amount', 'invoice_amount_type', 'invoice_desciption', 'invoice_date', 'created_at'];
+	$allowedSorts = ['id', 'student_name', 'invoice_reference_number', 'student_regnumber', 'invoice_amount', 'invoice_amount_type', 'invoice_desciption', 'invoice_date', 'sync_status', 'zerp_invoice_no', 'created_at'];
 	if (!in_array($sort, $allowedSorts, true)) {
 		$sort = 'invoice_date';
 	}
@@ -451,7 +533,8 @@ function saris_list_invoices($limit, $offset, $searchTerm = '', $sort = 'invoice
 	$params[] = (int)$offset;
 	return saris_fetch_all(
 		"SELECT id, student_name, invoice_reference_number, student_regnumber, invoice_amount,
-			invoice_amount_type, invoice_desciption, invoice_date, created_at
+			invoice_amount_type, invoice_desciption, invoice_date, sync_status,
+			zerp_invoice_no, sync_error, created_at
 		FROM invoices
 		$where
 		ORDER BY `$sort` $dir, id DESC
@@ -461,7 +544,7 @@ function saris_list_invoices($limit, $offset, $searchTerm = '', $sort = 'invoice
 }
 
 function saris_list_payments($limit, $offset, $searchTerm = '', $sort = 'payment_date', $dir = 'DESC') {
-	$allowedSorts = ['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'created_at'];
+	$allowedSorts = ['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'sync_status', 'zerp_receipt_no', 'zerp_invoice_no', 'allocation_synced_at', 'created_at'];
 	if (!in_array($sort, $allowedSorts, true)) {
 		$sort = 'payment_date';
 	}
@@ -477,7 +560,8 @@ function saris_list_payments($limit, $offset, $searchTerm = '', $sort = 'payment
 	return saris_fetch_all(
 		"SELECT id, student_name, student_regnumber, payment_desciption, payment_amount,
 			payment_amount_type, payment_currency, payment_receipt_number, payment_transaction_ref,
-			payment_date, payment_reference_number, payment_source, created_at
+			payment_date, payment_reference_number, payment_source, sync_status,
+			zerp_receipt_no, zerp_invoice_no, allocation_synced_at, sync_error, created_at
 		FROM payments
 		$where
 		ORDER BY `$sort` $dir, id DESC

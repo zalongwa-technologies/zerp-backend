@@ -15,7 +15,17 @@ CREATE TABLE IF NOT EXISTS `students` (
   `student_entryyear` VARCHAR(20),
   `student_studyyear` INT,
   `student_intake` VARCHAR(100),
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `sync_attempts` INT NOT NULL DEFAULT 0,
+  `sync_error` TEXT NULL,
+  `sync_locked_at` DATETIME NULL,
+  `synced_at` DATETIME NULL,
+  `zerp_customer_code` VARCHAR(10) NULL,
+  `customer_synced_at` DATETIME NULL,
+  `branch_synced_at` DATETIME NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_students_zerp_customer` (`zerp_customer_code`),
+  KEY `idx_students_sync_status` (`sync_status`, `sync_attempts`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `invoices` (
@@ -27,7 +37,16 @@ CREATE TABLE IF NOT EXISTS `invoices` (
   `invoice_amount_type` VARCHAR(50),
   `invoice_desciption` TEXT,
   `invoice_date` DATETIME,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  `sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `sync_attempts` INT NOT NULL DEFAULT 0,
+  `sync_error` TEXT NULL,
+  `sync_locked_at` DATETIME NULL,
+  `synced_at` DATETIME NULL,
+  `zerp_invoice_no` INT NULL,
+  `zerp_invoice_reference` VARCHAR(50) NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_invoices_zerp_invoice` (`zerp_invoice_no`),
+  KEY `idx_invoices_sync_status` (`sync_status`, `sync_attempts`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `payments` (
@@ -43,9 +62,35 @@ CREATE TABLE IF NOT EXISTS `payments` (
   `payment_date` DATETIME,
   `payment_reference_number` VARCHAR(100),
   `payment_source` VARCHAR(100),
+  `sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `sync_attempts` INT NOT NULL DEFAULT 0,
+  `sync_error` TEXT NULL,
+  `sync_locked_at` DATETIME NULL,
+  `synced_at` DATETIME NULL,
+  `zerp_receipt_no` INT NULL,
+  `zerp_invoice_no` INT NULL,
+  `allocation_synced_at` DATETIME NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY `uq_payments_receipt_number` (`payment_receipt_number`),
-  UNIQUE KEY `uq_payments_composite` (`payment_transaction_ref`, `student_regnumber`, `payment_date`, `payment_amount`)
+  UNIQUE KEY `uq_payments_composite` (`payment_transaction_ref`, `student_regnumber`, `payment_date`, `payment_amount`),
+  UNIQUE KEY `uq_payments_zerp_receipt` (`zerp_receipt_no`),
+  KEY `idx_payments_sync_status` (`sync_status`, `sync_attempts`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `zerp_sync_log` (
+  `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `run_id` VARCHAR(36) NOT NULL,
+  `record_type` VARCHAR(20) NOT NULL,
+  `record_id` INT NULL,
+  `source_reference` VARCHAR(100) NULL,
+  `xmlrpc_method` VARCHAR(100) NULL,
+  `attempt_number` INT NOT NULL DEFAULT 0,
+  `sync_status` VARCHAR(20) NOT NULL,
+  `fault_code` VARCHAR(20) NULL,
+  `message` TEXT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_zerp_sync_log_run` (`run_id`),
+  KEY `idx_zerp_sync_log_record` (`record_type`, `record_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `saris_sync_log` (

@@ -150,19 +150,35 @@ if ($RootPath === '/' or $RootPath === '\\') {
 }
 
 // ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
-$ZERP_EndPoint = 'https://zerp.xxx.xxx.tz/api/api_xml-rpc.php';
-$ZERP_Username = 'xcz';
-$ZERP_Password = 'Ap!User@2021';
+$ZERP_SyncEnabled = false;
+$ZERP_EndPoint = 'https://zerp.example.tz/api/api_xml-rpc.php';
+$ZERP_Username = '';
+$ZERP_Password = '';
 $ZERP_BankAccount = '1020'; //Chart of Account of the default Cash on Hand Bank Account 
-$ZERP_SalesArea = '3'; //select * from locations; to get sales area
+$ZERP_SalesArea = '3'; //Legacy setting used as the default invoice stock location.
 $ZERP_SalesPerson = '1';
 $ZERP_SalesType = '1';
 $ZERP_ShipVia = '1';
+$ZERP_DefaultBranch = 'MAIN';
+$ZERP_Currency = 'TZS';
+$ZERP_PaymentMethod = '1';
+$ZERP_PaymentTerms = '1';
+$ZERP_HoldReason = 1;
+$ZERP_CustomerType = 1;
+$ZERP_BranchArea = '1';
+$ZERP_DefaultLocation = '3';
+$ZERP_TaxGroup = 1;
+$ZERP_InvoicePartCode = '0as1';
+$ZERP_InvoiceLocation = '3';
+$ZERP_InvoiceRate = 1;
+$ZERP_XMLRPC_Timeout = 60;
+$ZERP_SyncMaxAttempts = 5;
+$ZERP_SyncBatchSize = 100;
 
 // ZALONGWA SARIS System Configuration for Exracting both Invoices and Receipts
-$SARIS_API_BASE_URL = 'https://xxx.xxx.ac.tz';
-$SARIS_API_CLIENT_ID = 'NMMNXY_ErPii';
-$SARIS_API_CLIENT_SECRET = 'K7@JUMAxP4!mZ9qM6#vB6&cR1$eY8uW0h3CX';
+$SARIS_API_BASE_URL = 'https://saris.example.ac.tz';
+$SARIS_API_CLIENT_ID = '';
+$SARIS_API_CLIENT_SECRET = '';
 $REMOTE_ADDR = '127.0.0.1';
 
 

@@ -1206,7 +1206,7 @@ unset($ReturnValue);
 
 $Description = __('Creates a customer receipt from the details passed to the method as an associative array');
 $Parameter[0]['name'] = __('Receipt Details');
-$Parameter[0]['description'] = __('An associative array describing the customer receipt with the following fields: debtorno - the customer code; trandate - the date of the receipt in Y-m-d format; amountfx - the amount in FX; paymentmethod - the payment method of the receipt e.g. cash/EFTPOS/credit card; bankaccount - the webERP bank account to use for the transaction, reference - the reference to record against the webERP receipt transaction');
+$Parameter[0]['description'] = __('An associative array describing the customer receipt with the following fields: debtorno - the customer code; branchcode - optional customer branch code; trandate - the date of the receipt in Y-m-d format; amountfx - the amount in FX; paymentmethod - the payment method of the receipt e.g. cash/EFTPOS/credit card; bankaccount - the webERP bank account to use for the transaction, reference - the reference to record against the webERP receipt transaction');
 $Parameter[1]['name'] = __('User name');
 $Parameter[1]['description'] = __('A valid weberp username. This user should have security access to this data.');
 $Parameter[2]['name'] = __('User password');

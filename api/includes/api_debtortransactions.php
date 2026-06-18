@@ -354,6 +354,7 @@ function InsertDebtorReceipt($Receipt, $User, $Password) {
 		 * $Receipt['bankaccount'] - the webERP bank account
 		 * $Receipt['reference']
 		 * $Receipt['discountfx']
+		 * $Receipt['branchcode'] - optional branch code; defaults to debtorno for legacy clients
 
 	*/
 	$Errors = array();
@@ -361,6 +362,26 @@ function InsertDebtorReceipt($Receipt, $User, $Password) {
 	if (gettype($db)=='integer') {
 		$Errors[0]=NoAuthorisation;
 		return $Errors;
+	}
+	foreach ($Receipt as $key => $Value) {
+		$Receipt[$key] = DB_escape_string($Value);
+	}
+
+	$ExistingReceiptResult = api_DB_query(
+		"SELECT transno, ovamount
+		FROM debtortrans
+		WHERE type=12
+		  AND debtorno='" . $Receipt['debtorno'] . "'
+		  AND reference='" . $Receipt['reference'] . "'
+		ORDER BY id DESC
+		LIMIT 1"
+	);
+	if (DB_num_rows($ExistingReceiptResult) > 0) {
+		$ExistingReceipt = DB_fetch_array($ExistingReceiptResult);
+		if (abs(abs((float)$ExistingReceipt['ovamount']) - (float)$Receipt['amountfx']) > 0.005) {
+			return ['error' => 'A receipt with this reference already exists with a different amount'];
+		}
+		return [0, (int)$ExistingReceipt['transno']];
 	}
 
 	/*Get Company Defaults */
@@ -515,12 +536,12 @@ function InsertDebtorReceipt($Receipt, $User, $Password) {
 									ovamount,
 									ovdiscount,
 									invtext)
-				VALUES ('" . $ReceiptNo . "',
-						12,
-						'" . $Receipt['debtorno'] . "',
-						'" . $Receipt['debtorno'] . "',
-						'" . $Receipt['trandate'] . "',
-						'" . date('Y-m-d H-i-s') . "',
+					VALUES ('" . $ReceiptNo . "',
+							12,
+							'" . $Receipt['debtorno'] . "',
+							'" . ($Receipt['branchcode'] ?? $Receipt['debtorno']) . "',
+							'" . $Receipt['trandate'] . "',
+							'" . date('Y-m-d H:i:s') . "',
 						'" . $PeriodNo . "',
 						'" . $Receipt['reference'] . "',
 						'" . $CustCurrRow['rate'] . "',
@@ -1262,12 +1283,30 @@ function InsertSalesInvoice($InvoiceDetails, $user, $password) {
     foreach ($InvoiceDetails as $key => $Value) {
         $InvoiceDetails[$key] = DB_escape_string($Value);
     }
+    $ExistingInvoiceResult = api_DB_query(
+        "SELECT transno, ovamount
+        FROM debtortrans
+        WHERE type=10
+          AND debtorno='" . $InvoiceDetails['debtorno'] . "'
+          AND reference='" . $InvoiceDetails['reference'] . "'
+        ORDER BY id DESC
+        LIMIT 1"
+    );
+    if (DB_num_rows($ExistingInvoiceResult) > 0) {
+        $ExistingInvoice = DB_fetch_array($ExistingInvoiceResult);
+        if (abs((float)$ExistingInvoice['ovamount'] - (float)$InvoiceDetails['ovamount']) > 0.005) {
+            return ['error' => 'An invoice with this reference already exists with a different amount'];
+        }
+        return [0, (int)$ExistingInvoice['transno']];
+    }
     $PartCode=$InvoiceDetails['partcode'];
     $Errors=VerifyStockCodeExists($PartCode, sizeof($Errors), $Errors);
     $Errors=VerifyInvoiceStockCodeExists($PartCode, sizeof($Errors), $Errors);
     unset($InvoiceDetails['partcode']);
     $SalesArea=$InvoiceDetails['salesarea'];
     unset($InvoiceDetails['salesarea']);
+    $JobRef=$InvoiceDetails['jobref'] ?? '';
+    unset($InvoiceDetails['jobref']);
     $InvoiceDetails['transno']=GetNextTransNo(10);
     $InvoiceDetails['order_']=$InvoiceDetails['transno'];
     $InvoiceDetails['type'] = 10;
@@ -1324,8 +1363,7 @@ function InsertSalesInvoice($InvoiceDetails, $user, $password) {
     }
     $FieldNames='';
     $FieldValues='';
-    $InvoiceDetails['trandate']=ConvertToSQLDate($InvoiceDetails['trandate']);
-    $InvoiceDetails['trandate']= date("Y-m-d");
+    $InvoiceDetails['trandate']=date('Y-m-d', strtotime($InvoiceDetails['trandate']));
     $InvoiceDetails['prd']=GetPeriodFromTransactionDate($InvoiceDetails['trandate'], sizeof($Errors), $Errors);
     foreach ($InvoiceDetails as $key => $Value) {
         $FieldNames.=$key.', ';
@@ -1344,12 +1382,13 @@ function InsertSalesInvoice($InvoiceDetails, $user, $password) {
         $SQL = "UPDATE systypes SET typeno='" . $InvoiceDetails['transno'] . "' WHERE typeid=10";
        			
 		$Result = DB_query($SQL);
-        $SQL = "INSERT INTO salesorders (orderno,debtorno,branchcode,orddate,ordertype,salesperson,deliverydate,fromstkloc,shipvia) 
+        $SQL = "INSERT INTO salesorders (orderno,debtorno,branchcode,customerref,orddate,ordertype,salesperson,deliverydate,fromstkloc,shipvia)
                 VALUES ('" . $InvoiceDetails['transno'] ."',
                         '" . $InvoiceDetails['debtorno'] ."',
                         '" . $InvoiceDetails['branchcode'] ."',
+                        '" . $InvoiceDetails['reference'] ."',
                         '" . $InvoiceDetails['trandate'] ."',
-                        '" . $InvoiceDetails['type'] ."',
+                        '" . $InvoiceDetails['tpe'] ."',
                         '" . $InvoiceDetails['salesperson'] ."',
                         '" . $InvoiceDetails['trandate'] ."',
                         '" . $SalesArea ."',
@@ -1371,7 +1410,7 @@ function InsertSalesInvoice($InvoiceDetails, $user, $password) {
                         '" . $DebtorsGLCode. "',
                         '". __('Invoice for') .' -' . $InvoiceDetails['debtorno'] .' ' . __('Total') . ' - '. $InvoiceDetails['ovamount'] . "',
                         '" . $InvoiceDetails['ovamount'] . "',
-                        '" . $InvoiceDetails['jobref'] . "')";
+                        '" . $JobRef . "')";
         // REMOVED: return $SQL;
         $Result = api_DB_query($SQL);
         if (DB_error_no() != 0) {
@@ -1386,8 +1425,8 @@ function InsertSalesInvoice($InvoiceDetails, $user, $password) {
                         '" . $InvoiceDetails['prd'] . "',
                         '" . $SalesGLCode . "',
                         '" . __('Invoice for') . ' -' . $InvoiceDetails['debtorno'] . ' ' . __('Total') .' - '. $InvoiceDetails['ovamount'] ."',
-                        '" . (-intval($InvoiceDetails['ovamount'])) ."',
-                        '" . $InvoiceDetails['jobref'] . "')";
+                        '" . (-1 * (float)$InvoiceDetails['ovamount']) ."',
+                        '" . $JobRef . "')";
         $Result = api_DB_query($SQL);
         if (DB_error_no() != 0) {
             DB_Txn_Rollback();

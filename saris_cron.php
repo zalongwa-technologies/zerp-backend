@@ -25,8 +25,16 @@ try {
 
 	$startDate = saris_default_invoice_start_date();
 	$endDate = date('Y-m-d');
-	$stats = saris_full_sync(new SARISAPIClient(), $startDate, $endDate);
+	$result = saris_full_sync_with_zerp(new SARISAPIClient(), $startDate, $endDate);
+	$stats = $result['saris'];
 	$message = 'Automatic sync completed from ' . $startDate . ' to ' . $endDate . '. Invoices: ' . $stats['invoices'] . ', Students: ' . $stats['students'] . ', Payments: ' . $stats['payments'] . '.';
+	if ($result['zerp']['enabled']) {
+		$message .= ' ZERP posted — Students: ' . $result['zerp']['students_synced']
+			. ', Invoices: ' . $result['zerp']['invoices_synced']
+			. ', Payments: ' . $result['zerp']['payments_synced']
+			. ', Partial: ' . $result['zerp']['partial']
+			. ', Failed: ' . $result['zerp']['failed'] . '.';
+	}
 	saris_log_sync($message, 'success');
 	echo $message . "\n";
 } catch (Exception $e) {

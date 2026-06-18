@@ -189,6 +189,7 @@ class ZERPXMLRPCClient {
 		foreach ($codes as $code) {
 			$messages[] = self::ERROR_MESSAGES[$code] ?? ('ZERP API error ' . $code);
 		}
+		$messages = array_values(array_unique($messages));
 		$message = $messages ? implode('; ', $messages) : 'Unexpected ZERP API response';
 		throw new ZERPXMLRPCException($method . ' failed: ' . $message, $codes[0] ?? null);
 	}

@@ -423,3 +423,23 @@ The integration is complete when:
 - No credentials or sensitive payloads are exposed in source control or logs.
 
 Do not begin implementation by guessing missing field mappings. Inspect the actual database schemas and XML-RPC validation functions first, document assumptions, and then implement the safest mapping supported by the repository.
+
+
+
+
+===================================
+Reset invoice and payment retries:
+UPDATE invoices
+SET sync_status = 'pending',
+    sync_attempts = 0,
+    sync_error = NULL
+WHERE zerp_invoice_no IS NULL;
+
+UPDATE payments
+SET sync_status = CASE
+        WHEN zerp_receipt_no IS NULL THEN 'pending'
+        ELSE 'partial'
+    END,
+    sync_attempts = 0,
+    sync_error = NULL
+WHERE allocation_synced_at IS NULL;

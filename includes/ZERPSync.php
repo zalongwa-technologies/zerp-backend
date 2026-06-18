@@ -203,6 +203,11 @@ class ZERPSync {
 				$student = $this->studentByRegistration($row['student_regnumber']);
 				$invoice = $this->matchingInvoice($row);
 
+				if ($invoice === null || empty($invoice['zerp_invoice_no']) || empty($invoice['zerp_invoice_reference'])) {
+					$this->currentMethod = 'reconciliation';
+					throw new RuntimeException('Payment is waiting for a synchronized invoice match; no receipt was created.');
+				}
+
 				if (empty($row['zerp_receipt_no'])) {
 					$this->currentMethod = 'weberp.xmlrpc_InsertDebtorReceipt';
 					$result = $this->client->insertDebtorReceipt($this->receiptPayload($row, $student));
@@ -215,11 +220,6 @@ class ZERPSync {
 					);
 					$stmtReceipt->execute([$receiptNo, $row['id']]);
 					$row['zerp_receipt_no'] = $receiptNo;
-				}
-
-				if ($invoice === null || empty($invoice['zerp_invoice_no']) || empty($invoice['zerp_invoice_reference'])) {
-					$this->currentMethod = 'reconciliation';
-					throw new RuntimeException('Receipt was posted, but no synchronized invoice could be matched for allocation.');
 				}
 
 				if (empty($row['allocation_synced_at'])) {

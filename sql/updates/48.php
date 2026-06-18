@@ -151,14 +151,6 @@ AddConstraint('salesorders', 'salesorders_ibfk_1', 'debtorno,branchcode', 'custb
 // 4. Create the SARIS integration and synchronization tables.
 // CreateTable() checks whether each table already exists before running its SQL.
 
-CreateTable('saris_settings', "CREATE TABLE `saris_settings` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`sync_mode` ENUM('manual', 'automatic') NOT NULL DEFAULT 'manual',
-	`sync_interval` ENUM('10min', '30min', '1hr', '1day') NULL,
-	`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`)
-)");
-
 CreateTable('students', "CREATE TABLE `students` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`student_regnumber` VARCHAR(100) NULL,
@@ -294,6 +286,16 @@ AddColumn('allocation_synced_at', 'payments', 'DATETIME', 'NULL', '', 'zerp_invo
 AddIndex(array('sync_status', 'sync_attempts'), 'payments', 'idx_payments_sync_status');
 
 // 5. Insert the default SARIS synchronization setting.
+// Keep this immediately before InsertRecord() so the default setting is never
+// queried or inserted before its table has been created.
+CreateTable('saris_settings', "CREATE TABLE IF NOT EXISTS `saris_settings` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`sync_mode` ENUM('manual', 'automatic') NOT NULL DEFAULT 'manual',
+	`sync_interval` ENUM('10min', '30min', '1hr', '1day') NULL DEFAULT NULL,
+	`updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`)
+)");
+
 InsertRecord(
 	'saris_settings',
 	array('id'),

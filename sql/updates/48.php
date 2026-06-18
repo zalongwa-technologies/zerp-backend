@@ -261,6 +261,38 @@ CreateTable('saris_sync_log', "CREATE TABLE `saris_sync_log` (
 	PRIMARY KEY (`id`)
 )");
 
+// CreateTable() does not alter a table which already exists. AddColumn() makes
+// this update safe for installations which created the SARIS staging tables
+// before the ZERP synchronization metadata was introduced.
+AddColumn('sync_status', 'students', 'VARCHAR(20)', 'NOT NULL', 'pending', 'student_intake');
+AddColumn('sync_attempts', 'students', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'students', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'students', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'students', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_customer_code', 'students', 'VARCHAR(10)', 'NULL', '', 'synced_at');
+AddColumn('customer_synced_at', 'students', 'DATETIME', 'NULL', '', 'zerp_customer_code');
+AddColumn('branch_synced_at', 'students', 'DATETIME', 'NULL', '', 'customer_synced_at');
+AddIndex(array('sync_status', 'sync_attempts'), 'students', 'idx_students_sync_status');
+
+AddColumn('sync_status', 'invoices', 'VARCHAR(20)', 'NOT NULL', 'pending', 'invoice_date');
+AddColumn('sync_attempts', 'invoices', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'invoices', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'invoices', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'invoices', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_invoice_no', 'invoices', 'INT', 'NULL', '', 'synced_at');
+AddColumn('zerp_invoice_reference', 'invoices', 'VARCHAR(50)', 'NULL', '', 'zerp_invoice_no');
+AddIndex(array('sync_status', 'sync_attempts'), 'invoices', 'idx_invoices_sync_status');
+
+AddColumn('sync_status', 'payments', 'VARCHAR(20)', 'NOT NULL', 'pending', 'payment_source');
+AddColumn('sync_attempts', 'payments', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'payments', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'payments', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'payments', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_receipt_no', 'payments', 'INT', 'NULL', '', 'synced_at');
+AddColumn('zerp_invoice_no', 'payments', 'INT', 'NULL', '', 'zerp_receipt_no');
+AddColumn('allocation_synced_at', 'payments', 'DATETIME', 'NULL', '', 'zerp_invoice_no');
+AddIndex(array('sync_status', 'sync_attempts'), 'payments', 'idx_payments_sync_status');
+
 // 5. Insert the default SARIS synchronization setting.
 InsertRecord(
 	'saris_settings',
@@ -300,6 +332,6 @@ UpdateField('scripts', 'description', 'SARIS Integration payments sync and listi
 if ($_SESSION['Updates']['Errors'] == 0) {
 	UpdateDBNo(
 		basename(__FILE__, '.php'),
-		__('Increase customer code sizes and add SARIS-to-ZERP integration tables')
+		__('Add SARIS-to-ZERP integration tables')
 	);
 }

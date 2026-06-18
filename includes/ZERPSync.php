@@ -39,6 +39,7 @@ class ZERPSync {
 			$this->resetStaleClaims();
 			$this->syncStudents();
 			$this->syncInvoices();
+			$this->refreshPaymentWaitingStates();
 			$this->syncPayments();
 			$this->stats['error_summary'] = $this->errorSummary();
 		} finally {
@@ -186,6 +187,18 @@ class ZERPSync {
 			WHERE s.sync_status = 'synced'
 			  AND p.sync_status IN ('pending', 'failed', 'partial')
 			  AND p.sync_attempts < ?
+			  AND EXISTS (
+				SELECT 1
+				FROM invoices i
+				WHERE i.student_regnumber = p.student_regnumber
+				  AND i.sync_status = 'synced'
+				  AND i.zerp_invoice_no IS NOT NULL
+				  AND i.zerp_invoice_reference IS NOT NULL
+				  AND (
+					i.invoice_reference_number = p.payment_reference_number
+					OR i.invoice_reference_number = p.payment_transaction_ref
+				  )
+			  )
 			ORDER BY p.id
 			LIMIT " . $this->batchSize();
 		$stmt = $this->pdo->prepare($sql);
@@ -204,8 +217,7 @@ class ZERPSync {
 				$invoice = $this->matchingInvoice($row);
 
 				if ($invoice === null || empty($invoice['zerp_invoice_no']) || empty($invoice['zerp_invoice_reference'])) {
-					$this->currentMethod = 'reconciliation';
-					throw new RuntimeException('Payment is waiting for a synchronized invoice match; no receipt was created.');
+					throw new LogicException('The eligible payment query returned a payment without a synchronized invoice match.');
 				}
 
 				if (empty($row['zerp_receipt_no'])) {
@@ -469,6 +481,45 @@ class ZERPSync {
 				  AND sync_locked_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)"
 			);
 		}
+	}
+
+	private function refreshPaymentWaitingStates() {
+		$matchCondition = "EXISTS (
+			SELECT 1
+			FROM invoices i
+			WHERE i.student_regnumber = payments.student_regnumber
+			  AND i.sync_status = 'synced'
+			  AND i.zerp_invoice_no IS NOT NULL
+			  AND i.zerp_invoice_reference IS NOT NULL
+			  AND (
+				i.invoice_reference_number = payments.payment_reference_number
+				OR i.invoice_reference_number = payments.payment_transaction_ref
+			  )
+		)";
+
+		$this->pdo->exec(
+			"UPDATE payments
+			SET sync_status = 'pending',
+				sync_attempts = 0,
+				sync_error = 'Waiting for a synchronized invoice reference match.',
+				sync_locked_at = NULL
+			WHERE allocation_synced_at IS NULL
+			  AND zerp_receipt_no IS NULL
+			  AND sync_status <> 'processing'
+			  AND NOT " . $matchCondition
+		);
+
+		$this->pdo->exec(
+			"UPDATE payments
+			SET sync_status = 'partial',
+				sync_attempts = 0,
+				sync_error = 'Receipt already posted; waiting for a synchronized invoice reference match.',
+				sync_locked_at = NULL
+			WHERE allocation_synced_at IS NULL
+			  AND zerp_receipt_no IS NOT NULL
+			  AND sync_status <> 'processing'
+			  AND NOT " . $matchCondition
+		);
 	}
 
 	private function errorSummary() {

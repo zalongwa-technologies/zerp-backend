@@ -443,3 +443,20 @@ SET sync_status = CASE
     sync_attempts = 0,
     sync_error = NULL
 WHERE allocation_synced_at IS NULL;
+
+Inspect the unmatched records:
+SELECT
+    p.id,
+    p.student_regnumber,
+    p.payment_reference_number,
+    p.payment_transaction_ref,
+    p.payment_date,
+    p.zerp_receipt_no,
+    GROUP_CONCAT(i.invoice_reference_number) AS available_invoices
+FROM payments p
+LEFT JOIN invoices i
+    ON i.student_regnumber = p.student_regnumber
+   AND i.zerp_invoice_no IS NOT NULL
+WHERE p.zerp_receipt_no IS NOT NULL
+  AND p.allocation_synced_at IS NULL
+GROUP BY p.id;

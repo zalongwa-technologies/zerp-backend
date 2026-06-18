@@ -288,7 +288,7 @@ AddIndex(array('sync_status', 'sync_attempts'), 'payments', 'idx_payments_sync_s
 // 5. Insert the default SARIS synchronization setting.
 // Keep this immediately before InsertRecord() so the default setting is never
 // queried or inserted before its table has been created.
-CreateTable('saris_settings', "CREATE TABLE IF NOT EXISTS `saris_settings` (
+CreateTable('saris_settings', "CREATE TABLE `saris_settings` (
 	`id` INT NOT NULL AUTO_INCREMENT,
 	`sync_mode` ENUM('manual', 'automatic') NOT NULL DEFAULT 'manual',
 	`sync_interval` ENUM('10min', '30min', '1hr', '1day') NULL DEFAULT NULL,
@@ -296,13 +296,20 @@ CreateTable('saris_settings', "CREATE TABLE IF NOT EXISTS `saris_settings` (
 	PRIMARY KEY (`id`)
 )");
 
-InsertRecord(
-	'saris_settings',
-	array('id'),
-	array(1),
-	array('id', 'sync_mode'),
-	array(1, 'manual')
-);
+if (DB_table_exists('saris_settings')) {
+	InsertRecord(
+		'saris_settings',
+		array('id'),
+		array(1),
+		array('id', 'sync_mode'),
+		array(1, 'manual')
+	);
+} else {
+	OutputResult(
+		__('The default SARIS synchronization setting could not be inserted because the saris_settings table was not created'),
+		'error'
+	);
+}
 
 // 6. Expand modules.reportlink to hold the SARIS report link.
 ChangeColumnSize('reportlink', 'modules', 'VARCHAR(6)', ' NOT NULL ', '', '6');

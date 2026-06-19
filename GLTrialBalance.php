@@ -152,34 +152,62 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		$HTML .= '<html>
 					<head>';
 		$HTML .= '<link href="css/reports.css" rel="stylesheet" type="text/css" />';
+		$HTML .= '<style>
+			body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #ffffff; color: #334155; margin: 20px; font-size: 11px; line-height: 1.4; }
+			.report-header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #059669; }
+			.report-header h2 { margin: 0; font-size: 16px; color: #0f172a; font-weight: bold; }
+			.report-header h3 { margin: 5px 0 2px 0; font-size: 12px; color: #059669; font-weight: bold; text-transform: uppercase; }
+			.report-header p { margin: 0; color: #64748b; font-size: 10px; }
+			.db-table-wrap { width: 100%; margin-top: 10px; }
+			.monochromatic-table { width: 100%; border-collapse: collapse; text-align: left; }
+			.monochromatic-table th { 
+				background-color: #059669; 
+				color: #ffffff; 
+				padding: 6px 8px; 
+				font-weight: bold; 
+				font-size: 10px; 
+				text-transform: uppercase;
+				border: none;
+			}
+			.monochromatic-table td { padding: 4px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; vertical-align: middle; }
+			.monochromatic-table tr:nth-child(even) td { background-color: #f8fafc; }
+			.monochromatic-table .number { text-align: right; }
+			.total_row td { font-weight: bold; border-top: 2px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; color: #0f172a; background-color: #f1f5f9 !important; font-size: 11px; }
+			.check_totals_row td { background-color: #ecfdf5 !important; color: #064e3b; font-size: 12px; border-top: 2px solid #10b981; border-bottom: 3px double #10b981; }
+		</style>';
+		$HTML .= '</head><body>';
+		
+		$HTML .= '<div class="report-header">
+					<h2>' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
+					<h3>' . __('Trial Balance') . '</h3>
+					<p>' . __('For the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</p>
+				  </div>';
+	} else {
+		$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
+		$HTML .= '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+		$HTML .= '<input type="hidden" name="PeriodFrom" value="' . $_POST['PeriodFrom'] . '" />';
+		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />';
 	}
 
-	$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
-	$HTML .= '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
-	$HTML .= '<input type="hidden" name="PeriodFrom" value="' . $_POST['PeriodFrom'] . '" />';
-	$HTML .= '<input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />';
-
-	$HTML .= '<meta name="author" content="WebERP " . $Version">
-					<meta name="Creator" content="webERP https://www.weberp.org">
-				</head>
-				<body>
-				<div class="db-table-wrap"><table class="monochromatic-table">
-					<thead>
-						<tr>
-							<th colspan="6">
-								<b>' . __('Trial Balance for the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</b>
-							</th>
-						</tr>
-						<tr>
-							<th>' . __('Account') . '</th>
-							<th>' . __('Account Name') . '</th>
-							<th>' . __('Month Debit') . '</th>
-							<th>' . __('Month Credit') . '</th>
-							<th>' . __('Period Debit') . '</th>
-							<th>' . __('Period Credit') . '</th>
-						</tr>
-					</thead>
-					<tbody>';
+	$HTML .= '<div class="db-table-wrap"><table class="monochromatic-table">
+				<thead>';
+	if (!isset($_POST['PrintPDF'])) {
+		$HTML .= '	<tr>
+						<th colspan="6">
+							<b>' . __('Trial Balance for the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</b>
+						</th>
+					</tr>';
+	}
+	$HTML .= '		<tr>
+						<th>' . __('Account') . '</th>
+						<th>' . __('Account Name') . '</th>
+						<th class="number">' . __('Month Debit') . '</th>
+						<th class="number">' . __('Month Credit') . '</th>
+						<th class="number">' . __('Period Debit') . '</th>
+						<th class="number">' . __('Period Credit') . '</th>
+					</tr>
+				</thead>
+				<tbody>';
 
 	$ViewTopic = 'GeneralLedger';
 	$BookMark = 'TrialBalance';
@@ -421,7 +449,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr>
 				<td></td>
 			</tr>';
-	$HTML .= '<tr class="total_row" style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #374151; border-bottom: 2px double #374151;">
+	$HTML .= '<tr class="total_row check_totals_row">
 				<td>' . __('Check Totals') . '</td>
 				<td></td>
 				<td class="number">' . locale_number_format($CumulativeMonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
@@ -433,26 +461,21 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<td></td>
 			</tr>';
 
-	$HTML .= '</table></div>';
+	$HTML .= '</tbody></table></div>';
 
-	$HTML .= '</form>';
 	if (isset($_POST['PrintPDF'])) {
-		$HTML .= '</tbody>
-				<div class="footer fixed-section">
+		$HTML .= '<div class="footer fixed-section">
 					<div class="right">
 						<span class="page-number">Page </span>
 					</div>
-				</div>
-			</table>';
+				</div>';
 	} else {
-		$HTML .= '</tbody>
-				</table>
-				<div class="centre">
-					<form><input type="submit" name="close" value="' . __('Close') . '" onclick="window.close()" /></form>
+		$HTML .= '</form>
+				<div class="centre" style="margin-top:20px;">
+					<form><input type="submit" name="close" class="db-btn db-btn-secondary" value="' . __('Close') . '" onclick="window.close()" /></form>
 				</div>';
 	}
-	$HTML .= '</body>
-		</html>';
+	$HTML .= '</body></html>';
 
 	if (isset($_POST['PrintPDF'])) {
 		$DomPDF = new Dompdf($DomPDFOptions); // Pass the options object defined in SetDomPDFOptions.php containing common options
@@ -472,7 +495,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	} elseif (isset($_POST['Spreadsheet'])) {
 		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-		$File = 'GLTrialBalance-' . date('Y-m-d'). '.' . 'ods';
+		$File = 'GLTrialBalance-' . date('Y-m-d'). '.' . 'xlsx';
 
 		header('Content-Disposition: attachment;filename="' . $File . '"');
 		header('Cache-Control: max-age=0');
@@ -481,13 +504,19 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		if (preg_match('/<table[\s\S]*?<\/table>/i', $HTML, $m)) {
 			$Table = $m[0];
 			$Table = preg_replace('/&(?![a-zA-Z#][a-zA-Z0-9]*;)/', '&amp;', $Table);
-			$SpreadsheetHTML = '<html><head><meta charset="UTF-8"></head><body>' . $Table . '</body></html>';
+			// Inject basic styling for the spreadsheet parser
+			$SpreadsheetHTML = '<html><head><meta charset="UTF-8"><style>
+				th { font-weight: bold; background-color: #f3f4f6; color: #111827; text-align: left; border: 1px solid #d1d5db; }
+				td { border: 1px solid #d1d5db; }
+				.number { text-align: right; }
+				.total_row td { font-weight: bold; border-top: 2px solid #000; }
+			</style></head><body>' . $Table . '</body></html>';
 		} else {
 			$SpreadsheetHTML = '<html><head><meta charset="UTF-8"></head><body><table><tbody></tbody></table></body></html>';
 		}
 		$spreadsheet = $reader->loadFromString($SpreadsheetHTML);
 
-		$writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Ods');
+		$writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
 		$writer->save('php://output');
 	} else {
 		$Title = __('General Ledger Trial Balance');

@@ -13,10 +13,52 @@ if (isset($_POST['SyncPayments'])) {
 	if (!saris_validate_date_range($startDate, $endDate)) {
 		prnMsg(__('Please enter a valid date range. End Date must be greater than or equal to Start Date.'), 'error');
 	} else {
+		$historyRunId = saris_sync_run_id();
+		$historyStartedAt = date('Y-m-d H:i:s');
+		$historyStartedTimer = microtime(true);
 		try {
 			$count = saris_sync_payments(new SARISAPIClient(), $startDate, $endDate);
-			prnMsg(__('Payments sync completed.') . ' ' . __('Payments') . ': ' . $count . '.', 'success');
+			$zerpStats = saris_run_zerp_sync();
+			$message = __('Payments sync completed.') . ' ' . __('Payments') . ': ' . $count . '.';
+			if ($zerpStats['enabled']) {
+				$message .= ' ' . __('ZERP payments posted') . ': ' . $zerpStats['payments_synced']
+					. ', ' . __('Partial') . ': ' . $zerpStats['partial']
+					. ', ' . __('Failed') . ': ' . $zerpStats['failed'] . '.';
+			}
+			$historyStatus = saris_sync_history_status($zerpStats);
+			saris_record_sync_history([
+				'run_id' => $historyRunId,
+				'trigger_type' => 'manual-payments',
+				'sync_status' => $historyStatus,
+				'date_from' => $startDate,
+				'date_to' => $endDate,
+				'iterations' => 1,
+				'saris' => ['payments' => $count],
+				'zerp' => $zerpStats,
+				'message' => $message,
+				'started_at' => $historyStartedAt,
+				'completed_at' => date('Y-m-d H:i:s'),
+				'duration_seconds' => microtime(true) - $historyStartedTimer,
+			]);
+			prnMsg(
+				__('Synchronization completed and was saved to history.')
+					. ' <a href="SARIS_SyncHistory.php">' . __('View Sync History') . '</a>',
+				$historyStatus === 'success' ? 'success' : 'warn'
+			);
 		} catch (Exception $e) {
+			saris_record_sync_history([
+				'run_id' => $historyRunId,
+				'trigger_type' => 'manual-payments',
+				'sync_status' => 'error',
+				'date_from' => $startDate,
+				'date_to' => $endDate,
+				'iterations' => 1,
+				'error_summary' => [['record_type' => 'run', 'count' => 1, 'message' => $e->getMessage()]],
+				'message' => $e->getMessage(),
+				'started_at' => $historyStartedAt,
+				'completed_at' => date('Y-m-d H:i:s'),
+				'duration_seconds' => microtime(true) - $historyStartedTimer,
+			]);
 			prnMsg(htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'), 'error');
 		}
 	}
@@ -42,13 +84,13 @@ if ($extraParams !== '') {
 if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 	ob_start();
 	if (count($result) === 0) {
-		echo '<tr><td colspan="13" style="text-align:center;padding:60px;color:#6b7280;">';
+		echo '<tr><td colspan="18" style="text-align:center;padding:60px;color:#6b7280;">';
 		echo '<svg style="width:64px;height:64px;margin:0 auto 16px;color:#d1d5db;display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
 		echo '<div style="font-size:16px;">' . __('No records found matching your search criteria.') . '</div></td></tr>';
 	} else {
 		foreach ($result as $row) {
 			echo '<tr>';
-			foreach (['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'created_at'] as $key) {
+			foreach (['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'sync_status', 'zerp_receipt_no', 'zerp_invoice_no', 'allocation_synced_at', 'sync_error', 'created_at'] as $key) {
 				echo '<td>' . htmlspecialchars((string)$row[$key], ENT_QUOTES, 'UTF-8') . '</td>';
 			}
 			echo '</tr>';
@@ -96,20 +138,29 @@ $columns = [
 	'Payment Date' => 'payment_date',
 	'Reference Number' => 'payment_reference_number',
 	'Source' => 'payment_source',
+	'Sync Status' => 'sync_status',
+	'ZERP Receipt' => 'zerp_receipt_no',
+	'ZERP Invoice' => 'zerp_invoice_no',
+	'Allocated At' => 'allocation_synced_at',
+	'Sync Error' => null,
 	'Created At' => 'created_at'
 ];
 foreach ($columns as $label => $col) {
-	saris_render_sort_header($label, $col, $sort, $dir);
+	if ($col === null) {
+		echo '<th>' . __($label) . '</th>';
+	} else {
+		saris_render_sort_header($label, $col, $sort, $dir);
+	}
 }
 echo '</tr></thead><tbody>';
 if (count($result) === 0) {
-	echo '<tr><td colspan="13" style="text-align:center;padding:60px;color:#6b7280;">';
+	echo '<tr><td colspan="18" style="text-align:center;padding:60px;color:#6b7280;">';
 	echo '<svg style="width:64px;height:64px;margin:0 auto 16px;color:#d1d5db;display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
 	echo '<div style="font-size:16px;">' . __('No records found matching your search criteria.') . '</div></td></tr>';
 } else {
 	foreach ($result as $row) {
 		echo '<tr>';
-		foreach (['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'created_at'] as $key) {
+		foreach (['id', 'student_name', 'student_regnumber', 'payment_desciption', 'payment_amount', 'payment_amount_type', 'payment_currency', 'payment_receipt_number', 'payment_transaction_ref', 'payment_date', 'payment_reference_number', 'payment_source', 'sync_status', 'zerp_receipt_no', 'zerp_invoice_no', 'allocation_synced_at', 'sync_error', 'created_at'] as $key) {
 			echo '<td>' . htmlspecialchars((string)$row[$key], ENT_QUOTES, 'UTF-8') . '</td>';
 		}
 		echo '</tr>';

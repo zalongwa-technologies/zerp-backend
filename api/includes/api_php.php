@@ -26,7 +26,8 @@ if (!isset($WebErpSessionType)) {
 	}
 }
 
-$DefaultDatabase = 'zerp_backend';
+// $DefaultDatabase is loaded from config.php by api_session.php, or by the
+// normal web session bootstrap when this API is invoked from a web request.
 $api_DatabaseName = $_SESSION['DatabaseName'] ?? $DefaultDatabase;
 
 include(__DIR__ . '/api_errorcodes.php');

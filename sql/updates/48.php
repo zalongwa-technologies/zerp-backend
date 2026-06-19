@@ -1,7 +1,8 @@
 <?php
-// INCREASE SIZE OF debtorsmaster.debtorno FROM 10 CHAR TO 32 CHAR
-// This is needed to accommodate Student Registration Number (RegNo)
-// by Juma Lungo, Tanzania
+// UPDATE THE DATABASE BY ADDING TABLES AND ALTERING TABLE COLUMNS IN ORDER TO
+// FACILITATE SARIS AND webERP Systems Integration
+// by Juma Lungo <babamadende@gmail.com>, Tanzania
+// 18 June 2026
 
 // 1. delete foreign key constraints (Bottom-Up-Drop aka BUD)
 //
@@ -147,4 +148,199 @@ AddConstraint('salesorders', 'salesorders_ibfk_1', 'debtorno,branchcode', 'custb
 // AND COLUMN_NAME = 'branchcode'
 // ORDER BY CHARACTER_MAXIMUM_LENGTH, TABLE_NAME;
 
-UpdateDBNo(basename(__FILE__, '.php'), __('Increase customer code sizes'));
+// 4. Create the SARIS integration and synchronization tables.
+// CreateTable() checks whether each table already exists before running its SQL.
+
+CreateTable('students', "CREATE TABLE `students` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`student_regnumber` VARCHAR(100) NULL,
+	`student_fullname` VARCHAR(255) NULL,
+	`student_email` VARCHAR(255) NULL,
+	`student_phone` VARCHAR(50) NULL,
+	`student_programme` VARCHAR(255) NULL,
+	`student_entryyear` VARCHAR(20) NULL,
+	`student_studyyear` INT NULL,
+	`student_intake` VARCHAR(100) NULL,
+	`sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+	`sync_attempts` INT NOT NULL DEFAULT 0,
+	`sync_error` TEXT NULL,
+	`sync_locked_at` DATETIME NULL,
+	`synced_at` DATETIME NULL,
+	`zerp_customer_code` VARCHAR(10) NULL,
+	`customer_synced_at` DATETIME NULL,
+	`branch_synced_at` DATETIME NULL,
+	`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `student_regnumber` (`student_regnumber`),
+	UNIQUE KEY `uq_students_zerp_customer` (`zerp_customer_code`),
+	KEY `idx_students_sync_status` (`sync_status`, `sync_attempts`)
+)");
+
+CreateTable('invoices', "CREATE TABLE `invoices` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`student_name` VARCHAR(255) NULL,
+	`invoice_reference_number` VARCHAR(100) NULL,
+	`student_regnumber` VARCHAR(100) NULL,
+	`invoice_amount` DECIMAL(15,2) NULL,
+	`invoice_amount_type` VARCHAR(50) NULL,
+	`invoice_desciption` TEXT NULL,
+	`invoice_date` DATETIME NULL,
+	`sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+	`sync_attempts` INT NOT NULL DEFAULT 0,
+	`sync_error` TEXT NULL,
+	`sync_locked_at` DATETIME NULL,
+	`synced_at` DATETIME NULL,
+	`zerp_invoice_no` INT NULL,
+	`zerp_invoice_reference` VARCHAR(50) NULL,
+	`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `invoice_reference_number` (`invoice_reference_number`),
+	UNIQUE KEY `uq_invoices_zerp_invoice` (`zerp_invoice_no`),
+	KEY `idx_invoices_sync_status` (`sync_status`, `sync_attempts`)
+)");
+
+CreateTable('payments', "CREATE TABLE `payments` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`student_name` VARCHAR(255) NULL,
+	`student_regnumber` VARCHAR(100) NULL,
+	`payment_desciption` TEXT NULL,
+	`payment_amount` DECIMAL(15,2) NULL,
+	`payment_amount_type` VARCHAR(50) NULL,
+	`payment_currency` VARCHAR(10) NULL,
+	`payment_receipt_number` VARCHAR(100) NULL,
+	`payment_transaction_ref` VARCHAR(100) NULL,
+	`payment_date` DATETIME NULL,
+	`payment_reference_number` VARCHAR(100) NULL,
+	`payment_source` VARCHAR(100) NULL,
+	`sync_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+	`sync_attempts` INT NOT NULL DEFAULT 0,
+	`sync_error` TEXT NULL,
+	`sync_locked_at` DATETIME NULL,
+	`synced_at` DATETIME NULL,
+	`zerp_receipt_no` INT NULL,
+	`zerp_invoice_no` INT NULL,
+	`allocation_synced_at` DATETIME NULL,
+	`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `uq_payments_receipt_number` (`payment_receipt_number`),
+	UNIQUE KEY `uq_payments_composite` (`payment_transaction_ref`, `student_regnumber`, `payment_date`, `payment_amount`),
+	UNIQUE KEY `uq_payments_zerp_receipt` (`zerp_receipt_no`),
+	KEY `idx_payments_sync_status` (`sync_status`, `sync_attempts`)
+)");
+
+CreateTable('zerp_sync_log', "CREATE TABLE `zerp_sync_log` (
+	`id` BIGINT NOT NULL AUTO_INCREMENT,
+	`run_id` VARCHAR(36) NOT NULL,
+	`record_type` VARCHAR(20) NOT NULL,
+	`record_id` INT NULL,
+	`source_reference` VARCHAR(100) NULL,
+	`xmlrpc_method` VARCHAR(100) NULL,
+	`attempt_number` INT NOT NULL DEFAULT 0,
+	`sync_status` VARCHAR(20) NOT NULL,
+	`fault_code` VARCHAR(20) NULL,
+	`message` TEXT NULL,
+	`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	KEY `idx_zerp_sync_log_run` (`run_id`),
+	KEY `idx_zerp_sync_log_record` (`record_type`, `record_id`)
+)");
+
+CreateTable('saris_sync_log', "CREATE TABLE `saris_sync_log` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`sync_status` VARCHAR(20) NOT NULL,
+	`message` TEXT NULL,
+	`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`)
+)");
+
+// CreateTable() does not alter a table which already exists. AddColumn() makes
+// this update safe for installations which created the SARIS staging tables
+// before the ZERP synchronization metadata was introduced.
+AddColumn('sync_status', 'students', 'VARCHAR(20)', 'NOT NULL', 'pending', 'student_intake');
+AddColumn('sync_attempts', 'students', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'students', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'students', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'students', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_customer_code', 'students', 'VARCHAR(10)', 'NULL', '', 'synced_at');
+AddColumn('customer_synced_at', 'students', 'DATETIME', 'NULL', '', 'zerp_customer_code');
+AddColumn('branch_synced_at', 'students', 'DATETIME', 'NULL', '', 'customer_synced_at');
+AddIndex(array('sync_status', 'sync_attempts'), 'students', 'idx_students_sync_status');
+
+AddColumn('sync_status', 'invoices', 'VARCHAR(20)', 'NOT NULL', 'pending', 'invoice_date');
+AddColumn('sync_attempts', 'invoices', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'invoices', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'invoices', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'invoices', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_invoice_no', 'invoices', 'INT', 'NULL', '', 'synced_at');
+AddColumn('zerp_invoice_reference', 'invoices', 'VARCHAR(50)', 'NULL', '', 'zerp_invoice_no');
+AddIndex(array('sync_status', 'sync_attempts'), 'invoices', 'idx_invoices_sync_status');
+
+AddColumn('sync_status', 'payments', 'VARCHAR(20)', 'NOT NULL', 'pending', 'payment_source');
+AddColumn('sync_attempts', 'payments', 'INT', 'NOT NULL', '0', 'sync_status');
+AddColumn('sync_error', 'payments', 'text', 'NULL', '', 'sync_attempts');
+AddColumn('sync_locked_at', 'payments', 'DATETIME', 'NULL', '', 'sync_error');
+AddColumn('synced_at', 'payments', 'DATETIME', 'NULL', '', 'sync_locked_at');
+AddColumn('zerp_receipt_no', 'payments', 'INT', 'NULL', '', 'synced_at');
+AddColumn('zerp_invoice_no', 'payments', 'INT', 'NULL', '', 'zerp_receipt_no');
+AddColumn('allocation_synced_at', 'payments', 'DATETIME', 'NULL', '', 'zerp_invoice_no');
+AddIndex(array('sync_status', 'sync_attempts'), 'payments', 'idx_payments_sync_status');
+
+// 5. Insert the default SARIS synchronization setting.
+// Keep this immediately before InsertRecord() so the default setting is never
+// queried or inserted before its table has been created.
+CreateTable('saris_settings', "CREATE TABLE `saris_settings` (
+	`id` INT(11) NOT NULL AUTO_INCREMENT,
+	`sync_mode` ENUM('manual', 'automatic') NOT NULL DEFAULT 'manual',
+	`sync_interval` ENUM('10min', '30min', '1hr', '1day') DEFAULT NULL,
+	`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`)
+)");
+
+if (DB_table_exists('saris_settings')) {
+	InsertRecord(
+		'saris_settings',
+		array('id'),
+		array(1),
+		array('id', 'sync_mode'),
+		array(1, 'manual')
+	);
+} else {
+	OutputResult(
+		__('The default SARIS synchronization setting could not be inserted because the saris_settings table was not created'),
+		'error'
+	);
+}
+
+// 6. Expand modules.reportlink to hold the SARIS report link.
+ChangeColumnSize('reportlink', 'modules', 'VARCHAR(6)', ' NOT NULL ', '', '6');
+
+// 7. Register the SARIS module and its menu items for every security role.
+// NewModule() and NewMenuItem() are idempotent and perform the role-specific inserts.
+NewModule('SARIS', 'saris', __('SARIS Integration'), 9);
+
+NewMenuItem('SARIS', 'Transactions', __('Settings'), '/SARIS_Settings.php', 1);
+NewMenuItem('SARIS', 'Transactions', __('Students'), '/SARIS_Students.php', 2);
+NewMenuItem('SARIS', 'Transactions', __('Invoices'), '/SARIS_Invoices.php', 3);
+NewMenuItem('SARIS', 'Transactions', __('Payments'), '/SARIS_Payments.php', 4);
+
+// 8. Register the SARIS pages and retain the descriptions from db_setup.sql.
+NewScript('SARIS_Settings.php', 15);
+NewScript('SARIS_Students.php', 15);
+NewScript('SARIS_Invoices.php', 15);
+NewScript('SARIS_Payments.php', 15);
+
+UpdateField('scripts', 'pagesecurity', 15, "script='SARIS_Settings.php'");
+UpdateField('scripts', 'description', 'SARIS Integration settings', "script='SARIS_Settings.php'");
+UpdateField('scripts', 'pagesecurity', 15, "script='SARIS_Students.php'");
+UpdateField('scripts', 'description', 'SARIS Integration students sync and listing', "script='SARIS_Students.php'");
+UpdateField('scripts', 'pagesecurity', 15, "script='SARIS_Invoices.php'");
+UpdateField('scripts', 'description', 'SARIS Integration invoices listing', "script='SARIS_Invoices.php'");
+UpdateField('scripts', 'pagesecurity', 15, "script='SARIS_Payments.php'");
+UpdateField('scripts', 'description', 'SARIS Integration payments sync and listing', "script='SARIS_Payments.php'");
+
+if ($_SESSION['Updates']['Errors'] == 0) {
+	UpdateDBNo(
+		basename(__FILE__, '.php'),
+		__('Add SARIS-to-ZERP integration tables')
+	);
+}

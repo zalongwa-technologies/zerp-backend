@@ -69,6 +69,30 @@ top menu bar. The documentation is also available within the [live demo.](https:
 The developer's documentation is also included in every installation, in markdown format. It is found in `./doc/developers/`.
 It can be browsed online at https://github.com/timschofield/webERP/tree/master/doc/developers
 
+## SARIS-to-ZERP synchronization
+
+The SARIS integration first imports students, invoices, and payments into local staging tables, then optionally posts them
+to ZERP through `/api/api_xml-rpc.php`. Posting follows the dependency order customer, branch, invoice, receipt, allocation.
+
+For an existing installation, back up the database and apply `sql/saris_zerp_sync_migration.sql` once. New installations
+receive the synchronization fields from `db_setup.sql`.
+
+Copy the ZERP settings from `config.distrib.php` into the runtime `config.php`, verify that each configured currency, sales
+type, payment term, customer type, area, salesperson, location, tax group, shipper, bank account, and invoice part code
+exists in ZERP, then set:
+
+```php
+$ZERP_SyncEnabled = true;
+```
+
+Manual SARIS pulls and `saris_cron.php` both invoke the same posting service. Remote invoice and receipt numbers are stored
+locally, and XML-RPC invoice/receipt creation checks source references before inserting, making retries safe. Payments are
+allocated only when `payment_reference_number` or `payment_transaction_ref` exactly matches a synchronized
+`invoice_reference_number`; unmatched receipts remain in `partial` state for reconciliation. Errors are stored on each
+staging record and in `zerp_sync_log`. Credentials belong only in `config.php` and are never written to synchronization logs.
+After correcting a permanent configuration or data error, an operator can retry a record by setting its `sync_status` to
+`pending`, `sync_attempts` to `0`, and `sync_error` to `NULL`.
+
 ## Support
 
 Free support is available 24/7, provided by our enthusiastic community of actual webERP users, integrators, and the developers themselves.
@@ -105,5 +129,3 @@ A copy of the GNU General Public License is included in the doc directory along 
 Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 Copyright © 2003-2026 The webERP Contributors - Contact: info@weberp.org
-
-

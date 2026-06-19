@@ -10,14 +10,14 @@ $recentStudents = [];
 $recentPayments = [];
 
 // Check tables and get stats
-$chk = DB_query("SHOW TABLES LIKE 'saris_students'");
+$chk = DB_query("SHOW TABLES LIKE 'students'");
 if (DB_num_rows($chk) > 0) {
-    $res = DB_query("SELECT COUNT(*) as count FROM saris_students");
+    $res = DB_query("SELECT COUNT(*) as count FROM students");
     if (DB_error_no() == 0 && $res) {
         $row = DB_fetch_assoc($res);
         $totalStudents = (int)$row['count'];
     }
-    $res = DB_query("SELECT * FROM saris_students ORDER BY created_at DESC LIMIT 5");
+    $res = DB_query("SELECT student_regnumber, student_fullname FROM students ORDER BY created_at DESC LIMIT 5");
     if (DB_error_no() == 0 && $res) {
         while ($row = DB_fetch_assoc($res)) {
             $recentStudents[] = $row;
@@ -25,23 +25,23 @@ if (DB_num_rows($chk) > 0) {
     }
 }
 
-$chk = DB_query("SHOW TABLES LIKE 'saris_invoices'");
+$chk = DB_query("SHOW TABLES LIKE 'invoices'");
 if (DB_num_rows($chk) > 0) {
-    $res = DB_query("SELECT COUNT(*) as count FROM saris_invoices");
+    $res = DB_query("SELECT COUNT(*) as count FROM invoices");
     if (DB_error_no() == 0 && $res) {
         $row = DB_fetch_assoc($res);
         $totalInvoices = (int)$row['count'];
     }
 }
 
-$chk = DB_query("SHOW TABLES LIKE 'saris_payments'");
+$chk = DB_query("SHOW TABLES LIKE 'payments'");
 if (DB_num_rows($chk) > 0) {
-    $res = DB_query("SELECT COUNT(*) as count FROM saris_payments");
+    $res = DB_query("SELECT COUNT(*) as count FROM payments");
     if (DB_error_no() == 0 && $res) {
         $row = DB_fetch_assoc($res);
         $totalPayments = (int)$row['count'];
     }
-    $res = DB_query("SELECT * FROM saris_payments ORDER BY payment_date DESC LIMIT 5");
+    $res = DB_query("SELECT payment_receipt_number, student_name, payment_amount, payment_date FROM payments ORDER BY payment_date DESC LIMIT 5");
     if (DB_error_no() == 0 && $res) {
         while ($row = DB_fetch_assoc($res)) {
             $recentPayments[] = $row;
@@ -150,8 +150,8 @@ if (DB_num_rows($chk) > 0) {
                             <?php foreach ($recentStudents as $student): ?>
                             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-soft); padding-bottom: 8px;">
                                 <div style="display: flex; flex-direction: column;">
-                                    <span style="font-weight: 600; font-size: 0.85rem;"><?= htmlspecialchars($student['name']) ?></span>
-                                    <span style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($student['reg_number']) ?></span>
+                                    <span style="font-weight: 600; font-size: 0.85rem;"><?= htmlspecialchars($student['student_fullname']) ?></span>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($student['student_regnumber']) ?></span>
                                 </div>
                             </div>
                             <?php endforeach; ?>
@@ -180,9 +180,9 @@ if (DB_num_rows($chk) > 0) {
                         <?php else: ?>
                             <?php foreach ($recentPayments as $payment): ?>
                             <tr>
-                                <td style="font-weight: 700; color: var(--primary);"><?= htmlspecialchars($payment['receipt_number']) ?></td>
+                                <td style="font-weight: 700; color: var(--primary);"><?= htmlspecialchars($payment['payment_receipt_number']) ?></td>
                                 <td style="font-weight: 600;"><?= htmlspecialchars($payment['student_name']) ?></td>
-                                <td style="font-weight: 700;">TZS <?= number_format($payment['amount'], 2) ?></td>
+                                <td style="font-weight: 700;">TZS <?= number_format($payment['payment_amount'], 2) ?></td>
                                 <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($payment['payment_date'])) ?></td>
                             </tr>
                             <?php endforeach; ?>

@@ -36,7 +36,7 @@ $ExtraHeadContent = '
 	body { font-family: "Inter", sans-serif !important; background-color: var(--db-surface-alt) !important; color: var(--db-text-main) !important; margin: 0; padding: 0; }
 	
 	.db-page { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; box-sizing: border-box !important; padding: 20px; }
-	.db-centered-container { width: 100% !important; max-width: 1000px !important; margin: 0 auto; box-sizing: border-box !important; }
+	.db-centered-container { width: 100% !important; max-width: 1350px !important; margin: 0 auto; box-sizing: border-box !important; }
 	
 	/* Page Header */
 	.db-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
@@ -47,9 +47,9 @@ $ExtraHeadContent = '
 	/* Layout & Cards */
 	.db-main-layout { display: grid; gap: 24px; box-sizing: border-box !important; min-width: 0 !important; }
 	.db-card { background: #ffffff; border-radius: 12px; box-shadow: var(--db-shadow-sm); border: 1px solid var(--db-border); overflow: hidden; width: 100% !important; box-sizing: border-box !important; margin-bottom: 24px; min-width: 0 !important; }
-	.db-card-header { padding: 16px 20px; border-bottom: 1px solid var(--db-border); display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
-	.db-card-title { font-size: 1.1rem; font-weight: 600; color: var(--db-text-main); margin: 0; }
-	.db-card-body { padding: 20px; }
+	.db-card-header { padding: 20px 24px; border-bottom: 1px solid var(--db-border); display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
+	.db-card-title { font-size: 1.15rem; font-weight: 600; color: var(--db-text-main); margin: 0; }
+	.db-card-body { padding: 24px; }
 	
 	/* Forms */
 	.db-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
@@ -70,10 +70,33 @@ $ExtraHeadContent = '
 	.db-btn-secondary:hover { background: #f3f4f6 !important; color: #111827 !important; }
 	
 	/* Enhanced Tables */
-	.db-table-wrap { width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; box-sizing: border-box !important; border-radius: 8px; border: 1px solid var(--db-border); background: #fff; margin-top: 15px; }
+	.db-table-wrap { 
+		width: 100% !important; 
+		overflow-x: auto !important; 
+		overflow-y: auto !important; 
+		max-height: 78vh !important; 
+		-webkit-overflow-scrolling: touch; 
+		box-sizing: border-box !important; 
+		border-radius: 8px; 
+		border: 1px solid var(--db-border); 
+		background: #fff; 
+		margin-top: 15px; 
+	}
 	.monochromatic-table { width: 100%; border-collapse: collapse; text-align: left; }
-	.monochromatic-table th, .monochromatic-table thead td { background: #f9fafb !important; color: #4b5563 !important; padding: 12px 16px !important; font-weight: 600 !important; font-size: 0.85rem !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; border-bottom: 2px solid var(--db-border) !important; }
-	.monochromatic-table td { padding: 14px 16px !important; border-bottom: 1px solid var(--db-border) !important; font-size: 0.9rem !important; color: #111827 !important; vertical-align: middle; }
+	.monochromatic-table th, .monochromatic-table thead td { 
+		background: #f9fafb !important; 
+		color: #4b5563 !important; 
+		padding: 16px 24px !important; 
+		font-weight: 600 !important; 
+		font-size: 0.85rem !important; 
+		text-transform: uppercase !important; 
+		letter-spacing: 0.05em !important; 
+		border-bottom: 2px solid var(--db-border) !important; 
+		position: sticky !important; 
+		top: 0 !important; 
+		z-index: 10 !important; 
+	}
+	.monochromatic-table td { padding: 16px 24px !important; border-bottom: 1px solid var(--db-border) !important; font-size: 0.9rem !important; color: #111827 !important; vertical-align: middle; }
 	.monochromatic-table tr:last-child td { border-bottom: none !important; }
 	.monochromatic-table tr:nth-child(even) { background-color: #f9fafb !important; }
 	.monochromatic-table .number { text-align: right !important; }
@@ -140,7 +163,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					<meta name="Creator" content="webERP https://www.weberp.org">
 				</head>
 				<body>
-				<table>
+				<div class="db-table-wrap"><table class="monochromatic-table">
 					<thead>
 						<tr>
 							<th colspan="6">
@@ -150,10 +173,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 						<tr>
 							<th>' . __('Account') . '</th>
 							<th>' . __('Account Name') . '</th>
-							<th>' . __('Month Actual') . '</th>
-							<th>' . __('Month Budget') . '</th>
-							<th>' . __('Period Actual') . '</th>
-							<th>' . __('Period Budget') . '</th>
+							<th>' . __('Month Debit') . '</th>
+							<th>' . __('Month Credit') . '</th>
+							<th>' . __('Period Debit') . '</th>
+							<th>' . __('Period Credit') . '</th>
 						</tr>
 					</thead>
 					<tbody>';
@@ -260,29 +283,6 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$LastGroup = $AccountListRow['group_'];
 	$LastGroupName = $AccountListRow['group_'];
 
-	$SQL = "SELECT amount AS monthbudget
-			FROM glbudgetdetails
-			WHERE account='" . $AccountListRow['accountcode'] . "'
-				AND period='" . $_POST['PeriodTo'] . "'
-				AND headerid='" . $_POST['SelectedBudget'] . "'";
-	$MonthBudgetResult = DB_query($SQL);
-	$MonthBudgetRow = DB_fetch_array($MonthBudgetResult);
-	if (!isset($MonthBudgetRow['monthbudget'])) {
-		$MonthBudgetRow['monthbudget'] = 0;
-	}
-
-	$SQL = "SELECT SUM(amount) AS periodbudget
-			FROM glbudgetdetails
-			WHERE account='" . $AccountListRow['accountcode'] . "'
-				AND period>='" . $_POST['PeriodFrom'] . "'
-				AND period<='" . $_POST['PeriodTo'] . "'
-				AND headerid='" . $_POST['SelectedBudget'] . "'";
-	$PeriodBudgetResult = DB_query($SQL);
-	$PeriodBudgetRow = DB_fetch_array($PeriodBudgetResult);
-	if (!isset($PeriodBudgetRow['periodbudget'])) {
-		$PeriodBudgetRow['periodbudget'] = 0;
-	}
-
 	if (!isset($ThisMonthArray[$AccountListRow['accountcode']])) {
 		$ThisMonthArray[$AccountListRow['accountcode']] = 0;
 	}
@@ -290,22 +290,37 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		$ThisPeriodArray[$AccountListRow['accountcode']] = 0;
 	}
 
+	$MonthActual = $ThisMonthArray[$AccountListRow['accountcode']];
+	$PeriodActual = $ThisPeriodArray[$AccountListRow['accountcode']];
+
+	$MonthDebit = ($MonthActual > 0) ? $MonthActual : 0;
+	$MonthCredit = ($MonthActual < 0) ? -$MonthActual : 0;
+	$PeriodDebit = ($PeriodActual > 0) ? $PeriodActual : 0;
+	$PeriodCredit = ($PeriodActual < 0) ? -$PeriodActual : 0;
+
+	$MonthDebitStr = ($MonthDebit != 0) ? locale_number_format($MonthDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+	$MonthCreditStr = ($MonthCredit != 0) ? locale_number_format($MonthCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+	$PeriodDebitStr = ($PeriodDebit != 0) ? locale_number_format($PeriodDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+	$PeriodCreditStr = ($PeriodCredit != 0) ? locale_number_format($PeriodCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+
 	$HTML .= '<tr class="striped_row">
 				<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 				<td>' . $AccountListRow['accountname'] . '</td>
-				<td class="number">' . locale_number_format($ThisMonthArray[$AccountListRow['accountcode']], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($MonthBudgetRow['monthbudget'], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($ThisPeriodArray[$AccountListRow['accountcode']], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($PeriodBudgetRow['periodbudget'], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . $MonthDebitStr . '</td>
+				<td class="number">' . $MonthCreditStr . '</td>
+				<td class="number">' . $PeriodDebitStr . '</td>
+				<td class="number">' . $PeriodCreditStr . '</td>
 			</tr>';
 
-	$MonthActualGroupTotal = $ThisMonthArray[$AccountListRow['accountcode']];
-	$MonthBudgetGroupTotal = $MonthBudgetRow['monthbudget'];
-	$PeriodActualGroupTotal = $ThisPeriodArray[$AccountListRow['accountcode']];
-	$PeriodBudgetGroupTotal = $PeriodBudgetRow['periodbudget'];
+	$MonthDebitGroupTotal = $MonthDebit;
+	$MonthCreditGroupTotal = $MonthCredit;
+	$PeriodDebitGroupTotal = $PeriodDebit;
+	$PeriodCreditGroupTotal = $PeriodCredit;
 
-	$CumulativeMonthActualGroupTotal = 0;
-	$CumulativePeriodActualGroupTotal = 0;
+	$CumulativeMonthDebitGroupTotal = 0;
+	$CumulativeMonthCreditGroupTotal = 0;
+	$CumulativePeriodDebitGroupTotal = 0;
+	$CumulativePeriodCreditGroupTotal = 0;
 
 	while ($AccountListRow = DB_fetch_array($AccountListResult)) {
 		if (!isset($ThisMonthArray[$AccountListRow['accountcode']])) {
@@ -325,10 +340,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$HTML .= '<tr class="total_row">
 						<td>' . __('Total') . '</td>
 						<td>' . $LastGroupName . '</td>
-						<td class="number">' . locale_number_format($MonthActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-						<td class="number">' . locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-						<td class="number">' . locale_number_format($PeriodActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-						<td class="number">' . locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+						<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+						<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+						<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+						<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 					</tr>';
 			$HTML .= '<tr>
 						<td></td>
@@ -345,51 +360,43 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$LastGroup = $AccountListRow['group_'];
 			$LastGroupName = $AccountListRow['group_'];
 
-			$CumulativeMonthActualGroupTotal+= $MonthActualGroupTotal;
-			$CumulativePeriodActualGroupTotal+= $PeriodActualGroupTotal;
+			$CumulativeMonthDebitGroupTotal += $MonthDebitGroupTotal;
+			$CumulativeMonthCreditGroupTotal += $MonthCreditGroupTotal;
+			$CumulativePeriodDebitGroupTotal += $PeriodDebitGroupTotal;
+			$CumulativePeriodCreditGroupTotal += $PeriodCreditGroupTotal;
 
-			$MonthActualGroupTotal = 0;
-			$MonthBudgetGroupTotal = 0;
-			$PeriodActualGroupTotal = 0;
-			$PeriodBudgetGroupTotal = 0;
+			$MonthDebitGroupTotal = 0;
+			$MonthCreditGroupTotal = 0;
+			$PeriodDebitGroupTotal = 0;
+			$PeriodCreditGroupTotal = 0;
 
 		}
 
-		$SQL = "SELECT amount AS monthbudget
-				FROM glbudgetdetails
-				WHERE account='" . $AccountListRow['accountcode'] . "'
-					AND period='" . $_POST['PeriodTo'] . "'
-					AND headerid='" . $_POST['SelectedBudget'] . "'";
-		$MonthBudgetResult = DB_query($SQL);
-		$MonthBudgetRow = DB_fetch_array($MonthBudgetResult);
-		if (!isset($MonthBudgetRow['monthbudget'])) {
-			$MonthBudgetRow['monthbudget'] = 0;
-		}
+		$MonthActual = $ThisMonthArray[$AccountListRow['accountcode']];
+		$PeriodActual = $ThisPeriodArray[$AccountListRow['accountcode']];
 
-		$SQL = "SELECT SUM(amount) AS periodbudget
-				FROM glbudgetdetails
-				WHERE account='" . $AccountListRow['accountcode'] . "'
-					AND period>='" . $_POST['PeriodFrom'] . "'
-					AND period<='" . $_POST['PeriodTo'] . "'
-					AND headerid='" . $_POST['SelectedBudget'] . "'";
-		$PeriodBudgetResult = DB_query($SQL);
-		$PeriodBudgetRow = DB_fetch_array($PeriodBudgetResult);
-		if (!isset($PeriodBudgetRow['periodbudget'])) {
-			$PeriodBudgetRow['periodbudget'] = 0;
-		}
+		$MonthDebit = ($MonthActual > 0) ? $MonthActual : 0;
+		$MonthCredit = ($MonthActual < 0) ? -$MonthActual : 0;
+		$PeriodDebit = ($PeriodActual > 0) ? $PeriodActual : 0;
+		$PeriodCredit = ($PeriodActual < 0) ? -$PeriodActual : 0;
+
+		$MonthDebitStr = ($MonthDebit != 0) ? locale_number_format($MonthDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+		$MonthCreditStr = ($MonthCredit != 0) ? locale_number_format($MonthCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+		$PeriodDebitStr = ($PeriodDebit != 0) ? locale_number_format($PeriodDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+		$PeriodCreditStr = ($PeriodCredit != 0) ? locale_number_format($PeriodCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 
 		$HTML .= '<tr class="striped_row">
 					<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 					<td>' . $AccountListRow['accountname'] . '</td>
-					<td class="number">' . locale_number_format($ThisMonthArray[$AccountListRow['accountcode']], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-					<td class="number">' . locale_number_format($MonthBudgetRow['monthbudget'], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-					<td class="number">' . locale_number_format($ThisPeriodArray[$AccountListRow['accountcode']], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-					<td class="number">' . locale_number_format($PeriodBudgetRow['periodbudget'], $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+					<td class="number">' . $MonthDebitStr . '</td>
+					<td class="number">' . $MonthCreditStr . '</td>
+					<td class="number">' . $PeriodDebitStr . '</td>
+					<td class="number">' . $PeriodCreditStr . '</td>
 				</tr>';
-		$MonthActualGroupTotal+= $ThisMonthArray[$AccountListRow['accountcode']];
-		$MonthBudgetGroupTotal+= $MonthBudgetRow['monthbudget'];
-		$PeriodActualGroupTotal+= $ThisPeriodArray[$AccountListRow['accountcode']];
-		$PeriodBudgetGroupTotal+= $PeriodBudgetRow['periodbudget'];
+		$MonthDebitGroupTotal += $MonthDebit;
+		$MonthCreditGroupTotal += $MonthCredit;
+		$PeriodDebitGroupTotal += $PeriodDebit;
+		$PeriodCreditGroupTotal += $PeriodCredit;
 	}
 	$HTML .= '<tr>
 				<td></td>
@@ -397,34 +404,36 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr class="total_row">
 				<td>' . __('Total') . '</td>
 				<td>' . $LastGroupName . '</td>
-				<td class="number">' . locale_number_format($MonthActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($PeriodActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+				<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+				<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+				<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>
 			</tr>';
 
-	$CumulativeMonthActualGroupTotal+= $MonthActualGroupTotal;
-	$CumulativePeriodActualGroupTotal+= $PeriodActualGroupTotal;
+	$CumulativeMonthDebitGroupTotal += $MonthDebitGroupTotal;
+	$CumulativeMonthCreditGroupTotal += $MonthCreditGroupTotal;
+	$CumulativePeriodDebitGroupTotal += $PeriodDebitGroupTotal;
+	$CumulativePeriodCreditGroupTotal += $PeriodCreditGroupTotal;
 
 	$HTML .= '<tr>
 				<td></td>
 			</tr>';
-	$HTML .= '<tr class="total_row">
+	$HTML .= '<tr class="total_row" style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #374151; border-bottom: 2px double #374151;">
 				<td>' . __('Check Totals') . '</td>
 				<td></td>
-				<td class="number">' . locale_number_format($CumulativeMonthActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number"></td>
-				<td class="number">' . locale_number_format($CumulativePeriodActualGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number"></td>
+				<td class="number">' . locale_number_format($CumulativeMonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . locale_number_format($CumulativeMonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . locale_number_format($CumulativePeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . locale_number_format($CumulativePeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>
 			</tr>';
 
-	$HTML .= '</table>';
+	$HTML .= '</table></div>';
 
 	$HTML .= '</form>';
 	if (isset($_POST['PrintPDF'])) {
@@ -599,27 +608,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			<div class="fieldhelp">', __('Select a predefined period from this list. If a selection is made here it will override anything selected in the From and To options above.'), '</div>
 		</div>';
 
-	$SQL = "SELECT `id`,
-					`name`,
-					`current`
-				FROM glbudgetheaders";
-	$Result = DB_query($SQL);
-	echo '<div class="db-form-group">
-			<label class="db-label" for="SelectedBudget">', __('Budget To Show Comparisons With'), '</label>
-			<select class="db-select" name="SelectedBudget">';
-	while ($MyRow = DB_fetch_array($Result)) {
-		if (!isset($_POST['SelectedBudget']) and $MyRow['current'] == 1) {
-			$_POST['SelectedBudget'] = $MyRow['id'];
-		}
-		if ($MyRow['id'] == $_POST['SelectedBudget']) {
-			echo '<option selected="selected" value="', $MyRow['id'], '">', $MyRow['name'], '</option>';
-		} else {
-			echo '<option value="', $MyRow['id'], '">', $MyRow['name'], '</option>';
-		}
-	}
-	echo '<div class="fieldhelp">', __('Select the budget to make comparisons with.'), '</div>
-		</select>
-	</div>';
+	// Budget comparisons are not used in standard Trial Balance.
+	$_POST['SelectedBudget'] = '';
 
 	echo '</div></div> <!-- close db-form-row and db-card-body -->
 	</div>'; // close db-card

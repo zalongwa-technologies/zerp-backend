@@ -46,7 +46,7 @@ if (isset($_POST['submit'])) {
 	$Result = DB_query($SQL);
 	$MyRow=DB_fetch_row($Result);
 
-	if ($MyRow[0] != 0 AND $_POST['SelectedAccountGroup'] == '') {
+	if ($MyRow[0] != 0 AND (!isset($_POST['SelectedAccountGroup']) OR $_POST['SelectedAccountGroup'] == '')) {
 		$InputError = 1; prnMsg( __('Group already exists'),'error');
 		$Errors[$i++] = 'GroupName';
 	}
@@ -75,7 +75,7 @@ if (isset($_POST['submit'])) {
 	if (!ctype_digit($_POST['SectionInAccounts'])) { $InputError = 1; $Errors[$i++] = 'SectionInAccounts'; }
 	if (!ctype_digit($_POST['SequenceInTB'])) { $InputError = 1; $Errors[$i++] = 'SequenceInTB'; }
 
-	if ($_POST['SelectedAccountGroup']!='' AND $InputError !=1) {
+	if (isset($_POST['SelectedAccountGroup']) AND $_POST['SelectedAccountGroup']!='' AND $InputError !=1) {
 		if ($_POST['SelectedAccountGroup']!==$_POST['GroupName']) {
 			DB_IgnoreForeignKeys();
 			DB_query("UPDATE chartmaster SET group_='" . $_POST['GroupName'] . "' WHERE group_='" . $_POST['SelectedAccountGroup'] . "'");
@@ -202,12 +202,17 @@ echo '<main class="db-main">';
 echo '<aside class="db-aside">';
 if (isset($_GET['SelectedAccountGroup'])) {
     $SQL = "SELECT groupname, sectioninaccounts, sequenceintb, pandl, parentgroupname FROM accountgroups WHERE groupname='" . $_GET['SelectedAccountGroup'] ."'";
-    $MyRow = DB_fetch_array(DB_query($SQL));
-    $_POST['GroupName'] = $MyRow['groupname'];
-    $_POST['SectionInAccounts'] = $MyRow['sectioninaccounts'];
-    $_POST['SequenceInTB'] = $MyRow['sequenceintb'];
-    $_POST['PandL'] = $MyRow['pandl'];
-    $_POST['ParentGroupName'] = $MyRow['parentgroupname'];
+    $Result = DB_query($SQL);
+    if (DB_num_rows($Result) > 0) {
+        $MyRow = DB_fetch_array($Result);
+        $_POST['GroupName'] = $MyRow['groupname'];
+        $_POST['SectionInAccounts'] = $MyRow['sectioninaccounts'];
+        $_POST['SequenceInTB'] = $MyRow['sequenceintb'];
+        $_POST['PandL'] = $MyRow['pandl'];
+        $_POST['ParentGroupName'] = $MyRow['parentgroupname'];
+    } else {
+        unset($_GET['SelectedAccountGroup']);
+    }
 }
 if (!isset($_POST['GroupName'])) { $_POST['GroupName']=''; $_POST['SectionInAccounts']=''; $_POST['SequenceInTB']=''; $_POST['PandL']=''; $_POST['SelectedAccountGroup']=''; }
 

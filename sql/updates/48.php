@@ -289,10 +289,10 @@ AddIndex(array('sync_status', 'sync_attempts'), 'payments', 'idx_payments_sync_s
 // Keep this immediately before InsertRecord() so the default setting is never
 // queried or inserted before its table has been created.
 CreateTable('saris_settings', "CREATE TABLE `saris_settings` (
-	`id` INT NOT NULL AUTO_INCREMENT,
+	`id` INT(11) NOT NULL AUTO_INCREMENT,
 	`sync_mode` ENUM('manual', 'automatic') NOT NULL DEFAULT 'manual',
-	`sync_interval` ENUM('10min', '30min', '1hr', '1day') NULL DEFAULT NULL,
-	`updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	`sync_interval` ENUM('10min', '30min', '1hr', '1day') DEFAULT NULL,
+	`updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 	PRIMARY KEY (`id`)
 )");
 

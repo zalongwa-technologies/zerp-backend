@@ -29,6 +29,9 @@ class ZERPSync {
 	}
 
 	public function run() {
+		if (function_exists('set_time_limit')) {
+			set_time_limit(0);
+		}
 		if (!$this->acquireLock()) {
 			$this->stats['locked'] = true;
 			$this->stats['skipped']++;
@@ -72,121 +75,141 @@ class ZERPSync {
 	}
 
 	private function syncStudents() {
-		$rows = $this->eligibleRows('students');
-		foreach ($rows as $row) {
-			if (!$this->claim('students', $row['id'])) {
-				$this->stats['skipped']++;
-				continue;
+		// batch_size controls memory/request chunking, not the total records per run.
+		$lastId = 0;
+		while (true) {
+			$rows = $this->eligibleRows('students', $lastId);
+			if (!$rows) {
+				break;
 			}
-			$row = $this->rowById('students', $row['id']);
-			try {
-				$code = $row['zerp_customer_code'] ?: self::customerCode($row['student_regnumber']);
-				$branchCode = substr((string)$this->config['branch_code'], 0, 10);
-				if ($this->limit($row['student_fullname'], 40) === '') {
-					throw new InvalidArgumentException('Student name is empty.');
+			foreach ($rows as $row) {
+				$lastId = max($lastId, (int)$row['id']);
+				if (!$this->claim('students', $row['id'])) {
+					$this->stats['skipped']++;
+					continue;
 				}
-				if (empty($row['customer_synced_at'])) {
-					$this->currentMethod = 'weberp.xmlrpc_GetCustomer';
-					$existing = $this->client->getCustomer($code);
-					if ($existing !== null) {
-						$existingName = trim((string)($existing['name'] ?? ''));
-						$expectedName = $this->limit($row['student_fullname'], 40);
-						if ($existingName !== '' && strcasecmp($existingName, $expectedName) !== 0) {
-							throw new RuntimeException('Customer code ' . $code . ' already belongs to "' . $existingName . '".');
-						}
-					} else {
-						$this->currentMethod = 'weberp.xmlrpc_InsertCustomer';
-						$this->client->insertCustomer($this->customerPayload($row, $code));
+				$row = $this->rowById('students', $row['id']);
+				try {
+					$code = $row['zerp_customer_code'] ?: self::customerCode($row['student_regnumber']);
+					$branchCode = substr((string)$this->config['branch_code'], 0, 10);
+					if ($this->limit($row['student_fullname'], 40) === '') {
+						throw new InvalidArgumentException('Student name is empty.');
 					}
-					$this->updateStudentCustomer($row['id'], $code);
-				}
-
-				if (empty($row['branch_synced_at'])) {
-					$this->currentMethod = 'weberp.xmlrpc_GetCustomerBranch';
-					$existingBranch = $this->client->getBranch($code, $branchCode);
-					if ($existingBranch === null) {
-						$this->currentMethod = 'weberp.xmlrpc_InsertBranch';
-						try {
-							$this->client->insertBranch($this->branchPayload($row, $code, $branchCode));
-						} catch (Throwable $exception) {
-							throw new RuntimeException(
-								'Branch creation failed with configured area "'
-								. $this->config['branch_area']
-								. '", salesperson "' . $this->config['salesperson']
-								. '", location "' . $this->config['default_location']
-								. '": ' . $exception->getMessage(),
-								0,
-								$exception
-							);
+					if (empty($row['customer_synced_at'])) {
+						$this->currentMethod = 'weberp.xmlrpc_GetCustomer';
+						$existing = $this->client->getCustomer($code);
+						if ($existing !== null) {
+							$existingName = trim((string)($existing['name'] ?? ''));
+							$expectedName = $this->limit($row['student_fullname'], 40);
+							if ($existingName !== '' && strcasecmp($existingName, $expectedName) !== 0) {
+								throw new RuntimeException('Customer code ' . $code . ' already belongs to "' . $existingName . '".');
+							}
+						} else {
+							$this->currentMethod = 'weberp.xmlrpc_InsertCustomer';
+							$this->client->insertCustomer($this->customerPayload($row, $code));
 						}
+						$this->updateStudentCustomer($row['id'], $code);
 					}
-					$this->updateStudentBranch($row['id']);
-				}
 
-				$this->markSynced('students', $row['id']);
-				$this->stats['students_synced']++;
-			} catch (Throwable $exception) {
-				$fresh = $this->rowById('students', $row['id']);
-				$status = !empty($fresh['customer_synced_at']) || !empty($fresh['branch_synced_at']) ? 'partial' : 'failed';
-				$this->markError('students', $row, $status, $exception);
+					if (empty($row['branch_synced_at'])) {
+						$this->currentMethod = 'weberp.xmlrpc_GetCustomerBranch';
+						$existingBranch = $this->client->getBranch($code, $branchCode);
+						if ($existingBranch === null) {
+							$this->currentMethod = 'weberp.xmlrpc_InsertBranch';
+							try {
+								$this->client->insertBranch($this->branchPayload($row, $code, $branchCode));
+							} catch (Throwable $exception) {
+								throw new RuntimeException(
+									'Branch creation failed with configured area "'
+									. $this->config['branch_area']
+									. '", salesperson "' . $this->config['salesperson']
+									. '", location "' . $this->config['default_location']
+									. '": ' . $exception->getMessage(),
+									0,
+									$exception
+								);
+							}
+						}
+						$this->updateStudentBranch($row['id']);
+					}
+
+					$this->markSynced('students', $row['id']);
+					$this->stats['students_synced']++;
+				} catch (Throwable $exception) {
+					$fresh = $this->rowById('students', $row['id']);
+					$status = !empty($fresh['customer_synced_at']) || !empty($fresh['branch_synced_at']) ? 'partial' : 'failed';
+					$this->markError('students', $row, $status, $exception);
+				}
 			}
 		}
 	}
 
 	private function syncInvoices() {
-		$sql = "SELECT i.*
-			FROM invoices i
-			INNER JOIN students s ON s.student_regnumber = i.student_regnumber
-			WHERE s.sync_status = 'synced'
-			  AND i.sync_status IN ('pending', 'failed', 'partial')
-			  AND i.sync_attempts < ?
-			ORDER BY i.id
-			LIMIT " . $this->batchSize();
-		$stmt = $this->pdo->prepare($sql);
-		$stmt->execute([$this->maxAttempts()]);
-		foreach ($stmt->fetchAll() as $row) {
-			if (!$this->claim('invoices', $row['id'])) {
-				$this->stats['skipped']++;
-				continue;
+		$lastId = 0;
+		while (true) {
+			$sql = "SELECT i.*
+				FROM invoices i
+				INNER JOIN students s ON s.student_regnumber = i.student_regnumber
+				WHERE s.sync_status = 'synced'
+				  AND i.sync_status IN ('pending', 'failed', 'partial')
+				  AND i.sync_attempts < ?
+				  AND i.id > ?
+				ORDER BY i.id
+				LIMIT " . $this->batchSize();
+			$stmt = $this->pdo->prepare($sql);
+			$stmt->execute([$this->maxAttempts(), $lastId]);
+			$rows = $stmt->fetchAll();
+			if (!$rows) {
+				break;
 			}
-			$row = $this->rowById('invoices', $row['id']);
-			try {
-				if (!empty($row['zerp_invoice_no'])) {
-					$this->markSynced('invoices', $row['id']);
-					$this->stats['invoices_synced']++;
+			foreach ($rows as $row) {
+				$lastId = max($lastId, (int)$row['id']);
+				if (!$this->claim('invoices', $row['id'])) {
+					$this->stats['skipped']++;
 					continue;
 				}
-				if ((float)$row['invoice_amount'] <= 0) {
-					throw new InvalidArgumentException('Invoice amount must be greater than zero.');
+				$row = $this->rowById('invoices', $row['id']);
+				try {
+					if (!empty($row['zerp_invoice_no'])) {
+						$this->markSynced('invoices', $row['id']);
+						$this->stats['invoices_synced']++;
+						continue;
+					}
+					if ((float)$row['invoice_amount'] <= 0) {
+						throw new InvalidArgumentException('Invoice amount must be greater than zero.');
+					}
+					$student = $this->studentByRegistration($row['student_regnumber']);
+					$remoteReference = self::remoteReference($row['invoice_reference_number']);
+					$this->currentMethod = 'weberp.xmlrpc_InsertSalesInvoice';
+					$result = $this->client->insertSalesInvoice(
+						$this->invoicePayload($row, $student, $remoteReference)
+					);
+					$invoiceNo = $this->remoteNumber($result, 'invoice');
+					$stmtUpdate = $this->pdo->prepare(
+						"UPDATE invoices
+						SET zerp_invoice_no = ?, zerp_invoice_reference = ?, sync_status = 'synced',
+							sync_error = NULL, sync_locked_at = NULL, synced_at = NOW()
+						WHERE id = ?"
+					);
+					$stmtUpdate->execute([$invoiceNo, $remoteReference, $row['id']]);
+					$this->stats['invoices_synced']++;
+				} catch (Throwable $exception) {
+					$this->markError('invoices', $row, 'failed', $exception);
 				}
-				$student = $this->studentByRegistration($row['student_regnumber']);
-				$remoteReference = self::remoteReference($row['invoice_reference_number']);
-				$this->currentMethod = 'weberp.xmlrpc_InsertSalesInvoice';
-				$result = $this->client->insertSalesInvoice(
-					$this->invoicePayload($row, $student, $remoteReference)
-				);
-				$invoiceNo = $this->remoteNumber($result, 'invoice');
-				$stmtUpdate = $this->pdo->prepare(
-					"UPDATE invoices
-					SET zerp_invoice_no = ?, zerp_invoice_reference = ?, sync_status = 'synced',
-						sync_error = NULL, sync_locked_at = NULL, synced_at = NOW()
-					WHERE id = ?"
-				);
-				$stmtUpdate->execute([$invoiceNo, $remoteReference, $row['id']]);
-				$this->stats['invoices_synced']++;
-			} catch (Throwable $exception) {
-				$this->markError('invoices', $row, 'failed', $exception);
 			}
 		}
 	}
 
 	private function syncPayments() {
-		$sql = "SELECT p.*
+		$lastId = 0;
+		while (true) {
+			$sql = "SELECT p.*
 			FROM payments p
 			INNER JOIN students s ON s.student_regnumber = p.student_regnumber
 			WHERE s.sync_status = 'synced'
 			  AND p.sync_status IN ('pending', 'failed', 'partial')
 			  AND p.sync_attempts < ?
+			  AND p.id > ?
 			  AND EXISTS (
 				SELECT 1
 				FROM invoices i
@@ -201,61 +224,67 @@ class ZERPSync {
 			  )
 			ORDER BY p.id
 			LIMIT " . $this->batchSize();
-		$stmt = $this->pdo->prepare($sql);
-		$stmt->execute([$this->maxAttempts()]);
-		foreach ($stmt->fetchAll() as $row) {
-			if (!$this->claim('payments', $row['id'])) {
-				$this->stats['skipped']++;
-				continue;
+			$stmt = $this->pdo->prepare($sql);
+			$stmt->execute([$this->maxAttempts(), $lastId]);
+			$rows = $stmt->fetchAll();
+			if (!$rows) {
+				break;
 			}
-			$row = $this->rowById('payments', $row['id']);
-			try {
-				if ((float)$row['payment_amount'] <= 0) {
-					throw new InvalidArgumentException('Payment amount must be greater than zero.');
+			foreach ($rows as $row) {
+				$lastId = max($lastId, (int)$row['id']);
+				if (!$this->claim('payments', $row['id'])) {
+					$this->stats['skipped']++;
+					continue;
 				}
-				$student = $this->studentByRegistration($row['student_regnumber']);
-				$invoice = $this->matchingInvoice($row);
+				$row = $this->rowById('payments', $row['id']);
+				try {
+					if ((float)$row['payment_amount'] <= 0) {
+						throw new InvalidArgumentException('Payment amount must be greater than zero.');
+					}
+					$student = $this->studentByRegistration($row['student_regnumber']);
+					$invoice = $this->matchingInvoice($row);
 
-				if ($invoice === null || empty($invoice['zerp_invoice_no']) || empty($invoice['zerp_invoice_reference'])) {
-					throw new LogicException('The eligible payment query returned a payment without a synchronized invoice match.');
-				}
+					if ($invoice === null || empty($invoice['zerp_invoice_no']) || empty($invoice['zerp_invoice_reference'])) {
+						throw new LogicException('The eligible payment query returned a payment without a synchronized invoice match.');
+					}
 
-				if (empty($row['zerp_receipt_no'])) {
-					$this->currentMethod = 'weberp.xmlrpc_InsertDebtorReceipt';
-					$result = $this->client->insertDebtorReceipt($this->receiptPayload($row, $student));
-					$receiptNo = $this->remoteNumber($result, 'receipt');
-					$stmtReceipt = $this->pdo->prepare(
+					if (empty($row['zerp_receipt_no'])) {
+						$this->currentMethod = 'weberp.xmlrpc_InsertDebtorReceipt';
+						$result = $this->client->insertDebtorReceipt($this->receiptPayload($row, $student));
+						$receiptNo = $this->remoteNumber($result, 'receipt');
+						$stmtReceipt = $this->pdo->prepare(
+							"UPDATE payments
+							SET zerp_receipt_no = ?, sync_status = 'partial', sync_error = NULL,
+								sync_locked_at = NULL
+							WHERE id = ?"
+						);
+						$stmtReceipt->execute([$receiptNo, $row['id']]);
+						$row['zerp_receipt_no'] = $receiptNo;
+					}
+
+					if (empty($row['allocation_synced_at'])) {
+						$this->currentMethod = 'weberp.xmlrpc_AllocateTrans';
+						$this->client->allocateTransaction([
+							'debtorno' => $student['zerp_customer_code'],
+							'type' => 12,
+							'transno' => (int)$row['zerp_receipt_no'],
+							'customerref' => $invoice['zerp_invoice_reference'],
+						]);
+					}
+
+					$stmtDone = $this->pdo->prepare(
 						"UPDATE payments
-						SET zerp_receipt_no = ?, sync_status = 'partial', sync_error = NULL,
-							sync_locked_at = NULL
+						SET zerp_invoice_no = ?, allocation_synced_at = COALESCE(allocation_synced_at, NOW()),
+							sync_status = 'synced', sync_error = NULL, sync_locked_at = NULL, synced_at = NOW()
 						WHERE id = ?"
 					);
-					$stmtReceipt->execute([$receiptNo, $row['id']]);
-					$row['zerp_receipt_no'] = $receiptNo;
+					$stmtDone->execute([$invoice['zerp_invoice_no'], $row['id']]);
+					$this->stats['payments_synced']++;
+				} catch (Throwable $exception) {
+					$fresh = $this->rowById('payments', $row['id']);
+					$status = !empty($fresh['zerp_receipt_no']) ? 'partial' : 'failed';
+					$this->markError('payments', $row, $status, $exception);
 				}
-
-				if (empty($row['allocation_synced_at'])) {
-					$this->currentMethod = 'weberp.xmlrpc_AllocateTrans';
-					$this->client->allocateTransaction([
-						'debtorno' => $student['zerp_customer_code'],
-						'type' => 12,
-						'transno' => (int)$row['zerp_receipt_no'],
-						'customerref' => $invoice['zerp_invoice_reference'],
-					]);
-				}
-
-				$stmtDone = $this->pdo->prepare(
-					"UPDATE payments
-					SET zerp_invoice_no = ?, allocation_synced_at = COALESCE(allocation_synced_at, NOW()),
-						sync_status = 'synced', sync_error = NULL, sync_locked_at = NULL, synced_at = NOW()
-					WHERE id = ?"
-				);
-				$stmtDone->execute([$invoice['zerp_invoice_no'], $row['id']]);
-				$this->stats['payments_synced']++;
-			} catch (Throwable $exception) {
-				$fresh = $this->rowById('payments', $row['id']);
-				$status = !empty($fresh['zerp_receipt_no']) ? 'partial' : 'failed';
-				$this->markError('payments', $row, $status, $exception);
 			}
 		}
 	}
@@ -359,14 +388,15 @@ class ZERPSync {
 		return $row ?: null;
 	}
 
-	private function eligibleRows($table) {
+	private function eligibleRows($table, $afterId = 0) {
 		$sql = "SELECT * FROM `" . $table . "`
 			WHERE sync_status IN ('pending', 'failed', 'partial')
 			  AND sync_attempts < ?
+			  AND id > ?
 			ORDER BY id
 			LIMIT " . $this->batchSize();
 		$stmt = $this->pdo->prepare($sql);
-		$stmt->execute([$this->maxAttempts()]);
+		$stmt->execute([$this->maxAttempts(), (int)$afterId]);
 		return $stmt->fetchAll();
 	}
 

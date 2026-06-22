@@ -277,12 +277,13 @@ if (isset($_POST['CommitDepreciation']) AND $InputError == false){
 	prnMsg(__('Depreciation') . ' ' . $TransNo . ' ' . __('has been successfully entered'),'success');
 	unset($_POST['ProcessDate']);
 	echo '<br /><a href="' . $RootPath . '/index.php">' .__('Return to main menu') . '</a>';
+} else {
 	echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '" method="post">
 			<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 	
 	echo '<div class="db-card" style="margin-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto;">
 			<div class="db-card-header">
-				<div class="db-card-title"><i class="fas fa-check-circle"></i> ' . __('Posting Action') . '</div>
+				<div class="db-card-title"><i class="fas fa-calculator"></i> ' . __('Process Depreciation') . '</div>
 			</div>
 			<div class="db-card-body">';
 
@@ -301,12 +302,12 @@ if (isset($_POST['CommitDepreciation']) AND $InputError == false){
 
 	echo '		<div class="db-alert db-alert-info" style="margin-top: 15px;">
 					<i class="fas fa-info-circle db-alert-icon"></i>
-					<div>' . __('Review the calculation above before committing to the General Ledger.') . '</div>
+					<div>' . __('Please review the calculated depreciation amounts above. Once verified, click below to finalize and process the entries.') . '</div>
 				</div>
 			</div>
 			<div class="db-card-footer db-footer-stack" style="padding: 15px 24px; background: var(--surface-alt); display: flex; justify-content: center;">
 				<button type="submit" name="CommitDepreciation" class="db-btn db-btn-primary" style="padding: 12px 30px;">
-					<i class="fas fa-save"></i> ' . __('Commit Depreciation Journal') . '
+					<i class="fas fa-save"></i> ' . __('Process Depreciation') . '
 				</button>
 			</div>
 		</div>

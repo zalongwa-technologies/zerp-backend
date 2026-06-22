@@ -1,6 +1,7 @@
 <?php
 
 require(__DIR__ . '/includes/session.php');
+include_once(__DIR__ . '/includes/SQL_CommonFunctions.php');
 
 $Title = __('Depreciation Journal Entry');
 $ViewTopic = 'FixedAssets';

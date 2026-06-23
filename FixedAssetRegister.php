@@ -71,26 +71,59 @@ if (isset($_POST['submit']) or isset($_POST['PrintPDF']) or isset($_POST['Spread
 		$HTML .= '<html>
 					<head>';
 		$HTML .= '<link href="css/reports.css" rel="stylesheet" type="text/css" />';
+		$HTML .= '<style>
+			body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background-color: #ffffff; color: #334155; margin: 20px; font-size: 11px; line-height: 1.4; }
+			.report-header { text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #059669; }
+			.report-header h2 { margin: 0; font-size: 16px; color: #0f172a; font-weight: bold; }
+			.report-header h3 { margin: 5px 0 2px 0; font-size: 12px; color: #059669; font-weight: bold; text-transform: uppercase; }
+			.report-header p { margin: 0; color: #64748b; font-size: 10px; }
+			.db-table-wrap { width: 100%; margin-top: 10px; }
+			.monochromatic-table { width: 100%; border-collapse: collapse; text-align: left; }
+			.monochromatic-table th { 
+				background-color: #059669; 
+				color: #ffffff; 
+				padding: 6px 8px; 
+				font-weight: bold; 
+				font-size: 10px; 
+				text-transform: uppercase;
+				border: none;
+			}
+			.monochromatic-table td { padding: 4px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; vertical-align: middle; }
+			.monochromatic-table tr:nth-child(even) td { background-color: #f8fafc; }
+			.monochromatic-table .number { text-align: right; }
+			.total_row th { font-weight: bold; border-top: 2px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; color: #0f172a; background-color: #f1f5f9 !important; font-size: 11px; }
+			.check_totals_row td { background-color: #ecfdf5 !important; color: #064e3b; font-size: 12px; border-top: 2px solid #10b981; border-bottom: 3px double #10b981; }
+		</style>';
 	}
 
-	$HTML .= '<meta name="author" content="WebERP">
-					<meta name="Creator" content="webERP https://www.weberp.org">
-				</head>
-				<body>';
+	if (isset($_POST['PrintPDF']) || isset($_POST['Spreadsheet'])) {
+		$HTML .= '<meta name="author" content="WebERP">
+						<meta name="Creator" content="webERP https://www.weberp.org">
+					</head>
+					<body>';
+	}
 	
 	if (!isset($_POST['PrintPDF']) && !isset($_POST['Spreadsheet'])) {
 		$HTML .= '<div class="db-centered-container" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
 					<div class="db-card" style="border: none; box-shadow: var(--shadow-lg);">';
 	}
 
-	$HTML .= '<div class="centre" id="ReportHeader" style="padding: 30px; border-bottom: 2px solid var(--border-soft);">
-					<h2 style="margin: 0; color: var(--text-main);">' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
-					<div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
-						' . __('From') . ': <span class="db-font-bold">' . $_POST['FromDate'] . '</span> ' . __('to') . ' <span class="db-font-bold">' . $_POST['ToDate'] . '</span><br />
-						' . __('Printed') . ': ' . date($_SESSION['DefaultDateFormat']) . '
-					</div>
-				</div>
-				<form id="RegisterForm" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '">
+	if (isset($_POST['PrintPDF'])) {
+		$HTML .= '<div class="report-header">
+					<h2>' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
+					<h3>' . __('Fixed Asset Register') . '</h3>
+					<p>' . __('From') . ': ' . $_POST['FromDate'] . ' ' . __('to') . ' ' . $_POST['ToDate'] . ' | ' . __('Printed') . ': ' . date($_SESSION['DefaultDateFormat']) . '</p>
+				  </div>';
+	} else {
+		$HTML .= '<div class="centre" id="ReportHeader" style="padding: 30px; border-bottom: 2px solid var(--border-soft);">
+						<h2 style="margin: 0; color: var(--text-main);">' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
+						<div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+							' . __('From') . ': <span class="db-font-bold">' . $_POST['FromDate'] . '</span> ' . __('to') . ' <span class="db-font-bold">' . $_POST['ToDate'] . '</span><br />
+							' . __('Printed') . ': ' . date($_SESSION['DefaultDateFormat']) . '
+						</div>
+					</div>';
+	}
+	$HTML .= '	<form id="RegisterForm" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '">
 				<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 	
 	if (!isset($_POST['PrintPDF']) && !isset($_POST['Spreadsheet'])) {
@@ -222,8 +255,10 @@ if (isset($_POST['submit']) or isset($_POST['PrintPDF']) or isset($_POST['Spread
 		$HTML .= '</div></div>'; // End card, centered-container
 	}
 
-	$HTML .= '</body>
-		</html>';
+	if (isset($_POST['PrintPDF']) || isset($_POST['Spreadsheet'])) {
+		$HTML .= '</body>
+			</html>';
+	}
 
 	if (isset($_POST['PrintPDF'])) {
 		$DomPDF = new Dompdf($DomPDFOptions); // Pass the options object defined in SetDomPDFOptions.php containing common options
@@ -265,16 +300,27 @@ if (isset($_POST['submit']) or isset($_POST['PrintPDF']) or isset($_POST['Spread
 				</div>';
 		echo $HTML;
 		echo '<style>
-		.monochromatic-table th { background: transparent !important; color: var(--text-main) !important; border-bottom: 2px solid var(--border) !important; }
-		.monochromatic-table tr:hover td { background: transparent !important; }
-		.monochromatic-table td { border-bottom: 1px solid var(--border-soft); }
+		.db-page { max-width: 100vw; overflow-x: hidden; padding: 20px !important; }
+		.db-centered-container { max-width: 98% !important; padding: 0 !important; }
+		.db-card { border-radius: 12px !important; overflow: hidden; border: 1px solid #e2e8f0 !important; }
+		.db-table-wrap { overflow-x: auto; background: #fff; max-height: 75vh; }
+		.monochromatic-table { min-width: 1500px; border-collapse: separate; border-spacing: 0; width: 100%; }
+		.monochromatic-table th { position: sticky; top: 0; background: #f8fafc !important; color: #475569 !important; font-size: 0.75rem !important; font-weight: 700 !important; text-transform: uppercase; letter-spacing: 0.05em; padding: 14px 16px !important; border-bottom: 2px solid #cbd5e1 !important; white-space: nowrap; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+		.monochromatic-table td { font-size: 0.85rem !important; padding: 12px 16px !important; color: #334155; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+		.monochromatic-table td.db-font-bold { font-weight: 700; color: #0f172a; }
+		.monochromatic-table tbody tr { transition: background-color 0.2s ease; }
+		.monochromatic-table tbody tr:hover { background-color: #f8fafc !important; }
+		.monochromatic-table tfoot th { position: sticky; bottom: 0; background: #f1f5f9 !important; color: #0f172a !important; font-size: 0.85rem !important; padding: 16px 16px !important; border-top: 2px solid #cbd5e1; z-index: 10; }
+		.db-table-wrap::-webkit-scrollbar { height: 10px; width: 10px; }
+		.db-table-wrap::-webkit-scrollbar-track { background: #f1f5f9; }
+		.db-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; border: 2px solid #f1f5f9; }
+		.db-table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 		
 		@media (max-width: 768px) {
+			.db-page { padding: 10px !important; }
 			.db-page-header { padding: 15px !important; }
 			.db-page-title { font-size: 1.25rem !important; }
-			.db-page-subtitle { white-space: normal !important; overflow: visible !important; font-size: 0.8rem !important; }
-			.db-table-wrap { overflow-x: auto !important; margin: 0 -20px; width: calc(100% + 40px); -webkit-overflow-scrolling: touch; }
-			.monochromatic-table { min-width: 1200px !important; width: 1200px !important; }
+			.db-page-subtitle { white-space: normal !important; font-size: 0.8rem !important; }
 			.db-card-footer { flex-direction: column !important; padding: 20px !important; gap: 10px !important; }
 			.db-btn { width: 100% !important; display: flex !important; justify-content: center !important; }
 		}

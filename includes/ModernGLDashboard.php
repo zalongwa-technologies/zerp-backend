@@ -202,6 +202,21 @@ while ($row = DB_fetch_assoc($resRecent)) {
                             </a>
                             <?php
                         }
+                        // INJECT STATUTORY REPORTS
+                        ?>
+                        <a href="<?= $RootPath ?>/GLChangesInEquity.php" class="legacy-menu-tile">
+                            <div class="legacy-menu-tile-icon">
+                                <?= $icons['Reports'] ?>
+                            </div>
+                            <span class="legacy-menu-tile-text"><?= __('Statement of Changes in Equity') ?></span>
+                        </a>
+                        <a href="<?= $RootPath ?>/FixedAssetRegister.php" class="legacy-menu-tile">
+                            <div class="legacy-menu-tile-icon">
+                                <?= $icons['Reports'] ?>
+                            </div>
+                            <span class="legacy-menu-tile-text"><?= __('Property, Plant & Equipment') ?></span>
+                        </a>
+                        <?php
                     }
                     ?>
                 </div>

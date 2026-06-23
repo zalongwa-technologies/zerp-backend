@@ -134,6 +134,12 @@ if (isset($_GET['PeriodTo'])) {
 if (isset($_GET['Period'])) {
 	$_POST['Period'] = $_GET['Period'];
 }
+if (isset($_GET['SelectedBudget'])) {
+	$_POST['SelectedBudget'] = $_GET['SelectedBudget'];
+}
+if (!isset($_POST['SelectedBudget'])) {
+	$_POST['SelectedBudget'] = 0;
+}
 
 if (isset($_POST['PeriodFrom']) and isset($_POST['PeriodTo']) and $_POST['PeriodFrom'] > $_POST['PeriodTo']) {
 
@@ -187,13 +193,14 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		$HTML .= '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 		$HTML .= '<input type="hidden" name="PeriodFrom" value="' . $_POST['PeriodFrom'] . '" />';
 		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />';
+		$HTML .= '<input type="hidden" name="SelectedBudget" value="' . $_POST['SelectedBudget'] . '" />';
 	}
 
 	$HTML .= '<div class="db-table-wrap"><table class="monochromatic-table">
 				<thead>';
 	if (!isset($_POST['PrintPDF'])) {
 		$HTML .= '	<tr>
-						<th colspan="6">
+						<th colspan="8">
 							<b>' . __('Trial Balance for the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</b>
 						</th>
 					</tr>';
@@ -203,8 +210,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 						<th>' . __('Account Name') . '</th>
 						<th class="number">' . __('Month Debit') . '</th>
 						<th class="number">' . __('Month Credit') . '</th>
+						<th class="number">' . __('Month Budget') . '</th>
 						<th class="number">' . __('Period Debit') . '</th>
 						<th class="number">' . __('Period Credit') . '</th>
+						<th class="number">' . __('Period Budget') . '</th>
 					</tr>
 				</thead>
 				<tbody>';
@@ -282,6 +291,22 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$RetainedEarningsResult = DB_query($RetainedEarningsSQL);
 	$RetainedEarningsRow = DB_fetch_array($RetainedEarningsResult);
 
+	/* Get the month budget */
+	$ThisMonthBudgetSQL = "SELECT account, SUM(amount) AS monthbudget FROM glbudgetdetails WHERE period='" . $_POST['PeriodTo'] . "' AND headerid='" . $_POST['SelectedBudget'] . "' GROUP BY account";
+	$ThisMonthBudgetResult = DB_query($ThisMonthBudgetSQL);
+	$ThisMonthBudgetArray = array();
+	while ($Row = DB_fetch_array($ThisMonthBudgetResult)) {
+		$ThisMonthBudgetArray[$Row['account']] = $Row['monthbudget'];
+	}
+
+	/* Get the period budget */
+	$ThisPeriodBudgetSQL = "SELECT account, SUM(amount) AS periodbudget FROM glbudgetdetails WHERE period>='" . $_POST['PeriodFrom'] . "' AND period<='" . $_POST['PeriodTo'] . "' AND headerid='" . $_POST['SelectedBudget'] . "' GROUP BY account";
+	$ThisPeriodBudgetResult = DB_query($ThisPeriodBudgetSQL);
+	$ThisPeriodBudgetArray = array();
+	while ($Row = DB_fetch_array($ThisPeriodBudgetResult)) {
+		$ThisPeriodBudgetArray[$Row['account']] = $Row['periodbudget'];
+	}
+
 	// Get all account codes
 	$SQL = "SELECT chartmaster.accountcode,
 					chartmaster.group_,
@@ -305,7 +330,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			</tr>';
 	$HTML .= '<tr class="total_row">
 				<td>' . $AccountListRow['group_'] . '</td>
-				<td colspan="6"></td>
+				<td colspan="8"></td>
 			</tr>';
 
 	$LastGroup = $AccountListRow['group_'];
@@ -317,9 +342,15 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	if (!isset($ThisPeriodArray[$AccountListRow['accountcode']])) {
 		$ThisPeriodArray[$AccountListRow['accountcode']] = 0;
 	}
+	if ($_SESSION['CompanyRecord']['retainedearnings'] == $AccountListRow['accountcode']) {
+		$ThisPeriodArray[$AccountListRow['accountcode']] += $RetainedEarningsRow['retainedearnings'];
+	}
 
 	$MonthActual = $ThisMonthArray[$AccountListRow['accountcode']];
 	$PeriodActual = $ThisPeriodArray[$AccountListRow['accountcode']];
+	
+	$MonthBudget = $ThisMonthBudgetArray[$AccountListRow['accountcode']] ?? 0;
+	$PeriodBudget = $ThisPeriodBudgetArray[$AccountListRow['accountcode']] ?? 0;
 
 	$MonthDebit = ($MonthActual > 0) ? $MonthActual : 0;
 	$MonthCredit = ($MonthActual < 0) ? -$MonthActual : 0;
@@ -328,27 +359,35 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 	$MonthDebitStr = ($MonthDebit != 0) ? locale_number_format($MonthDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 	$MonthCreditStr = ($MonthCredit != 0) ? locale_number_format($MonthCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+	$MonthBudgetStr = ($MonthBudget != 0) ? locale_number_format($MonthBudget, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 	$PeriodDebitStr = ($PeriodDebit != 0) ? locale_number_format($PeriodDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 	$PeriodCreditStr = ($PeriodCredit != 0) ? locale_number_format($PeriodCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+	$PeriodBudgetStr = ($PeriodBudget != 0) ? locale_number_format($PeriodBudget, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 
 	$HTML .= '<tr class="striped_row">
 				<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 				<td>' . $AccountListRow['accountname'] . '</td>
 				<td class="number">' . $MonthDebitStr . '</td>
 				<td class="number">' . $MonthCreditStr . '</td>
+				<td class="number">' . $MonthBudgetStr . '</td>
 				<td class="number">' . $PeriodDebitStr . '</td>
 				<td class="number">' . $PeriodCreditStr . '</td>
+				<td class="number">' . $PeriodBudgetStr . '</td>
 			</tr>';
 
 	$MonthDebitGroupTotal = $MonthDebit;
 	$MonthCreditGroupTotal = $MonthCredit;
+	$MonthBudgetGroupTotal = $MonthBudget;
 	$PeriodDebitGroupTotal = $PeriodDebit;
 	$PeriodCreditGroupTotal = $PeriodCredit;
+	$PeriodBudgetGroupTotal = $PeriodBudget;
 
 	$CumulativeMonthDebitGroupTotal = 0;
 	$CumulativeMonthCreditGroupTotal = 0;
+	$CumulativeMonthBudgetGroupTotal = 0;
 	$CumulativePeriodDebitGroupTotal = 0;
 	$CumulativePeriodCreditGroupTotal = 0;
+	$CumulativePeriodBudgetGroupTotal = 0;
 
 	while ($AccountListRow = DB_fetch_array($AccountListResult)) {
 		if (!isset($ThisMonthArray[$AccountListRow['accountcode']])) {
@@ -358,8 +397,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$ThisPeriodArray[$AccountListRow['accountcode']] = 0;
 		}
 		if ($_SESSION['CompanyRecord']['retainedearnings'] == $AccountListRow['accountcode']) {
-			$ThisMonthArray[$AccountListRow['accountcode']] = 0;
-			$ThisPeriodArray[$AccountListRow['accountcode']] = $RetainedEarningsRow['retainedearnings'];
+			$ThisPeriodArray[$AccountListRow['accountcode']] += $RetainedEarningsRow['retainedearnings'];
 		}
 		if ($AccountListRow['group_'] != $LastGroup) {
 			$HTML .= '<tr>
@@ -370,8 +408,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 						<td>' . $LastGroupName . '</td>
 						<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 						<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+						<td class="number">' . ($MonthBudgetGroupTotal != 0 ? locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 						<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 						<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+						<td class="number">' . ($PeriodBudgetGroupTotal != 0 ? locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 					</tr>';
 			$HTML .= '<tr>
 						<td></td>
@@ -382,7 +422,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					</tr>';
 			$HTML .= '<tr class="total_row">
 						<td>' . $AccountListRow['group_'] . '</td>
-						<td colspan="6"></td>
+						<td colspan="8"></td>
 					</tr>';
 
 			$LastGroup = $AccountListRow['group_'];
@@ -390,18 +430,25 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 			$CumulativeMonthDebitGroupTotal += $MonthDebitGroupTotal;
 			$CumulativeMonthCreditGroupTotal += $MonthCreditGroupTotal;
+			$CumulativeMonthBudgetGroupTotal += $MonthBudgetGroupTotal;
 			$CumulativePeriodDebitGroupTotal += $PeriodDebitGroupTotal;
 			$CumulativePeriodCreditGroupTotal += $PeriodCreditGroupTotal;
+			$CumulativePeriodBudgetGroupTotal += $PeriodBudgetGroupTotal;
 
 			$MonthDebitGroupTotal = 0;
 			$MonthCreditGroupTotal = 0;
+			$MonthBudgetGroupTotal = 0;
 			$PeriodDebitGroupTotal = 0;
 			$PeriodCreditGroupTotal = 0;
+			$PeriodBudgetGroupTotal = 0;
 
 		}
 
 		$MonthActual = $ThisMonthArray[$AccountListRow['accountcode']];
 		$PeriodActual = $ThisPeriodArray[$AccountListRow['accountcode']];
+		
+		$MonthBudget = $ThisMonthBudgetArray[$AccountListRow['accountcode']] ?? 0;
+		$PeriodBudget = $ThisPeriodBudgetArray[$AccountListRow['accountcode']] ?? 0;
 
 		$MonthDebit = ($MonthActual > 0) ? $MonthActual : 0;
 		$MonthCredit = ($MonthActual < 0) ? -$MonthActual : 0;
@@ -410,21 +457,27 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 		$MonthDebitStr = ($MonthDebit != 0) ? locale_number_format($MonthDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 		$MonthCreditStr = ($MonthCredit != 0) ? locale_number_format($MonthCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+		$MonthBudgetStr = ($MonthBudget != 0) ? locale_number_format($MonthBudget, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 		$PeriodDebitStr = ($PeriodDebit != 0) ? locale_number_format($PeriodDebit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 		$PeriodCreditStr = ($PeriodCredit != 0) ? locale_number_format($PeriodCredit, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
+		$PeriodBudgetStr = ($PeriodBudget != 0) ? locale_number_format($PeriodBudget, $_SESSION['CompanyRecord']['decimalplaces']) : '-';
 
 		$HTML .= '<tr class="striped_row">
 					<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 					<td>' . $AccountListRow['accountname'] . '</td>
 					<td class="number">' . $MonthDebitStr . '</td>
 					<td class="number">' . $MonthCreditStr . '</td>
+					<td class="number">' . $MonthBudgetStr . '</td>
 					<td class="number">' . $PeriodDebitStr . '</td>
 					<td class="number">' . $PeriodCreditStr . '</td>
+					<td class="number">' . $PeriodBudgetStr . '</td>
 				</tr>';
 		$MonthDebitGroupTotal += $MonthDebit;
 		$MonthCreditGroupTotal += $MonthCredit;
+		$MonthBudgetGroupTotal += $MonthBudget;
 		$PeriodDebitGroupTotal += $PeriodDebit;
 		$PeriodCreditGroupTotal += $PeriodCredit;
+		$PeriodBudgetGroupTotal += $PeriodBudget;
 	}
 	$HTML .= '<tr>
 				<td></td>
@@ -434,8 +487,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<td>' . $LastGroupName . '</td>
 				<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 				<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+				<td class="number">' . ($MonthBudgetGroupTotal != 0 ? locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 				<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 				<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
+				<td class="number">' . ($PeriodBudgetGroupTotal != 0 ? locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>
@@ -443,8 +498,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 	$CumulativeMonthDebitGroupTotal += $MonthDebitGroupTotal;
 	$CumulativeMonthCreditGroupTotal += $MonthCreditGroupTotal;
+	$CumulativeMonthBudgetGroupTotal += $MonthBudgetGroupTotal;
 	$CumulativePeriodDebitGroupTotal += $PeriodDebitGroupTotal;
 	$CumulativePeriodCreditGroupTotal += $PeriodCreditGroupTotal;
+	$CumulativePeriodBudgetGroupTotal += $PeriodBudgetGroupTotal;
 
 	$HTML .= '<tr>
 				<td></td>
@@ -454,8 +511,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<td></td>
 				<td class="number">' . locale_number_format($CumulativeMonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativeMonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . locale_number_format($CumulativeMonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativePeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativePeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
+				<td class="number">' . locale_number_format($CumulativePeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>
@@ -637,8 +696,24 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			<div class="fieldhelp">', __('Select a predefined period from this list. If a selection is made here it will override anything selected in the From and To options above.'), '</div>
 		</div>';
 
-	// Budget comparisons are not used in standard Trial Balance.
-	$_POST['SelectedBudget'] = '';
+	if (!isset($_POST['SelectedBudget'])) {
+		$_POST['SelectedBudget'] = 0;
+	}
+	echo '<div class="db-form-group">
+			<label class="db-label" for="SelectedBudget">', __('Budget Source'), '</label>
+			<select class="db-select" name="SelectedBudget">';
+	$Buds = DB_query("SELECT id, name FROM glbudgetheaders");
+	echo '<option value="0">', __('None'), '</option>';
+	while ($Bud = DB_fetch_array($Buds)) {
+		if ($_POST['SelectedBudget'] == $Bud['id']) {
+			echo '<option selected="selected" value="', $Bud['id'], '">', $Bud['name'], '</option>';
+		} else {
+			echo '<option value="', $Bud['id'], '">', $Bud['name'], '</option>';
+		}
+	}
+	echo '</select>
+		<div class="fieldhelp">', __('Select the budget to compare against'), '</div>
+	</div>';
 
 	echo '</div></div> <!-- close db-form-row and db-card-body -->
 	</div>'; // close db-card

@@ -101,7 +101,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	while ($MyRow = DB_fetch_array($AccountListResult)) {
 		$AccountBalance = $ThisYearActuals[$MyRow['accountcode']] ?? 0;
 		$LYAccountBalance = $LastYearActuals[$MyRow['accountcode']] ?? 0;
-		if ($MyRow['accountcode'] == $RetainedEarningsAct) { $AccountBalance = $ThisYearRetainedEarningsRow['retainedearnings']; $LYAccountBalance = $LastYearRetainedEarningsRow['retainedearnings']; }
+		if ($MyRow['accountcode'] == $RetainedEarningsAct) { $AccountBalance += $ThisYearRetainedEarningsRow['retainedearnings']; $LYAccountBalance += $LastYearRetainedEarningsRow['retainedearnings']; }
 
 		if ($MyRow['group_'] != $ActGrp and $ActGrp != '') {
 			if ($MyRow['parentgroupname'] != $ActGrp) {

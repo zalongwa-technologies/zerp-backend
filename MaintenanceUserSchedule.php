@@ -65,7 +65,10 @@ echo '<div class="db-centered-container" style="max-width: 1100px; margin: 0 aut
 					</thead>
 					<tbody>';
 
-while ($MyRow=DB_fetch_array($Result)) {
+if (DB_num_rows($Result) == 0) {
+	echo '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">' . __('No pending maintenance tasks found.') . '</td></tr>';
+} else {
+	while ($MyRow=DB_fetch_array($Result)) {
 
 	if ($MyRow['manager']!=''){
 		$ManagerResult = DB_query("SELECT realname FROM www_users WHERE userid='" . $MyRow['manager'] . "'");
@@ -99,6 +102,7 @@ while ($MyRow=DB_fetch_array($Result)) {
 				</a>
 			</td>
 		</tr>';
+}
 }
 
 echo '					</tbody>

@@ -46,6 +46,9 @@ if (isset($_POST['DatePaid'])) {
 include(__DIR__ . '/includes/SQL_CommonFunctions.php');
 include(__DIR__ . '/includes/GLFunctions.php');
 
+// Initialize $Errors early so it is always defined (prevents silent skips on CommitBatch)
+$Errors = [];
+
 if (isset($_POST['PaymentCancelled'])) {
 	prnMsg(__('Payment Cancelled since cheque was not printed'), 'warning');
 	include(__DIR__ . '/includes/footer.php');
@@ -111,7 +114,7 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 	} elseif ($TotalAmount == 0 AND $_SESSION['PaymentDetail' . $identifier]->ExRate == 0
 		AND ($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) == 0) {
 		prnMsg(__('This payment has no amounts entered and will not be processed'), 'warn');
-	} elseif ($_POST['BankAccount'] == '') {
+	} elseif (empty($_POST['BankAccount']) AND empty($_SESSION['PaymentDetail' . $identifier]->Account)) {
 		prnMsg(__('No bank account has been selected so this payment cannot be processed'), 'warn');
 	} else {
 
@@ -242,6 +245,13 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 				}
 				$TransNo = GetNextTransNo(22);
 				$TransType = 22;
+				// Safety: ensure ExRate and FunctionalExRate are never zero to prevent DivisionByZeroError
+				if (empty($_SESSION['PaymentDetail' . $identifier]->ExRate) OR $_SESSION['PaymentDetail' . $identifier]->ExRate <= 0) {
+					$_SESSION['PaymentDetail' . $identifier]->ExRate = 1.0;
+				}
+				if (empty($_SESSION['PaymentDetail' . $identifier]->FunctionalExRate) OR $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate <= 0) {
+					$_SESSION['PaymentDetail' . $identifier]->FunctionalExRate = 1.0;
+				}
 				$CreditorTotal = (($_SESSION['PaymentDetail' . $identifier]->Discount + $_SESSION['PaymentDetail' . $identifier]->Amount) / $_SESSION['PaymentDetail' . $identifier]->ExRate) / $_SESSION['PaymentDetail' . $identifier]->FunctionalExRate;
 
 				$SQL = "INSERT INTO supptrans (transno, type, supplierno, trandate, inputdate, suppreference, rate, ovamount, transtext, chequeno)
@@ -693,9 +703,13 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             }
             var form = document.getElementById('PaymentForm');
             if (form) {
-                var hid = document.createElement('input');
-                hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
-                form.appendChild(hid);
+                // Guard: only append CommitBatch hidden input once (prevent duplicate on re-click)
+                var hid = form.querySelector('input[name="CommitBatch"]');
+                if (!hid) {
+                    hid = document.createElement('input');
+                    hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
+                    form.appendChild(hid);
+                }
                 form.submit();
             }
             return true;
@@ -1427,7 +1441,7 @@ if ($_SESSION['CompanyRecord']['gllink_creditors'] == 1 AND $_SESSION['PaymentDe
 					<td class="text-right" style="font-weight: 700;">' . locale_number_format($MyRow['amount'], $_SESSION['PaymentDetail' . $identifier]->CurrDecimalPlaces) . '</td>
 					<td style="text-align: center;">
 						<div style="display: flex; gap: 8px; justify-content: center;">
-							<button type="button" class="db-btn db-btn-icon" onclick="payFull(' . $MyRow['id'] . ', ' . $MyRow['amount'] . ')" title="' . __('Pay Full') . '" style="color: var(--primary); background: var(--primary-soft);"><i class="fas fa-arrow-right"></i></button>
+							<button type="button" class="db-btn db-btn-icon" onclick="payFull(' . (int)$MyRow['id'] . ', ' . (float)($MyRow['amount'] ?? 0) . ')" title="' . __('Pay Full') . '" style="color: var(--primary); background: var(--primary-soft);"><i class="fas fa-arrow-right"></i></button>
 							<button type="button" class="db-btn db-btn-icon" onclick="payClear(' . $MyRow['id'] . ')" title="' . __('Clear') . '" style="color: var(--danger); background: #fee2e2;"><i class="fas fa-times"></i></button>
 						</div>
 					</td>

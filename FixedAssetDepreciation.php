@@ -88,8 +88,9 @@ $SQL = "SELECT fixedassets.assetid,
 $AssetsResult = DB_query($SQL);
 
 $InputError = false; //always hope for the best
-if (Date1GreaterThanDate2($_POST['ProcessDate'],date($_SESSION['DefaultDateFormat']))){
-	prnMsg(__('No depreciation will be committed as the processing date is beyond the current date. The depreciation run can only be run for periods prior to today'),'warn');
+$EndOfCurrentMonth = LastDayOfMonth(date($_SESSION['DefaultDateFormat']));
+if (Date1GreaterThanDate2($_POST['ProcessDate'], $EndOfCurrentMonth)){
+	prnMsg(__('No depreciation will be committed as the processing date is beyond the end of the current month. The depreciation run can only be run for periods up to the current month'),'warn');
 	$InputError =true;
 }
 if (isset($_POST['CommitDepreciation']) AND $InputError==false){

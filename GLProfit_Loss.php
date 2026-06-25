@@ -23,186 +23,200 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])) {
 	$PeriodToDate = MonthAndYearFromSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodTo']));
 	$PeriodFromDate = MonthAndYearFromSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodFrom']));
 
-    // 1. DATA PRE-CALCULATION (Refactored for KPI Cards)
-    $SectionsData = array();
-    $TotalRevenue = 0; $TotalCostOfSales = 0; $TotalExpenses = 0;
-    $TotalRevenueBudget = 0; $TotalCostOfSalesBudget = 0; $TotalExpensesBudget = 0;
-    $TotalRevenueLY = 0; $TotalCostOfSalesLY = 0; $TotalExpensesLY = 0;
+    // --- DATA MAPPING FUNCTION ---
+    if (!function_exists('mapAccountToProfitLossCategory')) {
+        function mapAccountToProfitLossCategory($accountName, $groupName) {
+            $acc = strtolower($accountName);
+            $grp = strtolower($groupName);
+            $combined = $acc . ' ' . $grp;
 
+            // REVENUE (SALES)
+            if (strpos($combined, 'non-exchange') !== false || strpos($combined, 'grant') !== false || strpos($combined, 'donation') !== false || strpos($combined, 'subvention') !== false) {
+                return ['type' => 'revenue', 'key' => 'non_exchange_transactions'];
+            }
+            if (strpos($combined, 'exchange') !== false || strpos($combined, 'sale') !== false || strpos($combined, 'fee') !== false || strpos($combined, 'tuition') !== false || strpos($combined, 'revenue') !== false || strpos($combined, 'income') !== false) {
+                return ['type' => 'revenue', 'key' => 'exchange_transactions'];
+            }
+
+            // EXPENSES
+            if (strpos($combined, 'admin') !== false || strpos($combined, 'office') !== false || strpos($combined, 'travel') !== false || strpos($combined, 'communication') !== false) {
+                return ['type' => 'expenses', 'key' => 'administrative_expenditure'];
+            }
+            if (strpos($combined, 'wage') !== false || strpos($combined, 'salary') !== false || strpos($combined, 'staff') !== false || strpos($combined, 'benefit') !== false || strpos($combined, 'allowance') !== false || strpos($combined, 'compensation') !== false) {
+                return ['type' => 'expenses', 'key' => 'wages_salaries_employee_benefits'];
+            }
+            if (strpos($combined, 'depreciation') !== false || strpos($combined, 'amortization') !== false || strpos($combined, 'ppe') !== false) {
+                return ['type' => 'expenses', 'key' => 'depreciation_of_ppe'];
+            }
+            
+            // Fallbacks - default any other P&L account to Other operating expenses
+            return ['type' => 'expenses', 'key' => 'other_operating_expenses'];
+        }
+    }
+
+    if (!function_exists('formatMoneyPL')) {
+        function formatMoneyPL($amount) {
+            if (abs($amount) < 0.005) return locale_number_format(0, 2);
+            return locale_number_format((float)$amount, 2);
+        }
+    }
+
+    $plData = [
+        'revenue' => [
+            'non_exchange_transactions' => ['label' => 'Revenue from Non-exchange Transactions', 'amount' => 0.0, 'accounts' => []],
+            'exchange_transactions' => ['label' => 'Revenue from Exchange Transactions', 'amount' => 0.0, 'accounts' => []],
+        ],
+        'expenses' => [
+            'administrative_expenditure' => ['label' => 'Administrative expenditure', 'amount' => 0.0, 'accounts' => []],
+            'wages_salaries_employee_benefits' => ['label' => 'Wages, salaries & employee benefits', 'amount' => 0.0, 'accounts' => []],
+            'other_operating_expenses' => ['label' => 'Other operating expenses', 'amount' => 0.0, 'accounts' => []],
+            'depreciation_of_ppe' => ['label' => 'Depreciation of PPE', 'amount' => 0.0, 'accounts' => []],
+        ]
+    ];
+
+    // --- DATA FETCHING ---
     $AccountListResult = DB_query("SELECT sectionid, sectionname, parentgroupname, chartmaster.group_, chartmaster.accountcode, accountname, pandl 
                                    FROM chartmaster 
                                    INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 
                                    INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ 
                                    INNER JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts 
                                    WHERE pandl=1 ORDER BY sequenceintb, group_, accountcode");
-    
-    $ThisYearRes = DB_query("SELECT account, SUM(amount) AS accounttotal FROM gltotals WHERE period>='" . $_POST['PeriodFrom'] . "' AND period<='" . $_POST['PeriodTo'] . "' GROUP BY account");
+
+    $ThisYearRes = DB_query("SELECT account, ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS accounttotal FROM gltrans WHERE periodno>='" . $_POST['PeriodFrom'] . "' AND periodno<='" . $_POST['PeriodTo'] . "' GROUP BY account");
     while ($R = DB_fetch_array($ThisYearRes)) $ThisYearActuals[$R['account']] = $R['accounttotal'];
-    
-    $LastYearRes = DB_query("SELECT account, SUM(amount) AS accounttotal FROM gltotals WHERE period>='" . ($_POST['PeriodFrom'] - 12) . "' AND period<='" . ($_POST['PeriodTo'] - 12) . "' GROUP BY account");
-    while ($R = DB_fetch_array($LastYearRes)) $LastYearActuals[$R['account']] = $R['accounttotal'];
 
-    // Collect all data first to calculate KPI totals
-    $FullReportData = array();
     while ($MyRow = DB_fetch_array($AccountListResult)) {
-        $BudgetRes = DB_query("SELECT SUM(amount) AS periodbudget FROM glbudgetdetails WHERE account='" . $MyRow['accountcode'] . "' AND period>='" . $_POST['PeriodFrom'] . "' AND period<='" . $_POST['PeriodTo'] . "' AND headerid='" . $_POST['SelectedBudget'] . "'");
-        $BudgetRow = DB_fetch_array($BudgetRes);
-        
-        $Actual = $ThisYearActuals[$MyRow['accountcode']] ?? 0;
-        $Budget = $BudgetRow['periodbudget'] ?? 0;
-        $LY = $LastYearActuals[$MyRow['accountcode']] ?? 0;
-
-        $FullReportData[] = array(
-            'sectionid' => $MyRow['sectionid'],
-            'sectionname' => $MyRow['sectionname'],
-            'group' => $MyRow['group_'],
-            'parent' => $MyRow['parentgroupname'],
-            'code' => $MyRow['accountcode'],
-            'name' => $MyRow['accountname'],
-            'actual' => $Actual,
-            'budget' => $Budget,
-            'ly' => $LY
-        );
-
-        // Accumulate for KPIs
-        if ($MyRow['sectionid'] == 1) { // Revenue
-            $TotalRevenue -= $Actual; $TotalRevenueBudget -= $Budget; $TotalRevenueLY -= $LY;
-        } elseif ($MyRow['sectionid'] == 2) { // COGS
-            $TotalCostOfSales += $Actual; $TotalCostOfSalesBudget += $Budget; $TotalCostOfSalesLY += $LY;
-        } else { // Expenses
-            $TotalExpenses += $Actual; $TotalExpensesBudget += $Budget; $TotalExpensesLY += $LY;
+        $AccountBalance = $ThisYearActuals[$MyRow['accountcode']] ?? 0;
+        if (abs($AccountBalance) > 0.005) {
+            $map = mapAccountToProfitLossCategory($MyRow['accountname'], $MyRow['group_']);
+            // Standard accounting: Revenue is typically a credit balance (negative in raw data)
+            // Expenses are typically debit balances (positive in raw data)
+            // To display both as positive numbers on the report:
+            $val = 0;
+            if ($map['type'] === 'revenue') {
+                $val = -$AccountBalance; 
+            } else {
+                $val = $AccountBalance;
+            }
+            $plData[$map['type']][$map['key']]['amount'] += $val;
+            
+            // Store individual accounts for Detailed view
+            $plData[$map['type']][$map['key']]['accounts'][] = [
+                'code' => $MyRow['accountcode'],
+                'name' => $MyRow['accountname'],
+                'amount' => $val
+            ];
         }
     }
 
-    $GrossProfit = $TotalRevenue - $TotalCostOfSales;
-    $NetProfit = $GrossProfit - $TotalExpenses;
-    $NetProfitBudget = ($TotalRevenueBudget - $TotalCostOfSalesBudget) - $TotalExpensesBudget;
+    // --- CALCULATIONS ---
+    $totalRevenue = array_sum(array_column($plData['revenue'], 'amount'));
+    $totalExpenses = array_sum(array_column($plData['expenses'], 'amount'));
+    $surplusDeficit = $totalRevenue - $totalExpenses;
 
-	$HTML = '';
-	if (isset($_POST['PrintPDF'])) { 
-        $HTML .= '<html><head><style>
-            body { font-family: "Helvetica", sans-serif; color: #334155; }
-            .report-header { text-align: center; margin-bottom: 20px; }
-            .kpi-row { display: table; width: 100%; margin-bottom: 20px; border-spacing: 10px; }
-            .kpi-card { display: table-cell; background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; text-align: center; width: 25%; }
-            .kpi-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
-            .kpi-value { font-size: 16px; font-weight: bold; color: hsl(145, 63%, 38%); }
-            .report-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            .report-table th { background: hsl(145, 45%, 22%); color: white; padding: 8px; text-align: left; }
-            .report-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
-            .section-header { background: hsl(145, 40%, 95%); font-weight: bold; }
-            .group-header { font-weight: bold; color: hsl(145, 45%, 22%); }
-            .text-right { text-align: right; }
-            .variance-pos { color: #166534; font-weight: bold; }
-            .variance-neg { color: #991b1b; font-weight: bold; }
-        </style></head><body>'; 
-    } else {
-        $HTML .= '<div class="aw-report-container">';
-    }
-
-	$HTML .= '<div class="report-header">
-                <h1 style="margin:0; font-size:1.8rem;">' . $_SESSION['CompanyRecord']['coyname'] . '</h1>
-                <div style="font-weight:900; color:hsl(145, 63%, 38%); font-size:1.2rem; text-transform:uppercase;">' . $Title . '</div>
-                <div style="color:#64748b; font-size:0.9rem;">' . $PeriodFromDate . ' ' . __('to') . ' ' . $PeriodToDate . '</div>
-              </div>';
-
-    // 2. EXECUTIVE KPI CARDS
-    $HTML .= '<div class="kpi-row">';
-    $HTML .= '<div class="kpi-card"><div class="kpi-label">' . __('Total Revenue') . '</div><div class="kpi-value">' . locale_number_format($TotalRevenue, 0) . '</div></div>';
-    $HTML .= '<div class="kpi-card"><div class="kpi-label">' . __('Gross Profit') . '</div><div class="kpi-value">' . locale_number_format($GrossProfit, 0) . ' <small>(' . ($TotalRevenue > 0 ? round($GrossProfit*100/$TotalRevenue,1) : 0) . '%)</small></div></div>';
-    $HTML .= '<div class="kpi-card"><div class="kpi-label">' . __('Total Expenses') . '</div><div class="kpi-value" style="color:#ef4444;">' . locale_number_format($TotalExpenses, 0) . '</div></div>';
-    $HTML .= '<div class="kpi-card"><div class="kpi-label">' . __('Net Profit') . '</div><div class="kpi-value" style="color:'.($NetProfit < 0 ? '#ef4444' : 'hsl(145, 63%, 38%)').';">' . locale_number_format($NetProfit, 0) . '</div></div>';
-    $HTML .= '</div>';
-
-    // 3. MAIN DATA TABLE
-    $HTML .= '<table class="report-table"><thead><tr>';
-	if ($_POST['ShowDetail'] == 'Detailed') {
-		$HTML .= '<th>' . __('Account') . '</th><th>' . __('Account Name') . '</th><th class="text-right">' . __('Actual') . '</th><th class="text-right">' . __('Budget') . '</th><th class="text-right">' . __('Var %') . '</th><th class="text-right">' . __('Last Year') . '</th>';
-	} else {
-		$HTML .= '<th colspan="2"></th><th class="text-right">' . __('Actual') . '</th><th class="text-right">' . __('Budget') . '</th><th class="text-right">' . __('Var %') . '</th><th class="text-right">' . __('Last Year') . '</th>';
-	}
-	$HTML .= '</tr></thead><tbody>';
-
-    $CurrentSection = ''; $CurrentGroup = ''; $Level = 0;
-    $SecActual = 0; $SecBudget = 0; $SecLY = 0;
-    $GrpActual = array(0,0,0,0,0); $GrpBudget = array(0,0,0,0,0); $GrpLY = array(0,0,0,0,0); $GrpNames = array();
-
-    foreach ($FullReportData as $row) {
-        // Section Break
-        if ($row['sectionid'] != $CurrentSection) {
-            if ($CurrentSection != '') {
-                // Show Section Total
-                $mul = ($CurrentSection == 1 ? -1 : 1);
-                $HTML .= '<tr class="section-header"><td colspan="2">' . __('Total') . ' ' . $Sections[$CurrentSection] . '</td><td class="text-right">' . locale_number_format($SecActual*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td class="text-right">' . locale_number_format($SecBudget*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td></td><td class="text-right">' . locale_number_format($SecLY*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td></tr>';
-                if ($CurrentSection == 2) {
-                    $HTML .= '<tr style="background:#cbd5e1; font-weight:900;"><td colspan="2">' . __('Gross Profit') . '</td><td class="text-right">' . locale_number_format($GrossProfit, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td class="text-right">' . locale_number_format($TotalRevenueBudget - $TotalCostOfSalesBudget, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td></td><td class="text-right">' . locale_number_format($TotalRevenueLY - $TotalCostOfSalesLY, $_SESSION['CompanyRecord']['decimalplaces']) . '</td></tr>';
-                }
-            }
-            $CurrentSection = $row['sectionid'];
-            $SecActual = 0; $SecBudget = 0; $SecLY = 0;
-            $HTML .= '<tr style="background:#f8fafc;"><td colspan="6" style="font-weight:900; text-transform:uppercase; color:hsl(145, 63%, 38%);">' . $row['sectionname'] . '</td></tr>';
-        }
-
-        // Grouping logic (simplified)
-        if ($row['group'] != $CurrentGroup) {
-            $CurrentGroup = $row['group'];
-            if ($_POST['ShowDetail'] == 'Detailed') {
-                $HTML .= '<tr><td colspan="6" style="font-weight:700; background:#f1f5f9;">' . $row['group'] . '</td></tr>';
-            }
-        }
-
-        $Actual = $row['actual']; $Budget = $row['budget']; $LY = $row['ly'];
-        $SecActual += $Actual; $SecBudget += $Budget; $SecLY += $LY;
-
-        if ($_POST['ShowDetail'] == 'Detailed') {
-            if (isset($_POST['ShowZeroBalance']) or ($Actual != 0 or $Budget != 0 or $LY != 0)) {
-                $mul = ($row['sectionid'] == 1 ? -1 : 1);
-                $Var = ($Budget != 0 ? round(($Actual - $Budget) / abs($Budget) * 100, 1) : 0);
-                $VarClass = ($Var > 0 ? ($row['sectionid'] == 1 ? 'variance-pos' : 'variance-neg') : ($row['sectionid'] == 1 ? 'variance-neg' : 'variance-pos'));
-                
-                $HTML .= '<tr>
-                    <td style="padding-left:20px;">' . $row['code'] . '</td>
-                    <td>' . $row['name'] . '</td>
-                    <td class="text-right">' . locale_number_format($Actual*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-                    <td class="text-right">' . locale_number_format($Budget*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-                    <td class="text-right ' . $VarClass . '">' . ($Budget != 0 ? $Var . '%' : '-') . '</td>
-                    <td class="text-right">' . locale_number_format($LY*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-                </tr>';
-            }
-        }
-    }
-
-    // Final Section Total
-    $mul = ($CurrentSection == 1 ? -1 : 1);
-    $HTML .= '<tr class="section-header"><td colspan="2">' . __('Total') . ' ' . $Sections[$CurrentSection] . '</td><td class="text-right">' . locale_number_format($SecActual*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td class="text-right">' . locale_number_format($SecBudget*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td></td><td class="text-right">' . locale_number_format($SecLY*$mul, $_SESSION['CompanyRecord']['decimalplaces']) . '</td></tr>';
-
-    // Grand Bottom Line
-	$HTML .= '<tr style="background:hsl(145, 63%, 38%); color:white; font-weight:900;"><td colspan="2" style="font-size:1.1rem;">' . __('NET PROFIT / (LOSS)') . '</td><td class="text-right" style="font-size:1.1rem;">' . locale_number_format($NetProfit, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td class="text-right" style="font-size:1.1rem;">' . locale_number_format($NetProfitBudget, $_SESSION['CompanyRecord']['decimalplaces']) . '</td><td></td><td class="text-right" style="font-size:1.1rem;">' . locale_number_format($TotalRevenueLY - $TotalCostOfSalesLY - $TotalExpensesLY, $_SESSION['CompanyRecord']['decimalplaces']) . '</td></tr>';
-	$HTML .= '</tbody></table>';
+    // --- HTML / CSS RENDERING ---
+    $HTML = '';
     
-    if (isset($_POST['PrintPDF'])) { $HTML .= '</body></html>'; } else { $HTML .= '</div>'; }
+    if (isset($_POST['PrintPDF'])) {
+        $HTML .= '<!DOCTYPE html><html><head><style>';
+    } else {
+        $HTML .= '<style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");';
+    }
 
-	if (isset($_POST['PrintPDF'])) {
-		$DomPDF = new Dompdf($DomPDFOptions); $DomPDF->loadHtml($HTML); $DomPDF->setPaper($_SESSION['PageSize'], 'portrait'); $DomPDF->render();
-		$DomPDF->stream($_SESSION['DatabaseName'] . '_Profit_Loss_' . date('Y-m-d') . '.pdf', array("Attachment" => false));
-	} else {
-		$Title = __('Financial Statement View'); include(__DIR__ . '/includes/header.php');
-		echo '<style>
-            .aw-report-container { max-width: 1200px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-            .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2.5rem; }
-            .kpi-card { background: var(--white); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-soft); box-shadow: var(--shadow); text-align: center; }
-            .kpi-label { font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
-            .kpi-value { font-size: 1.5rem; font-weight: 900; color: hsl(145, 63%, 38%); }
-            .report-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-            .report-table th { background: var(--primary-soft); color: var(--primary-dark); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 1rem; text-align: left; }
-            .report-table td { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border-soft); }
-            .section-header { background: var(--primary-soft); font-weight: 800; color: var(--primary-dark); }
-            .variance-pos { color: #166534; font-weight: 700; }
-            .variance-neg { color: #991b1b; font-weight: 700; }
-        </style>';
-		echo '<div style="background:hsl(210, 20%, 97%); padding:2rem; min-height:100vh;">' . $HTML . '</div>';
-		include(__DIR__ . '/includes/footer.php');
-	}
+    $HTML .= '
+        .balance-sheet-report { width: 100%; margin: 0 auto; border-collapse: separate; border-spacing: 0; font-family: "Inter", Helvetica, sans-serif; background: transparent; }
+        .report-title { text-align: center; font-size: 1.5rem; font-weight: 700; padding: 20px 0 30px; text-transform: uppercase; color: #111827; border: none !important; }
+        .section-header { font-weight: 700; font-size: 1.15rem; padding: 16px 20px; text-transform: uppercase; background-color: #d1fae5; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; border-radius: 6px; }
+        .item-label { padding: 12px 0 12px 20px; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; border-radius: 6px 0 0 6px; }
+        .amount { text-align: right; padding: 12px 20px 12px 0; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; border-radius: 0 6px 6px 0; }
+        .item-row { transition: all 0.2s ease; cursor: default; }
+        .item-row:nth-child(even) td { background-color: #f9fafb !important; }
+        .item-row:hover td { background-color: #f3f4f6 !important; }
+        .total-label { padding: 16px 0 16px 20px; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; border-radius: 6px 0 0 6px; }
+        .total-amount { text-align: right; padding: 16px 20px 16px 0; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
+        .grand-total-label { padding: 20px 0 20px 20px; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; text-transform: uppercase; border: none !important; border-top: 3px double #10b981 !important; border-radius: 6px 0 0 6px; }
+        .grand-total-amount { text-align: right; padding: 20px 20px 20px 0; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; border: none !important; border-top: 3px double #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
+        .balance-sheet-report td { background: transparent; }
+        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 1000px; margin: 15px auto; overflow-x: auto; box-sizing: border-box; }
+        
+        .db-page { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; box-sizing: border-box !important; padding: 20px; background: hsl(210, 20%, 97%); min-height: 100vh; }
+        .db-centered-container { width: 100% !important; max-width: 1350px !important; margin: 0 auto; box-sizing: border-box !important; }
+        .db-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; font-family: "Inter", Helvetica, sans-serif; }
+        .db-page-title { font-size: 1.5rem; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .db-btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; padding: 10px 18px !important; border-radius: 6px !important; font-weight: 600 !important; font-size: 0.875rem !important; transition: all 0.2s ease !important; border: none !important; cursor: pointer !important; text-decoration: none !important; font-family: "Inter", Helvetica, sans-serif; }
+        .db-btn-secondary { background: #ffffff !important; color: #374151 !important; border: 1px solid #d1d5db !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+    </style>';
+
+    if (isset($_POST['PrintPDF'])) {
+        $HTML .= '</head><body>';
+    }
+
+    $HTML .= '<div class="report-wrapper"><table class="balance-sheet-report">';
+    
+    // Title
+    $HTML .= '<tr><th colspan="2" class="report-title">' . __('STATEMENT OF FINANCIAL PERFORMANCE FOR THE PERIOD ENDED') . ' ' . strtoupper($PeriodToDate) . '</th></tr>';
+
+    // REVENUE (SALES)
+    $HTML .= '<tr><td colspan="2"><div class="section-header">' . __('REVENUE (SALES)') . '</div></td></tr>';
+    foreach($plData['revenue'] as $item) {
+        if ($_POST['ShowDetail'] == 'Detailed' && !empty($item['accounts'])) {
+            $HTML .= '<tr class="item-row"><td class="item-label" style="font-weight: 700; background-color:#f1f5f9;">' . __($item['label']) . '</td><td class="amount" style="background-color:#f1f5f9;"></td></tr>';
+            foreach($item['accounts'] as $acc) {
+                $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px; font-size: 0.85rem; color:#475569;">' . $acc['code'] . ' - ' . $acc['name'] . '</td><td class="amount" style="font-size: 0.85rem; color:#475569;">' . formatMoneyPL($acc['amount']) . '</td></tr>';
+            }
+            $HTML .= '<tr class="item-row"><td class="item-label" style="text-align: right; font-style: italic; font-size: 0.9rem;">' . __('Subtotal') . ' ' . __($item['label']) . '</td><td class="amount" style="font-weight: 600; border-bottom: 2px solid #e2e8f0 !important;">' . formatMoneyPL($item['amount']) . '</td></tr>';
+        } else {
+            $HTML .= '<tr class="item-row"><td class="item-label">' . __($item['label']) . '</td><td class="amount">' . formatMoneyPL($item['amount']) . '</td></tr>';
+        }
+    }
+    $HTML .= '<tr><td class="total-label">' . __('Total revenue') . '</td><td class="total-amount">' . formatMoneyPL($totalRevenue) . '</td></tr>';
+
+    // EXPENSES
+    $HTML .= '<tr><td colspan="2"><div class="section-header">' . __('EXPENSES') . '</div></td></tr>';
+    foreach($plData['expenses'] as $item) {
+        if ($_POST['ShowDetail'] == 'Detailed' && !empty($item['accounts'])) {
+            $HTML .= '<tr class="item-row"><td class="item-label" style="font-weight: 700; background-color:#f1f5f9;">' . __($item['label']) . '</td><td class="amount" style="background-color:#f1f5f9;"></td></tr>';
+            foreach($item['accounts'] as $acc) {
+                $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px; font-size: 0.85rem; color:#475569;">' . $acc['code'] . ' - ' . $acc['name'] . '</td><td class="amount" style="font-size: 0.85rem; color:#475569;">' . formatMoneyPL($acc['amount']) . '</td></tr>';
+            }
+            $HTML .= '<tr class="item-row"><td class="item-label" style="text-align: right; font-style: italic; font-size: 0.9rem;">' . __('Subtotal') . ' ' . __($item['label']) . '</td><td class="amount" style="font-weight: 600; border-bottom: 2px solid #e2e8f0 !important;">' . formatMoneyPL($item['amount']) . '</td></tr>';
+        } else {
+            $HTML .= '<tr class="item-row"><td class="item-label">' . __($item['label']) . '</td><td class="amount">' . formatMoneyPL($item['amount']) . '</td></tr>';
+        }
+    }
+    $HTML .= '<tr><td class="total-label">' . __('Total expenses') . '</td><td class="total-amount">' . formatMoneyPL($totalExpenses) . '</td></tr>';
+
+    // SURPLUS (DEFICIT)
+    $HTML .= '<tr><td class="grand-total-label">' . __('Surplus (Deficit) for the period') . '</td><td class="grand-total-amount">' . formatMoneyPL($surplusDeficit) . '</td></tr>';
+
+    $HTML .= '</table></div>';
+
+    if (isset($_POST['PrintPDF'])) {
+        $HTML .= '</body></html>';
+        $DomPDF = new Dompdf($DomPDFOptions); 
+        $DomPDF->loadHtml($HTML); 
+        $DomPDF->setPaper($_SESSION['PageSize'], 'portrait'); 
+        $DomPDF->render();
+        $DomPDF->stream($_SESSION['DatabaseName'] . '_Profit_Loss_' . date('Y-m-d') . '.pdf', array("Attachment" => false));
+        exit;
+    } else {
+        $Title = __('Financial Statement View'); include(__DIR__ . '/includes/header.php');
+        echo $HTML;
+        echo '<div class="centre" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '" target="_blank">
+                    <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
+                    <input type="hidden" name="PeriodFrom" value="' . $_POST['PeriodFrom'] . '" />
+                    <input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />
+                    <input type="hidden" name="SelectedBudget" value="' . $_POST['SelectedBudget'] . '" />
+                    <input type="hidden" name="ShowDetail" value="' . $_POST['ShowDetail'] . '" />
+                    <button type="submit" name="PrintPDF" class="db-btn db-btn-secondary" title="Produce PDF Report"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> ' . __('Print PDF') . '</button>
+                </form>
+                <form><button type="submit" name="close" class="db-btn db-btn-secondary" onclick="window.close()"><i class="fas fa-times"></i> ' . __('Close') . '</button></form>
+              </div>';
+        include(__DIR__ . '/includes/footer.php');
+    }
+
 
 } else {
     // SETUP PAGE (Architect v3 Card)

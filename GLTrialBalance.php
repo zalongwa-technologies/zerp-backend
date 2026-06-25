@@ -149,6 +149,11 @@ if (isset($_POST['PeriodFrom']) and isset($_POST['PeriodTo']) and $_POST['Period
 
 if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsheet'])) {
 
+	if (isset($_POST['Period']) && $_POST['Period'] != '') {
+		$_POST['PeriodFrom'] = ReportPeriod($_POST['Period'], 'From');
+		$_POST['PeriodTo'] = ReportPeriod($_POST['Period'], 'To');
+	}
+
 	$PeriodToDate = MonthAndYearFromSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodTo']));
 	$NumberOfMonths = $_POST['PeriodTo'] - $_POST['PeriodFrom'] + 1;
 
@@ -185,8 +190,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		
 		$HTML .= '<div class="report-header">
 					<h2>' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
-					<h3>' . __('Trial Balance') . '</h3>
-					<p>' . __('For the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</p>
+					<h3>' . __('Trial Balance As At') . ' ' . date('d M Y') . '</h3>
+					<p>' . __('Reporting Period: ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</p>
 				  </div>';
 	} else {
 		$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
@@ -200,8 +205,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<thead>';
 	if (!isset($_POST['PrintPDF'])) {
 		$HTML .= '	<tr>
-						<th colspan="4">
-							<b>' . __('Trial Balance for the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</b>
+						<th colspan="4" style="text-align:center; padding: 15px;">
+							<b style="font-size: 1.2rem; color: #059669; text-transform: uppercase;">' . __('Trial Balance As At') . ' ' . date('d M Y') . '</b><br>
+							<span style="font-weight: normal; font-size: 0.9rem; color: #4b5563;">' . __('Reporting Period: ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</span>
 						</th>
 					</tr>';
 	}
@@ -216,13 +222,6 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 	$ViewTopic = 'GeneralLedger';
 	$BookMark = 'TrialBalance';
-
-	if ($_POST['Period'] != '') {
-		$_POST['PeriodFrom'] = ReportPeriod($_POST['Period'], 'From');
-		$_POST['PeriodTo'] = ReportPeriod($_POST['Period'], 'To');
-	}
-
-	$NumberOfMonths = $_POST['PeriodTo'] - $_POST['PeriodFrom'] + 1;
 
 	$RetainedEarningsAct = $_SESSION['CompanyRecord']['retainedearnings'];
 

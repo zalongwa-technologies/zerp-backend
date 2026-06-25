@@ -227,8 +227,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     }
 
     $HTML .= '
-        .balance-sheet-report { width: 100%; margin: 0 auto; border-collapse: separate; border-spacing: 0; font-family: "Inter", Helvetica, sans-serif; background: transparent; }
-        .report-title { text-align: center; font-size: 1.5rem; font-weight: 700; padding: 20px 0 30px; text-transform: uppercase; color: #111827; border: none !important; }
+        .balance-sheet-report { table-layout: fixed; width: 100% !important; margin: 0 auto; border-collapse: separate; border-spacing: 0; font-family: "Inter", Helvetica, sans-serif; background: transparent; }
+        .balance-sheet-report th, .balance-sheet-report td { white-space: normal !important; word-wrap: break-word; }
+        .report-title { text-align: center; font-size: 1.5rem; font-weight: 700; padding: 20px 0 30px; text-transform: uppercase; color: #111827; border: none !important; line-height: 1.4; }
         .section-header { font-weight: 700; font-size: 1.15rem; padding: 16px 20px; text-transform: uppercase; background-color: #d1fae5; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; border-radius: 6px; }
         .subsection-header { font-weight: 600; padding: 15px 0 8px; color: #374151; font-size: 1.05rem; }
         .item-label { padding: 12px 0 12px 20px; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; border-radius: 6px 0 0 6px; }
@@ -242,14 +243,18 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
         .grand-total-amount { text-align: right; padding: 20px 20px 20px 0; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; border: none !important; border-top: 3px double #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
         .balance-warning { color: #b91c1c; font-weight: 600; text-align: center; padding: 15px; background: #fef2f2; border: 1px solid #fca5a5; margin-top: 35px; border-radius: 8px; font-size: 1rem; }
         .balance-sheet-report td { background: transparent; }
-        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 1000px; margin: 15px auto; overflow-x: auto; box-sizing: border-box; }
+        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 800px; margin: 15px auto; box-sizing: border-box; }
     </style>';
 
     if (isset($_POST['PrintPDF'])) {
         $HTML .= '</head><body>';
     }
 
-    $HTML .= '<div class="report-wrapper"><table class="balance-sheet-report">';
+    $HTML .= '<div class="report-wrapper"><table class="balance-sheet-report">
+    <colgroup>
+        <col style="width: 75%;">
+        <col style="width: 25%;">
+    </colgroup>';
     
     // Title
     $HTML .= '<tr><th colspan="2" class="report-title">' . __('STATEMENT OF FINANCIAL POSITION AS AT') . ' ' . date('d M Y') . '</th></tr>';
@@ -347,8 +352,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
         include(__DIR__ . '/includes/header.php');
 		echo '
 <style>
-    .db-page { width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; box-sizing: border-box !important; padding: 20px; }
-	.db-centered-container { width: 100% !important; max-width: 1350px !important; margin: 0 auto; box-sizing: border-box !important; }
+    .db-page { max-width: 100vw !important; box-sizing: border-box !important; padding: 20px; }
+	.db-centered-container { max-width: 1350px !important; margin: 0 auto; box-sizing: border-box !important; }
 	.db-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
 	.db-header-left { display: flex; flex-direction: column; }
 	.db-page-title { font-size: 1.5rem; font-weight: 700; color: var(--db-text-main); display: flex; align-items: center; gap: 10px; margin: 0; }

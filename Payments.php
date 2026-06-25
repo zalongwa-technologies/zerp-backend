@@ -316,10 +316,12 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 			$DisplayCurrency = $_SESSION['PaymentDetail' . $identifier]->Currency;
 			$DisplayDate = $_SESSION['PaymentDetail' . $identifier]->DatePaid;
 			$DisplayPayee = __('General Ledger');
+			$NewPaymentURL = $RootPath . '/Payments.php?NewPayment=Yes';
 			if (!empty($_SESSION['PaymentDetail' . $identifier]->SupplierID)) {
 				$SResult = DB_query("SELECT suppname FROM suppliers WHERE supplierid='" . $_SESSION['PaymentDetail' . $identifier]->SupplierID . "'");
 				$SRow = DB_fetch_array($SResult);
 				$DisplayPayee = $SRow['suppname'];
+				$NewPaymentURL = $RootPath . '/SelectSupplier.php';
 			}
 
 			echo '<div id="success-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 24px;">
@@ -348,7 +350,7 @@ if (isset($_POST['CommitBatch']) AND empty($Errors)) {
 							
 							<div style="display: flex; gap: 16px;">
 								<button type="button" onclick="window.close(); setTimeout(function() { window.location.href = \'' . $RootPath . '/index.php\'; }, 50);" class="db-btn db-btn-primary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.3);"><i class="fas fa-times" style="margin-right: 8px;"></i>' . __('Close') . '</button>
-								<button type="button" onclick="document.getElementById(\'success-modal-overlay\').style.display=\'none\'" class="db-btn db-btn-secondary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; background: #f1f5f9; color: #475569; border: none;">' . __('New Payment') . '</button>
+								<button type="button" onclick="window.location.href=\'' . $NewPaymentURL . '\'" class="db-btn db-btn-secondary" style="flex: 1; height: 50px; font-size: 1rem; border-radius: 12px; background: #f1f5f9; color: #475569; border: none;">' . __('New Payment') . '</button>
 							</div>
 						</div>
 					</div>
@@ -703,12 +705,24 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             }
             var form = document.getElementById('PaymentForm');
             if (form) {
+                // Prevent max_input_vars issue by disabling zero allocations before submit
+                document.querySelectorAll('.allocation-input').forEach(function(inp) {
+                    if (parseNum(inp.value) === 0) {
+                        inp.disabled = true;
+                        var idVal = inp.id;
+                        var remainAmt = document.querySelector('input[name="remainamt' + idVal + '"]');
+                        if (remainAmt) {
+                            remainAmt.disabled = true;
+                        }
+                    }
+                });
+
                 // Guard: only append CommitBatch hidden input once (prevent duplicate on re-click)
                 var hid = form.querySelector('input[name="CommitBatch"]');
                 if (!hid) {
                     hid = document.createElement('input');
                     hid.type = 'hidden'; hid.name = 'CommitBatch'; hid.value = '1';
-                    form.appendChild(hid);
+                    form.insertBefore(hid, form.firstChild);
                 }
                 form.submit();
             }

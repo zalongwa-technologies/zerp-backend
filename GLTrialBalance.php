@@ -200,20 +200,16 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<thead>';
 	if (!isset($_POST['PrintPDF'])) {
 		$HTML .= '	<tr>
-						<th colspan="8">
+						<th colspan="4">
 							<b>' . __('Trial Balance for the month of ') . $PeriodToDate . __(' and for the ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</b>
 						</th>
 					</tr>';
 	}
 	$HTML .= '		<tr>
-						<th>' . __('Account') . '</th>
+						<th>' . __('Account Code') . '</th>
 						<th>' . __('Account Name') . '</th>
-						<th class="number">' . __('Month Debit') . '</th>
-						<th class="number">' . __('Month Credit') . '</th>
-						<th class="number">' . __('Month Budget') . '</th>
-						<th class="number">' . __('Period Debit') . '</th>
-						<th class="number">' . __('Period Credit') . '</th>
-						<th class="number">' . __('Period Budget') . '</th>
+						<th class="number">' . __('Debit (Dr)') . '</th>
+						<th class="number">' . __('Credit (Cr)') . '</th>
 					</tr>
 				</thead>
 				<tbody>';
@@ -330,7 +326,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			</tr>';
 	$HTML .= '<tr class="total_row">
 				<td>' . $AccountListRow['group_'] . '</td>
-				<td colspan="8"></td>
+				<td colspan="3"></td>
 			</tr>';
 
 	$LastGroup = $AccountListRow['group_'];
@@ -367,12 +363,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr class="striped_row">
 				<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 				<td>' . $AccountListRow['accountname'] . '</td>
-				<td class="number">' . $MonthDebitStr . '</td>
-				<td class="number">' . $MonthCreditStr . '</td>
-				<td class="number">' . $MonthBudgetStr . '</td>
 				<td class="number">' . $PeriodDebitStr . '</td>
 				<td class="number">' . $PeriodCreditStr . '</td>
-				<td class="number">' . $PeriodBudgetStr . '</td>
 			</tr>';
 
 	$MonthDebitGroupTotal = $MonthDebit;
@@ -406,12 +398,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$HTML .= '<tr class="total_row">
 						<td>' . __('Total') . '</td>
 						<td>' . $LastGroupName . '</td>
-						<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-						<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-						<td class="number">' . ($MonthBudgetGroupTotal != 0 ? locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 						<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 						<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-						<td class="number">' . ($PeriodBudgetGroupTotal != 0 ? locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 					</tr>';
 			$HTML .= '<tr>
 						<td></td>
@@ -422,7 +410,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					</tr>';
 			$HTML .= '<tr class="total_row">
 						<td>' . $AccountListRow['group_'] . '</td>
-						<td colspan="8"></td>
+						<td colspan="3"></td>
 					</tr>';
 
 			$LastGroup = $AccountListRow['group_'];
@@ -465,12 +453,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		$HTML .= '<tr class="striped_row">
 					<td><a href="' . $RootPath . '/GLAccountInquiry.php?PeriodFrom=' . $_POST['PeriodFrom'] . '&amp;PeriodTo=' . $_POST['PeriodTo'] . '&amp;Account=' . $AccountListRow['accountcode'] . '&amp;Show=Yes">' . $AccountListRow['accountcode'] . '</a></td>
 					<td>' . $AccountListRow['accountname'] . '</td>
-					<td class="number">' . $MonthDebitStr . '</td>
-					<td class="number">' . $MonthCreditStr . '</td>
-					<td class="number">' . $MonthBudgetStr . '</td>
 					<td class="number">' . $PeriodDebitStr . '</td>
 					<td class="number">' . $PeriodCreditStr . '</td>
-					<td class="number">' . $PeriodBudgetStr . '</td>
 				</tr>';
 		$MonthDebitGroupTotal += $MonthDebit;
 		$MonthCreditGroupTotal += $MonthCredit;
@@ -485,12 +469,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr class="total_row">
 				<td>' . __('Total') . '</td>
 				<td>' . $LastGroupName . '</td>
-				<td class="number">' . ($MonthDebitGroupTotal != 0 ? locale_number_format($MonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-				<td class="number">' . ($MonthCreditGroupTotal != 0 ? locale_number_format($MonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-				<td class="number">' . ($MonthBudgetGroupTotal != 0 ? locale_number_format($MonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 				<td class="number">' . ($PeriodDebitGroupTotal != 0 ? locale_number_format($PeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 				<td class="number">' . ($PeriodCreditGroupTotal != 0 ? locale_number_format($PeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
-				<td class="number">' . ($PeriodBudgetGroupTotal != 0 ? locale_number_format($PeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) : '-') . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>
@@ -509,12 +489,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr class="total_row check_totals_row">
 				<td>' . __('Check Totals') . '</td>
 				<td></td>
-				<td class="number">' . locale_number_format($CumulativeMonthDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($CumulativeMonthCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($CumulativeMonthBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativePeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativePeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($CumulativePeriodBudgetGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 			</tr>';
 	$HTML .= '<tr>
 				<td></td>

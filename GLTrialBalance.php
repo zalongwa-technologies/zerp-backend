@@ -306,8 +306,11 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 	// Get all account codes
 	$SQL = "SELECT chartmaster.accountcode,
-					chartmaster.group_,
-					group_,
+					CASE 
+						WHEN chartmaster.group_ = 'Operating and Administrative E' THEN 'Operating and administrative expenses' 
+						WHEN chartmaster.group_ = 'Revenue' THEN 'Revenue from exchange transactions'
+						ELSE chartmaster.group_ 
+					END AS group_,
 					accountname,
 					pandl
 			FROM chartmaster
@@ -317,6 +320,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				AND glaccountusers.canview=1
 			INNER JOIN accountgroups
 				ON accountgroups.groupname=chartmaster.group_
+			WHERE chartmaster.accountcode != '1'
 			ORDER BY 
 				CASE 
 					WHEN accountgroups.groupname IN ('Fixed Assets', 'Non-current assets') THEN 1
@@ -324,15 +328,18 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					WHEN accountgroups.groupname = 'Equity' THEN 3
 					WHEN accountgroups.groupname IN ('Non-current Liabilities', 'Non-current liabilities') THEN 4
 					WHEN accountgroups.groupname = 'Current Liabilities' THEN 5
-					WHEN accountgroups.groupname = 'Revenue' THEN 6
-					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange') THEN 7
-					WHEN accountgroups.groupname IN ('Revenue from exchange transactions', 'Revenue from Exchange') THEN 8
-					WHEN accountgroups.groupname IN ('Operating and administrative expenses', 'Operating and Administrative E') THEN 9
-					WHEN accountgroups.groupname IN ('Wages salaries and employee benefits') THEN 10
-					WHEN accountgroups.groupname IN ('Other operating expenses', 'Other Revenue and Expenses') THEN 11
-					ELSE 12 
+					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange') THEN 6
+					WHEN accountgroups.groupname IN ('Revenue from exchange transactions', 'Revenue from Exchange', 'Revenue') THEN 7
+					WHEN accountgroups.groupname IN ('Operating and administrative expenses', 'Operating and Administrative E') THEN 8
+					WHEN accountgroups.groupname IN ('Wages salaries and employee benefits') THEN 9
+					WHEN accountgroups.groupname IN ('Other operating expenses', 'Other Revenue and Expenses') THEN 10
+					ELSE 11 
 				END,
-				accountgroups.groupname,
+				CASE 
+					WHEN accountgroups.groupname = 'Operating and Administrative E' THEN 'Operating and administrative expenses' 
+					WHEN accountgroups.groupname = 'Revenue' THEN 'Revenue from exchange transactions'
+					ELSE accountgroups.groupname 
+				END,
 				chartmaster.accountcode";
 	$AccountListResult = DB_query($SQL);
 	$AccountListRow = DB_fetch_array($AccountListResult);

@@ -155,6 +155,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	}
 
 	$PeriodToDate = MonthAndYearFromSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodTo']));
+	$PeriodFromDate = MonthAndYearFromSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodFrom']));
 	$NumberOfMonths = $_POST['PeriodTo'] - $_POST['PeriodFrom'] + 1;
 
 	$HTML = '';
@@ -190,8 +191,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 		
 		$HTML .= '<div class="report-header">
 					<h2>' . $_SESSION['CompanyRecord']['coyname'] . '</h2>
-					<h3>' . __('Trial Balance As At') . ' ' . date('d M Y') . '</h3>
-					<p>' . __('Reporting Period: ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</p>
+					<h3>' . __('Trial Balance') . '</h3>
+					<p>' . __('Period: ') . $PeriodFromDate . __(' - ') . $PeriodToDate . '</p>
 				  </div>';
 	} else {
 		$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
@@ -206,16 +207,17 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	if (!isset($_POST['PrintPDF'])) {
 		$HTML .= '	<tr>
 						<th colspan="4" style="text-align:center; padding: 15px;">
-							<b style="font-size: 1.2rem; color: #059669; text-transform: uppercase;">' . __('Trial Balance As At') . ' ' . date('d M Y') . '</b><br>
-							<span style="font-weight: normal; font-size: 0.9rem; color: #4b5563;">' . __('Reporting Period: ') . $NumberOfMonths . __(' months to ') . $PeriodToDate . '</span>
+							<div style="font-size: 1.4rem; font-weight: 700; color: #111827; margin-bottom: 5px; text-transform: uppercase;">' . $_SESSION['CompanyRecord']['coyname'] . '</div>
+							<b style="font-size: 1.2rem; color: #059669; text-transform: uppercase;">' . __('Trial Balance') . '</b><br>
+							<span style="font-weight: normal; font-size: 0.9rem; color: #4b5563;">' . __('Period: ') . $PeriodFromDate . __(' - ') . $PeriodToDate . '</span>
 						</th>
 					</tr>';
 	}
 	$HTML .= '		<tr>
 						<th>' . __('Account Code') . '</th>
 						<th>' . __('Account Name') . '</th>
-						<th class="number">' . __('Debit (Dr)') . '</th>
-						<th class="number">' . __('Credit (Cr)') . '</th>
+						<th class="number">' . __('Debit (TZS)') . '</th>
+						<th class="number">' . __('Credit (TZS)') . '</th>
 					</tr>
 				</thead>
 				<tbody>';
@@ -315,8 +317,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				AND glaccountusers.canview=1
 			INNER JOIN accountgroups
 				ON accountgroups.groupname=chartmaster.group_
-			ORDER BY groupname,
-					accountcode";
+			ORDER BY accountgroups.sequenceintb,
+					accountgroups.groupname,
+					chartmaster.accountcode";
 	$AccountListResult = DB_query($SQL);
 	$AccountListRow = DB_fetch_array($AccountListResult);
 
@@ -486,7 +489,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				<td></td>
 			</tr>';
 	$HTML .= '<tr class="total_row check_totals_row">
-				<td>' . __('Check Totals') . '</td>
+				<td>' . __('Totals') . '</td>
 				<td></td>
 				<td class="number">' . locale_number_format($CumulativePeriodDebitGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>
 				<td class="number">' . locale_number_format($CumulativePeriodCreditGroupTotal, $_SESSION['CompanyRecord']['decimalplaces']) . '</td>

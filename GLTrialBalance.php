@@ -317,9 +317,23 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				AND glaccountusers.canview=1
 			INNER JOIN accountgroups
 				ON accountgroups.groupname=chartmaster.group_
-			ORDER BY accountgroups.sequenceintb,
-					accountgroups.groupname,
-					chartmaster.accountcode";
+			ORDER BY 
+				CASE 
+					WHEN accountgroups.groupname IN ('Fixed Assets', 'Non-current assets') THEN 1
+					WHEN accountgroups.groupname = 'Current Assets' THEN 2
+					WHEN accountgroups.groupname = 'Equity' THEN 3
+					WHEN accountgroups.groupname IN ('Non-current Liabilities', 'Non-current liabilities') THEN 4
+					WHEN accountgroups.groupname = 'Current Liabilities' THEN 5
+					WHEN accountgroups.groupname = 'Revenue' THEN 6
+					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange') THEN 7
+					WHEN accountgroups.groupname IN ('Revenue from exchange transactions', 'Revenue from Exchange') THEN 8
+					WHEN accountgroups.groupname IN ('Operating and administrative expenses', 'Operating and Administrative E') THEN 9
+					WHEN accountgroups.groupname IN ('Wages salaries and employee benefits') THEN 10
+					WHEN accountgroups.groupname IN ('Other operating expenses', 'Other Revenue and Expenses') THEN 11
+					ELSE 12 
+				END,
+				accountgroups.groupname,
+				chartmaster.accountcode";
 	$AccountListResult = DB_query($SQL);
 	$AccountListRow = DB_fetch_array($AccountListResult);
 

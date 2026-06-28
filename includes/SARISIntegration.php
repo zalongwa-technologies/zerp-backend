@@ -2,158 +2,188 @@
 
 require_once(__DIR__ . '/ZERPSync.php');
 
-class SARISAPIClient {
-	private $baseUrl = 'https://star.mum.ac.tz';
-	private $clientId = '';
-	private $clientSecret = '';
-	private $timeout = 60;
+// Retrieve a value from the saris_api_settings table, with an optional default.
+function getSarisSetting($key, $default = null) {
+	try {
+		$row = saris_fetch_one(
+			'SELECT setting_value FROM saris_api_settings WHERE setting_key = ?',
+			[$key]
+		);
+		if ($row !== null && $row['setting_value'] !== null) {
+			return $row['setting_value'];
+		}
+	} catch (Exception $e) {
+		// table does not exist yet (pre-migration); fall through to default
+	}
+	return $default;
+}
 
-	public function __construct() {
-		$SARIS_API_BASE_URL = '';
-		$SARIS_API_CLIENT_ID = '';
-		$SARIS_API_CLIENT_SECRET = '';
-		$configFile = __DIR__ . '/../config.php';
-		if (file_exists($configFile)) {
-			include($configFile);
+class SARISAPIClient {
+	private $timeout = 60;
+	private $settings = null; // lazy-loaded from saris_api_settings on first use
+
+	private function loadSettings() {
+		if ($this->settings !== null) {
+			return;
 		}
-		if ($SARIS_API_BASE_URL !== '') {
-			$this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
-		}
-		$this->clientId = $SARIS_API_CLIENT_ID;
-		$this->clientSecret = $SARIS_API_CLIENT_SECRET;
+		$this->settings = [
+			'base_url'         => getSarisSetting('saris_base_url',         'https://saris.iae.ac.tz'),
+			'client_id'        => getSarisSetting('saris_client_id',        ''),
+			'client_secret'    => getSarisSetting('saris_client_secret',    ''),
+			'token_endpoint'   => getSarisSetting('saris_token_endpoint',   '/api/v1/login'),
+			'student_endpoint' => getSarisSetting('saris_student_endpoint', '/api/v1/students'),
+			'invoice_endpoint' => getSarisSetting('saris_invoice_endpoint', '/api/v1/invoices'),
+			'payment_endpoint' => getSarisSetting('saris_payment_endpoint', '/api/v1/payments'),
+		];
+	}
+
+	private function cfg($key) {
+		$this->loadSettings();
+		return isset($this->settings[$key]) ? $this->settings[$key] : '';
+	}
+
+	private function baseUrl() {
+		return rtrim($this->cfg('base_url'), '/');
 	}
 
 	private function ensureCredentials() {
-		if ($this->clientId === '' || $this->clientSecret === '') {
-			throw new Exception('SARIS API credentials are missing in config.php.');
+		if ($this->cfg('client_id') === '' || $this->cfg('client_secret') === '') {
+			throw new Exception('SARIS API credentials are not configured. Go to SARIS → API Configuration to set the Client ID and Client Secret.');
 		}
+	}
+
+	// Fetch (or return cached) OAuth2 bearer token.
+	public function getToken() {
+		if (!empty($_SESSION['SARISAPI_TOKEN'])
+			&& !empty($_SESSION['SARISAPI_TOKEN_EXPIRES_AT'])
+			&& time() < (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT']
+		) {
+			return $_SESSION['SARISAPI_TOKEN'];
+		}
+		return $this->authenticate();
 	}
 
 	private function authenticate() {
 		$this->ensureCredentials();
-		$url = $this->baseUrl . '/api_erp/v1/auth';
-		$payload = json_encode([
-			'client_id' => $this->clientId,
-			'client_secret' => $this->clientSecret
+		$url = $this->baseUrl() . $this->cfg('token_endpoint');
+		// IAE v1 uses OAuth2 client_credentials with form-encoded body
+		$payload = http_build_query([
+			'client_id'     => $this->cfg('client_id'),
+			'client_secret' => $this->cfg('client_secret'),
+			'grant_type'    => 'client_credentials',
+			'scope'         => 'SARIS',
 		]);
 
-		$maxAttempts = 3;
 		$result = false;
 		$error = '';
 		$httpCode = 0;
-		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+		for ($attempt = 1; $attempt <= 3; $attempt++) {
 			$ch = curl_init($url);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_POST, true);
 			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, [
+				'Content-Type: application/x-www-form-urlencoded',
 				'Accept: application/json',
-				'Content-Type: application/json'
 			]);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
 			$result = curl_exec($ch);
 			$error = curl_error($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
-
-			if ($result !== false) {
-				break;
-			}
-			if ($attempt < $maxAttempts) {
-				sleep(5 * $attempt);
-			}
+			if ($result !== false) break;
+			if ($attempt < 3) sleep(5 * $attempt);
 		}
 
 		if ($result === false) {
-			throw new Exception('Could not authenticate with SARIS: ' . $error);
+			throw new Exception('Could not connect to SARIS token endpoint: ' . $error);
 		}
 		$response = json_decode($result, true);
-		if ($httpCode !== 200 || !is_array($response) || (isset($response['statusCode']) && (int)$response['statusCode'] !== 200) || empty($response['token'])) {
-			throw new Exception('SARIS authentication failed with HTTP ' . $httpCode . '.');
+		// IAE v1 success: {success:true, results:{access_token, expires_in, ...}}
+		if (!is_array($response) || empty($response['success']) || empty($response['results']['access_token'])) {
+			$msg = isset($response['message']) ? $response['message'] : 'Unexpected response (HTTP ' . $httpCode . ')';
+			throw new Exception('SARIS authentication failed: ' . $msg);
 		}
-
-		$_SESSION['SARISAPI_TOKEN'] = $response['token'];
-		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + (isset($response['expires_in']) ? (int)$response['expires_in'] : 900) - 30;
+		$expiresIn = isset($response['results']['expires_in']) ? (int)$response['results']['expires_in'] : 3600;
+		$_SESSION['SARISAPI_TOKEN'] = $response['results']['access_token'];
+		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + $expiresIn - 30;
 		return $_SESSION['SARISAPI_TOKEN'];
 	}
 
-	private function getToken() {
-		if (empty($_SESSION['SARISAPI_TOKEN']) || empty($_SESSION['SARISAPI_TOKEN_EXPIRES_AT']) || time() >= (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT']) {
-			return $this->authenticate();
-		}
-		return $_SESSION['SARISAPI_TOKEN'];
-	}
-
-	private function request($endpoint, $params = []) {
-		$url = $this->baseUrl . $endpoint;
+	// Authenticated GET. On INVALID_TOKEN, refreshes once and retries.
+	public function get($endpointUrl, $params = [], $isRetry = false) {
+		$url = $endpointUrl;
 		if (!empty($params)) {
 			$url .= '?' . http_build_query($params);
 		}
 
-		$maxAttempts = 3;
-		$result = false;
-		$error = '';
-		$httpCode = 0;
-		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-			$ch = curl_init($url);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, [
-				'Authorization: Bearer ' . $this->getToken(),
-				'Content-Type: application/json'
-			]);
-			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-			$result = curl_exec($ch);
-			$error = curl_error($ch);
-			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
-
-			if ($result !== false) {
-				break;
-			}
-			if ($attempt < $maxAttempts) {
-				sleep(5 * $attempt);
-			}
-		}
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Authorization: Bearer ' . $this->getToken(),
+			'Accept: application/json',
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+		$result = curl_exec($ch);
+		$error = curl_error($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
 
 		if ($result === false) {
 			throw new Exception('SARIS API request failed: ' . $error);
 		}
 		$decoded = json_decode($result, true);
-		if ($httpCode === 404) {
-			return ['statusCode' => 404, 'data' => null];
-		}
-		if ($httpCode !== 200) {
-			throw new Exception('SARIS API returned HTTP ' . $httpCode . ' for ' . $endpoint . '.');
-		}
 		if (!is_array($decoded)) {
-			throw new Exception('SARIS API returned an invalid JSON response.');
+			throw new Exception('SARIS API returned invalid JSON (HTTP ' . $httpCode . ')');
 		}
-		if (isset($decoded['statusCode']) && (int)$decoded['statusCode'] === 404) {
-			return ['statusCode' => 404, 'data' => null];
-		}
-		if (isset($decoded['statusCode']) && (int)$decoded['statusCode'] !== 200) {
-			$message = isset($decoded['message']) ? $decoded['message'] : 'Unexpected SARIS API status.';
-			throw new Exception($message);
+
+		if (empty($decoded['success'])) {
+			$errorCode = isset($decoded['results']['error_code']) ? $decoded['results']['error_code'] : '';
+			$message   = isset($decoded['message'])              ? $decoded['message']              : 'Unknown error';
+
+			if ($errorCode === 'INVALID_TOKEN' && !$isRetry) {
+				// Token expired mid-request — clear cache, re-authenticate, retry once
+				unset($_SESSION['SARISAPI_TOKEN'], $_SESSION['SARISAPI_TOKEN_EXPIRES_AT']);
+				$this->authenticate();
+				return $this->get($endpointUrl, $params, true);
+			}
+			if ($errorCode === 'NO_DATA_FOUND') {
+				return ['success' => true, 'message' => 'No data found', 'results' => ['count' => 0, 'data' => []]];
+			}
+			error_log('SARIS API [' . $errorCode . '] ' . $endpointUrl . ': ' . $message);
+			throw new Exception('SARIS API error [' . $errorCode . ']: ' . $message);
 		}
 		return $decoded;
 	}
 
+	public function getStudents(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('student_endpoint'), $filters);
+	}
+
+	public function getInvoices(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('invoice_endpoint'), $filters);
+	}
+
+	public function getPayments(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('payment_endpoint'), $filters);
+	}
+
+	// Backward-compatible wrappers for any code that still calls the old method names
 	public function getAllInvoices($dateFrom, $dateTo) {
-		return $this->request('/api_erp/v1/get_all_invoices', [
-			'invoice_date_from' => $dateFrom,
-			'invoice_date_to' => $dateTo
-		]);
+		return $this->getInvoices(['date_from' => $dateFrom, 'date_to' => $dateTo, 'limit' => 50]);
 	}
 
 	public function getStudentInfo($regNumber) {
-		return $this->request('/api_erp/v1/get_student_info', ['reg_number' => $regNumber]);
+		$response = $this->getStudents(['regno' => $regNumber, 'limit' => 1]);
+		$data = saris_iae_extract($response);
+		if (empty($data)) {
+			return ['statusCode' => 404, 'data' => null];
+		}
+		return ['success' => true, 'data' => saris_map_student($data[0])];
 	}
 
 	public function getAllPayments($dateFrom, $dateTo) {
-		return $this->request('/api_erp/v1/get_all_payments', [
-			'payment_date_from' => $dateFrom,
-			'payment_date_to' => $dateTo
-		]);
+		return $this->getPayments(['date_from' => $dateFrom, 'date_to' => $dateTo, 'limit' => 50]);
 	}
 }
 
@@ -165,6 +195,64 @@ function saris_extract_records($response) {
 		return $response;
 	}
 	return [];
+}
+
+// Extract data array from IAE v1 response: {success, results:{count, data:[...]}}
+function saris_iae_extract(array $response) {
+	if (!empty($response['success'])
+		&& isset($response['results']['data'])
+		&& is_array($response['results']['data'])
+	) {
+		return $response['results']['data'];
+	}
+	return [];
+}
+
+// Map IAE v1 /students record fields to internal column names.
+function saris_map_student(array $raw) {
+	$classes = (!empty($raw['classes']) && is_array($raw['classes'])) ? $raw['classes'][0] : [];
+	return [
+		'student_regnumber' => isset($raw['RegNo'])            ? $raw['RegNo']            : null,
+		'student_fullname'  => isset($raw['Name'])             ? $raw['Name']             : null,
+		'student_email'     => isset($raw['Email'])            ? $raw['Email']            : null,
+		'student_phone'     => isset($raw['Phone'])            ? $raw['Phone']            : null,
+		'student_programme' => isset($raw['ProgrammeofStudy']) ? $raw['ProgrammeofStudy'] : null,
+		'student_entryyear' => isset($raw['EntryYear'])        ? $raw['EntryYear']        : null,
+		'student_studyyear' => isset($classes['YearOfStudy'])  ? $classes['YearOfStudy']  : null,
+		'student_intake'    => isset($classes['AYear'])        ? $classes['AYear']        : null,
+	];
+}
+
+// Map IAE v1 /invoices record fields to internal column names.
+// Key names shown here are best-guess from the API spec; update if the live
+// response uses different casing or snake_case variants.
+function saris_map_invoice(array $raw) {
+	return [
+		'student_name'             => isset($raw['StudentName'])  ? $raw['StudentName']  : (isset($raw['student_name'])  ? $raw['student_name']  : null),
+		'invoice_reference_number' => isset($raw['InvoiceId'])    ? $raw['InvoiceId']    : (isset($raw['invoice_id'])    ? $raw['invoice_id']    : (isset($raw['control_number']) ? $raw['control_number'] : null)),
+		'student_regnumber'        => isset($raw['StudentId'])     ? $raw['StudentId']    : (isset($raw['student_id'])    ? $raw['student_id']    : null),
+		'invoice_amount'           => isset($raw['Amount'])        ? $raw['Amount']       : (isset($raw['amount'])        ? $raw['amount']        : 0),
+		'invoice_amount_type'      => isset($raw['AmountType'])   ? $raw['AmountType']   : (isset($raw['amount_type'])   ? $raw['amount_type']   : null),
+		'invoice_desciption'       => isset($raw['FeeName'])      ? $raw['FeeName']      : (isset($raw['fee_name'])      ? $raw['fee_name']      : null),
+		'invoice_date'             => isset($raw['InvoiceDate'])  ? $raw['InvoiceDate']  : (isset($raw['invoice_date'])  ? $raw['invoice_date']  : (isset($raw['date']) ? $raw['date'] : null)),
+	];
+}
+
+// Map IAE v1 /payments record fields to internal column names.
+function saris_map_payment(array $raw) {
+	return [
+		'student_name'             => isset($raw['StudentName'])   ? $raw['StudentName']   : (isset($raw['student_name'])   ? $raw['student_name']   : null),
+		'student_regnumber'        => isset($raw['StudentId'])      ? $raw['StudentId']      : (isset($raw['student_id'])      ? $raw['student_id']      : null),
+		'payment_desciption'       => isset($raw['Description'])   ? $raw['Description']   : (isset($raw['fee_category'])   ? $raw['fee_category']   : null),
+		'payment_amount'           => isset($raw['Amount'])        ? $raw['Amount']        : (isset($raw['amount'])        ? $raw['amount']        : 0),
+		'payment_amount_type'      => isset($raw['AmountType'])    ? $raw['AmountType']    : (isset($raw['amount_type'])    ? $raw['amount_type']    : null),
+		'payment_currency'         => isset($raw['Currency'])      ? $raw['Currency']      : (isset($raw['currency'])      ? $raw['currency']      : null),
+		'payment_receipt_number'   => isset($raw['ReceiptNumber']) ? $raw['ReceiptNumber'] : (isset($raw['receipt_number']) ? $raw['receipt_number'] : null),
+		'payment_transaction_ref'  => isset($raw['ControlNumber']) ? $raw['ControlNumber'] : (isset($raw['control_number']) ? $raw['control_number'] : null),
+		'payment_date'             => isset($raw['PaymentDate'])   ? $raw['PaymentDate']   : (isset($raw['payment_date'])   ? $raw['payment_date']   : (isset($raw['date']) ? $raw['date'] : null)),
+		'payment_reference_number' => isset($raw['InvoiceNumber']) ? $raw['InvoiceNumber'] : (isset($raw['invoice_number']) ? $raw['invoice_number'] : null),
+		'payment_source'           => isset($raw['Source'])        ? $raw['Source']        : (isset($raw['source'])        ? $raw['source']        : null),
+	];
 }
 
 function saris_sql_decimal($value) {
@@ -354,45 +442,72 @@ function saris_upsert_payment($payment) {
 }
 
 function saris_sync_payments($client, $startDate, $endDate) {
-	$response = $client->getAllPayments($startDate, $endDate);
-	$payments = saris_extract_records($response);
-	$count = 0;
-	foreach ($payments as $payment) {
-		saris_upsert_payment($payment);
-		$count++;
-	}
+	$count    = 0;
+	$offset   = 0;
+	$pageSize = 50;
+	do {
+		$response = $client->getPayments([
+			'date_from'               => $startDate,
+			'date_to'                 => $endDate,
+			'include_invoice_details' => 'false', // reduce payload when detail is not needed
+			'limit'                   => $pageSize,
+			'offset'                  => $offset,
+		]);
+		$batch = saris_iae_extract($response);
+		foreach ($batch as $raw) {
+			saris_upsert_payment(saris_map_payment($raw));
+			$count++;
+		}
+		$offset += $pageSize;
+	} while (count($batch) === $pageSize);
 	return $count;
 }
 
 function saris_full_sync($client, $startDate, $endDate) {
 	$stats = [
-		'invoices' => 0,
-		'students' => 0,
+		'invoices'         => 0,
+		'students'         => 0,
 		'students_skipped' => 0,
-		'payments' => 0
+		'payments'         => 0,
 	];
-
-	$response = $client->getAllInvoices($startDate, $endDate);
-	$invoices = saris_extract_records($response);
 	$regNumbers = [];
-	foreach ($invoices as $invoice) {
-		saris_upsert_invoice($invoice);
-		$stats['invoices']++;
-		if (!empty($invoice['student_regnumber'])) {
-			$regNumbers[$invoice['student_regnumber']] = true;
-		}
-	}
+	$offset     = 0;
+	$pageSize   = 50;
 
-	foreach (array_keys($regNumbers) as $regNumber) {
-		$response = $client->getStudentInfo($regNumber);
-		if (isset($response['statusCode']) && (int)$response['statusCode'] === 404) {
+	// Paginated invoice fetch — replaced direct DB queries with IAE v1 API calls
+	do {
+		$response = $client->getInvoices([
+			'date_from' => $startDate,
+			'date_to'   => $endDate,
+			'limit'     => $pageSize,
+			'offset'    => $offset,
+		]);
+		$batch = saris_iae_extract($response);
+		foreach ($batch as $raw) {
+			$invoice = saris_map_invoice($raw);
+			saris_upsert_invoice($invoice);
+			$stats['invoices']++;
+			if (!empty($invoice['student_regnumber'])) {
+				$regNumbers[$invoice['student_regnumber']] = true;
+			}
+		}
+		$offset += $pageSize;
+	} while (count($batch) === $pageSize);
+
+	// Per-student lookup using the new /students endpoint
+	foreach (array_keys($regNumbers) as $regNo) {
+		$response = $client->getStudents(['regno' => $regNo, 'limit' => 1]);
+		$batch = saris_iae_extract($response);
+		if (empty($batch)) {
 			$stats['students_skipped']++;
 			continue;
 		}
-		$student = isset($response['data']) && is_array($response['data']) ? $response['data'] : $response;
-		if (is_array($student) && !empty($student['student_regnumber'])) {
+		$student = saris_map_student($batch[0]);
+		if (!empty($student['student_regnumber'])) {
 			saris_upsert_student($student);
 			$stats['students']++;
+		} else {
+			$stats['students_skipped']++;
 		}
 	}
 
@@ -707,11 +822,12 @@ function saris_list_sync_history($limit, $offset, $searchTerm = '', $sort = 'cre
 function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	global $RootPath;
 	$tabs = [
-		'Settings' => '/SARIS_Settings.php',
-		'Students' => '/SARIS_Students.php',
-		'Invoices' => '/SARIS_Invoices.php',
-		'Payments' => '/SARIS_Payments.php',
-		'Sync History' => '/SARIS_SyncHistory.php'
+		'Settings'          => '/SARIS_Settings.php',
+		'API Configuration' => '/SARIS_APIConfig.php',
+		'Students'          => '/SARIS_Students.php',
+		'Invoices'          => '/SARIS_Invoices.php',
+		'Payments'          => '/SARIS_Payments.php',
+		'Sync History'      => '/SARIS_SyncHistory.php',
 	];
 	echo '<div class="noPrint" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:0 0 24px 0;">';
 	echo '<div style="display:flex;gap:8px;flex-wrap:wrap;">';

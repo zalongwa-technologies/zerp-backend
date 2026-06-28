@@ -56,8 +56,6 @@ function  LoginAPI($databasename, $user, $password) {
 	}
 	return  $RetCode;
 }
-
-
 //  Logout function destroys the session data, and that's about it.
 function  LogoutAPI() {
 
@@ -70,7 +68,6 @@ function  LogoutAPI() {
     } else {
 		$RetCode = NoAuthorisation;
     }
-
     return $RetCode;
 }
 

@@ -150,40 +150,38 @@ if ($RootPath === '/' or $RootPath === '\\') {
 }
 
 // ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
-$ZERP_SyncEnabled = false;
-$ZERP_EndPoint = 'https://zerp.example.tz/api/api_xml-rpc.php';
-$ZERP_Username = '';
-$ZERP_Password = '';
+// ZALONGWA SARIS System Configuration for Exracting both Invoices and Receipts
+//$SARIS_API_BASE_URL = 'https://star.mum.ac.tz';
+//$SARIS_API_CLIENT_ID = 'MUM_ERP';
+//$SARIS_API_CLIENT_SECRET = 'K7@xP4!mZ9qT2#vB6&cR1$eY8uW0hF3d';
+$REMOTE_ADDR = '127.0.0.1';
+
+// ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
+$ZERP_SyncEnabled = true; //false;
+$SARIS_AUTO_SYNC_START_DATE = date("d-m-Y", strtotime("-10 days"));
+$ZERP_EndPoint = 'https://xxx.xx.co.tz/api/api_xml-rpc.php';
+$ZERP_Username = 'user';
+$ZERP_Password = 'pwd';
 $ZERP_BankAccount = '1020'; //Chart of Account of the default Cash on Hand Bank Account 
-$ZERP_SalesArea = '3'; //Legacy setting used as the default invoice stock location.
+// $ZERP_BranchArea = 'TZ'; //SELECT areacode, areadescription FROM areas ORDER BY areacode;
+$ZERP_BranchArea = 'TZ'; //SELECT areacode, areadescription FROM areas;
+$ZERP_SalesArea = '3'; //select * from locations; Legacy setting used as the default invoice stock location.
 $ZERP_SalesPerson = '1';
 $ZERP_SalesType = '1';
-$ZERP_ShipVia = '1';
-$ZERP_DefaultBranch = 'MAIN';
+$ZERP_ShipVia = '2'; //select * from shippers;
+$ZERP_DefaultBranch = 'COUNTER';
 $ZERP_Currency = 'TZS';
 $ZERP_PaymentMethod = '1';
 $ZERP_PaymentTerms = '1';
 $ZERP_HoldReason = 1;
 $ZERP_CustomerType = 1;
-$ZERP_BranchArea = '1';
+//$ZERP_BranchArea = 'TZ';
 $ZERP_DefaultLocation = '3';
 $ZERP_TaxGroup = 1;
-$ZERP_InvoicePartCode = '0as1';
+//$ZERP_InvoicePartCode = 'MUM';
 $ZERP_InvoiceLocation = '3';
 $ZERP_InvoiceRate = 1;
 $ZERP_XMLRPC_Timeout = 60;
 $ZERP_SyncMaxAttempts = 5;
 $ZERP_SyncBatchSize = 100;
-
-// ZALONGWA SARIS System Configuration for Exracting both Invoices and Receipts
-$SARIS_API_BASE_URL = 'https://saris.example.ac.tz';
-$SARIS_API_CLIENT_ID = '';
-$SARIS_API_CLIENT_SECRET = '';
-$SARIS_AUTO_SYNC_START_DATE = '2025-10-01';
-$REMOTE_ADDR = '127.0.0.1';
-
-
-// WebSHOP VFD Database Configurations
-$DB_CHARSET = 'utf8msasb4';
-$COUNTERS_SALE = 'COUNTxsER'; //Default counter sale customer
-$DEFAULT_PRODUCT_ID = '0as1';
+$ZERP_InvoicePartCode = 'TF';

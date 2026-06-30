@@ -19,22 +19,32 @@ if (isset($_GET['ShowDetail'])) $_POST['ShowDetail'] = $_GET['ShowDetail'];
 if (isset($_GET['ShowZeroBalance'])) $_POST['ShowZeroBalance'] = $_GET['ShowZeroBalance'];
 
 if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsheet'])) {
-	$RetainedEarningsAct = $_SESSION['CompanyRecord']['retainedearnings'];
-	$BalanceDate = ConvertSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodTo']));
-	$LastYearPeriod = $_POST['PeriodTo'] - 12;
+	$RetainedEarningsAct = $_SESSION['CompanyRecord']['retainedearnings'] ?? 0;
+	$DecimalPlaces = isset($_SESSION['CompanyRecord']['decimalplaces']) ? (int)$_SESSION['CompanyRecord']['decimalplaces'] : 2;
+	$PeriodTo = isset($_POST['PeriodTo']) ? (int)$_POST['PeriodTo'] : 0;
+	$ShowDetail = $_POST['ShowDetail'] ?? 'Detailed';
+	
+	$ThisYearSQLDate = EndDateSQLFromPeriodNo($PeriodTo);
+	$BalanceDate = !empty($ThisYearSQLDate) ? ConvertSQLDate($ThisYearSQLDate) : '';
+	
+	$LastYearPeriod = $PeriodTo - 12;
 	$LastYearSQLDate = EndDateSQLFromPeriodNo($LastYearPeriod);
-	$LastYearBalanceDate = $LastYearSQLDate ? ConvertSQLDate($LastYearSQLDate) : '';
-	$ThisYear = date('Y', strtotime(EndDateSQLFromPeriodNo($_POST['PeriodTo'])));
-	$LastYear = $LastYearSQLDate ? date('Y', strtotime($LastYearSQLDate)) : ($ThisYear - 1);
+	$LastYearBalanceDate = !empty($LastYearSQLDate) ? ConvertSQLDate($LastYearSQLDate) : '';
+	
+	$ThisYearTimestamp = !empty($ThisYearSQLDate) ? strtotime($ThisYearSQLDate) : false;
+	$ThisYear = ($ThisYearTimestamp !== false) ? (int)date('Y', $ThisYearTimestamp) : (int)date('Y');
+	
+	$LastYearTimestamp = !empty($LastYearSQLDate) ? strtotime($LastYearSQLDate) : false;
+	$LastYear = ($LastYearTimestamp !== false) ? (int)date('Y', $LastYearTimestamp) : ($ThisYear - 1);
 
-	$ThisYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $_POST['PeriodTo'] . "' AND pandl=1"));
-	$LastYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . ($_POST['PeriodTo'] - 12) . "' AND pandl=1"));
+	$ThisYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $PeriodTo . "' AND pandl=1"));
+	$LastYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $LastYearPeriod . "' AND pandl=1"));
 
 	$AccountListResult = DB_query("SELECT sectionid, sectionname, sectioninaccounts, parentgroupname, chartmaster.accountcode, group_, accountname, pandl FROM chartmaster INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ INNER JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts WHERE pandl=0 ORDER BY sequenceintb, group_, accountcode");
 	
-    $ResultActual = DB_query("SELECT account, ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $_POST['PeriodTo'] . "' GROUP BY account");
+    $ResultActual = DB_query("SELECT account, ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $PeriodTo . "' GROUP BY account");
 	while ($R = DB_fetch_array($ResultActual)) $ThisYearActuals[$R['account']] = $R['accounttotal'];
-	$ResultLY = DB_query("SELECT account, ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . ($_POST['PeriodTo'] - 12) . "' GROUP BY account");
+	$ResultLY = DB_query("SELECT account, ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $LastYearPeriod . "' GROUP BY account");
 	while ($R = DB_fetch_array($ResultLY)) $LastYearActuals[$R['account']] = $R['accounttotal'];
 
 	$HTML = '';
@@ -75,8 +85,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     } else {
 		$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
 		$HTML .= '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
-		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />';
-        $HTML .= '<input type="hidden" name="ShowDetail" value="' . $_POST['ShowDetail'] . '" />';
+		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $PeriodTo . '" />';
+        $HTML .= '<input type="hidden" name="ShowDetail" value="' . $ShowDetail . '" />';
         if (!empty($_POST['ShowZeroBalance'])) {
             $HTML .= '<input type="hidden" name="ShowZeroBalance" value="1" />';
         }
@@ -440,8 +450,8 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
                 <div class="centre" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
                     <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '" target="_blank">
                         <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
-                        <input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />
-                        <input type="hidden" name="ShowDetail" value="' . $_POST['ShowDetail'] . '" />
+                        <input type="hidden" name="PeriodTo" value="' . $PeriodTo . '" />
+                        <input type="hidden" name="ShowDetail" value="' . $ShowDetail . '" />
                         <input type="hidden" name="ShowZeroBalance" value="' . (empty($_POST['ShowZeroBalance']) ? 0 : 1) . '" />
                         <button type="submit" name="PrintPDF" class="db-btn db-btn-secondary" title="Produce PDF Report"><i class="fas fa-file-pdf"></i> ' . __('Print PDF') . '</button>
                         <button type="submit" name="Spreadsheet" class="db-btn db-btn-secondary" title="Spreadsheet"><i class="fas fa-file-excel"></i> ' . __('Spreadsheet') . '</button>

@@ -19,7 +19,7 @@ function getSarisSetting($key, $default = null) {
 }
 
 class SARISAPIClient {
-	private $timeout = 60;
+	private $timeout = 120;
 	private $settings = null; // lazy-loaded from saris_api_settings on first use
 
 	private function loadSettings() {
@@ -117,17 +117,25 @@ class SARISAPIClient {
 			$url .= '?' . http_build_query($params);
 		}
 
-		$ch = curl_init($url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, [
-			'Authorization: Bearer ' . $this->getToken(),
-			'Accept: application/json',
-		]);
-		curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-		$result = curl_exec($ch);
-		$error = curl_error($ch);
-		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
+		$token = $this->getToken();
+		$result = false;
+		$error = '';
+		$httpCode = 0;
+		for ($attempt = 1; $attempt <= 3; $attempt++) {
+			$ch = curl_init($url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, [
+				'Authorization: Bearer ' . $token,
+				'Accept: application/json',
+			]);
+			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			$result = curl_exec($ch);
+			$error = curl_error($ch);
+			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+			if ($result !== false) break;
+			if ($attempt < 3) sleep(5 * $attempt);
+		}
 
 		if ($result === false) {
 			throw new Exception('SARIS API request failed: ' . $error);
@@ -441,25 +449,44 @@ function saris_upsert_payment($payment) {
 	);
 }
 
+// Split a date range into <= 30-day windows so a wide manual sync doesn't
+// force the SARIS server to compute one huge query that exceeds our timeout.
+function saris_date_chunks($startDate, $endDate, $maxDays = 30) {
+	$chunks = [];
+	$start = new DateTime($startDate);
+	$end = new DateTime($endDate);
+	while ($start <= $end) {
+		$chunkEnd = (clone $start)->modify('+' . ($maxDays - 1) . ' days');
+		if ($chunkEnd > $end) {
+			$chunkEnd = clone $end;
+		}
+		$chunks[] = [$start->format('Y-m-d'), $chunkEnd->format('Y-m-d')];
+		$start = (clone $chunkEnd)->modify('+1 day');
+	}
+	return $chunks;
+}
+
 function saris_sync_payments($client, $startDate, $endDate) {
 	$count    = 0;
-	$offset   = 0;
 	$pageSize = 50;
-	do {
-		$response = $client->getPayments([
-			'date_from'               => $startDate,
-			'date_to'                 => $endDate,
-			'include_invoice_details' => 'false', // reduce payload when detail is not needed
-			'limit'                   => $pageSize,
-			'offset'                  => $offset,
-		]);
-		$batch = saris_iae_extract($response);
-		foreach ($batch as $raw) {
-			saris_upsert_payment(saris_map_payment($raw));
-			$count++;
-		}
-		$offset += $pageSize;
-	} while (count($batch) === $pageSize);
+	foreach (saris_date_chunks($startDate, $endDate) as [$chunkFrom, $chunkTo]) {
+		$offset = 0;
+		do {
+			$response = $client->getPayments([
+				'date_from'               => $chunkFrom,
+				'date_to'                 => $chunkTo,
+				'include_invoice_details' => 'false', // reduce payload when detail is not needed
+				'limit'                   => $pageSize,
+				'offset'                  => $offset,
+			]);
+			$batch = saris_iae_extract($response);
+			foreach ($batch as $raw) {
+				saris_upsert_payment(saris_map_payment($raw));
+				$count++;
+			}
+			$offset += $pageSize;
+		} while (count($batch) === $pageSize);
+	}
 	return $count;
 }
 

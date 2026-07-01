@@ -41,7 +41,7 @@ try {
 		date('Y-m-d')
 	)
 		? $SARIS_AUTO_SYNC_START_DATE
-		: '2025-10-01';
+		: date('Y-m-d', strtotime('-10 days'));
 	$endDate = date('Y-m-d');
 	$sarisClient = new SARISAPIClient();
 	$stats = [

@@ -702,7 +702,11 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
     }
 
     // ---- verify and submit ----
-    window.payVerify = function() {
+    // NB: intentionally not named "payVerify" - MiscFunctions.js (loaded async, sitewide)
+    // declares a global function payVerify(b,a) for an unrelated legacy form. Since it's
+    // an async script, it can execute after this one and silently clobber window.payVerify,
+    // making this button call the wrong function ("s.getAttribute" on a null #update element).
+    window.payConfirmAndPost = function() {
         try {
             autoFillReview();
             var amtEl = document.getElementById('Amount');
@@ -1584,7 +1588,7 @@ echo '<!-- SECTION 3: REVIEW & FINALIZE -->
 						<i class="fas fa-info-circle" style="margin-right: 6px;"></i> ' . __('Please verify all allocations before finalizing.') . '<br>
 						' . __('Once posted, these ledger entries cannot be edited directly.') . '
 					</div>
-					<button type="button" name="CommitBatch" onclick="payVerify()" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+					<button type="button" name="CommitBatch" onclick="payConfirmAndPost()" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
 						<i class="fas fa-check-double" style="margin-right: 12px;"></i>
 						' . __('Confirm & Post Payment') . '
 					</button>

@@ -120,6 +120,7 @@ if (isset($_FILES['ChartFile']) and $_FILES['ChartFile']['name']) { //start file
 	fclose($FileHandle);
 	//Now create the chartdetails records as necessary for the new chartsmaster records
 	# bug: file not found
+	echo 'Leah umeona?';
 	include(__DIR__ . '/includes/GLPostings.php');
 
 } else { //show file upload form

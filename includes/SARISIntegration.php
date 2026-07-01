@@ -2,6 +2,15 @@
 
 require_once(__DIR__ . '/ZERPSync.php');
 
+// Progress logging for CLI runs only — no-op under the web SAPI so browser-
+// triggered syncs (SARIS_Students.php, SARIS_Payments.php) are unaffected.
+function saris_cli_log($message) {
+	if (PHP_SAPI === 'cli') {
+		echo '[' . date('H:i:s') . '] ' . $message . "\n";
+		@flush();
+	}
+}
+
 // Retrieve a value from the saris_api_settings table, with an optional default.
 function getSarisSetting($key, $default = null) {
 	try {
@@ -87,11 +96,18 @@ class SARISAPIClient {
 				'Accept: application/json',
 			]);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			saris_cli_log("Authenticating with SARIS (attempt {$attempt}/3)...");
+			$requestStarted = microtime(true);
 			$result = curl_exec($ch);
 			$error = curl_error($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
-			if ($result !== false) break;
+			$elapsed = round(microtime(true) - $requestStarted, 1);
+			if ($result !== false) {
+				saris_cli_log("Authenticated (HTTP {$httpCode}, {$elapsed}s)");
+				break;
+			}
+			saris_cli_log("Auth attempt {$attempt} failed after {$elapsed}s: {$error}");
 			if ($attempt < 3) sleep(5 * $attempt);
 		}
 
@@ -120,6 +136,7 @@ class SARISAPIClient {
 		$token = $this->getToken();
 		$result = false;
 		$error = '';
+		$errno = 0;
 		$httpCode = 0;
 		for ($attempt = 1; $attempt <= 3; $attempt++) {
 			$ch = curl_init($url);
@@ -129,11 +146,23 @@ class SARISAPIClient {
 				'Accept: application/json',
 			]);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			saris_cli_log("GET {$url} (attempt {$attempt}/3)...");
+			$requestStarted = microtime(true);
 			$result = curl_exec($ch);
 			$error = curl_error($ch);
+			$errno = curl_errno($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
-			if ($result !== false) break;
+			$elapsed = round(microtime(true) - $requestStarted, 1);
+			if ($result !== false) {
+				saris_cli_log("  -> HTTP {$httpCode} in {$elapsed}s");
+				break;
+			}
+			saris_cli_log("  -> failed after {$elapsed}s: {$error}");
+			// A timeout means the server already took the full $this->timeout
+			// seconds without responding — retrying just multiplies that wait
+			// for no benefit. Only retry fast-failing connection errors.
+			if ($errno === CURLE_OPERATION_TIMEDOUT) break;
 			if ($attempt < 3) sleep(5 * $attempt);
 		}
 
@@ -469,7 +498,11 @@ function saris_date_chunks($startDate, $endDate, $maxDays = 30) {
 function saris_sync_payments($client, $startDate, $endDate) {
 	$count    = 0;
 	$pageSize = 50;
-	foreach (saris_date_chunks($startDate, $endDate) as [$chunkFrom, $chunkTo]) {
+	$chunks = saris_date_chunks($startDate, $endDate);
+	$chunkIndex = 0;
+	foreach ($chunks as [$chunkFrom, $chunkTo]) {
+		$chunkIndex++;
+		saris_cli_log("Payments chunk {$chunkIndex}/" . count($chunks) . ": {$chunkFrom} -> {$chunkTo}");
 		$offset = 0;
 		do {
 			$response = $client->getPayments([
@@ -484,6 +517,7 @@ function saris_sync_payments($client, $startDate, $endDate) {
 				saris_upsert_payment(saris_map_payment($raw));
 				$count++;
 			}
+			saris_cli_log("  payments page offset={$offset}: " . count($batch) . ' record(s), ' . $count . ' total so far');
 			$offset += $pageSize;
 		} while (count($batch) === $pageSize);
 	}
@@ -501,6 +535,7 @@ function saris_full_sync($client, $startDate, $endDate) {
 	$offset     = 0;
 	$pageSize   = 50;
 
+	saris_cli_log("== Invoices: {$startDate} -> {$endDate} ==");
 	// Paginated invoice fetch — replaced direct DB queries with IAE v1 API calls
 	do {
 		$response = $client->getInvoices([
@@ -518,15 +553,21 @@ function saris_full_sync($client, $startDate, $endDate) {
 				$regNumbers[$invoice['student_regnumber']] = true;
 			}
 		}
+		saris_cli_log("  invoices page offset={$offset}: " . count($batch) . ' record(s), ' . $stats['invoices'] . ' total so far');
 		$offset += $pageSize;
 	} while (count($batch) === $pageSize);
 
+	saris_cli_log('== Students: ' . count($regNumbers) . ' unique registration number(s) ==');
 	// Per-student lookup using the new /students endpoint
+	$studentIndex = 0;
 	foreach (array_keys($regNumbers) as $regNo) {
+		$studentIndex++;
+		saris_cli_log("  student {$studentIndex}/" . count($regNumbers) . ": {$regNo}");
 		$response = $client->getStudents(['regno' => $regNo, 'limit' => 1]);
 		$batch = saris_iae_extract($response);
 		if (empty($batch)) {
 			$stats['students_skipped']++;
+			saris_cli_log("    not found, skipped");
 			continue;
 		}
 		$student = saris_map_student($batch[0]);
@@ -535,9 +576,11 @@ function saris_full_sync($client, $startDate, $endDate) {
 			$stats['students']++;
 		} else {
 			$stats['students_skipped']++;
+			saris_cli_log("    no regnumber in response, skipped");
 		}
 	}
 
+	saris_cli_log("== Payments: {$startDate} -> {$endDate} ==");
 	$stats['payments'] = saris_sync_payments($client, $startDate, $endDate);
 	return $stats;
 }

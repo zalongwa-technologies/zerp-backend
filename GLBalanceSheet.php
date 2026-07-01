@@ -302,9 +302,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
 	// Column Headers
 	$HTML .= '<tr>
-		<th style="text-align: left; padding: 10px 0 10px 20px; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">' . __('Particulars') . '</th>
-		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">' . $ThisYear . '</th>
-		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #6b7280;">' . $LastYear . '</th>
+		<th style="text-align: left; padding: 10px 0 10px 20px; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;"></th>
+		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">31.12.' . $ThisYear . '<br><span style="font-size: 0.85em; color: #6b7280;">TZS</span></th>
+		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #6b7280;">31.12.' . $LastYear . '<br><span style="font-size: 0.85em;">TZS</span></th>
 	</tr>';
 
     // ASSETS

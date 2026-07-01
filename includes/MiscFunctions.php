@@ -564,7 +564,6 @@ function ChangeFieldInTable($TableName, $FieldName, $OldValue, $NewValue) {
 	}
 
 	$SQL = "UPDATE " . $TableName . " SET " . $FieldName . " ='" . $NewValue . "' WHERE " . $FieldName . "='" . $OldValue . "'";
-	echo '<br>Leah hii query hapa: <br>'. $SQL;
 	$ErrMsg = __('The SQL to update' . ' ' . $TableName . ' ' . __('records failed'));
 	$Result = DB_query($SQL, $ErrMsg, '', true);
 	echo ' ... ' . __('completed');

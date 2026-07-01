@@ -739,6 +739,18 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
         }
     };
 
+    // ---- reset Confirm & Post button if page is restored from bfcache (e.g. Back/Forward) ----
+    // Without this, a click that left the button disabled + "Processing..." before navigating
+    // away can be restored verbatim by the browser, making the button look permanently inactive.
+    window.addEventListener('pageshow', function(event) {
+        if (!event.persisted) return;
+        var btn = document.querySelector('button[name=CommitBatch]');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-double" style="margin-right: 12px;"></i> ' + '<?php echo addslashes(__('Confirm & Post Payment')); ?>';
+        }
+    });
+
     // ---- boot on page load ----
     window.addEventListener('load', function() {
         updateAllocationTotal();

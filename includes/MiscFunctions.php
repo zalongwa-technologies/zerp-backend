@@ -555,6 +555,14 @@ function ChangeFieldInTable($TableName, $FieldName, $OldValue, $NewValue) {
 	/* Used in Z_ scripts to change one field across the table.
 	*/
 	echo '<br />' . __('Changing') . ' ' . $TableName . ' ' . __('records');
+
+	// Some installs don't have every table this utility touches (e.g. older/newer schema
+	// variants) - skip rather than aborting the whole transaction with a hard DB error.
+	if (!DB_table_exists($TableName)) {
+		echo ' ... ' . __('table does not exist - skipped');
+		return;
+	}
+
 	$SQL = "UPDATE " . $TableName . " SET " . $FieldName . " ='" . $NewValue . "' WHERE " . $FieldName . "='" . $OldValue . "'";
 	$ErrMsg = __('The SQL to update' . ' ' . $TableName . ' ' . __('records failed'));
 	$Result = DB_query($SQL, $ErrMsg, '', true);

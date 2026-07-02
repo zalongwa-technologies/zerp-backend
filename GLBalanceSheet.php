@@ -260,24 +260,24 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     $HTML .= '
         .balance-sheet-report { table-layout: fixed; width: 100% !important; margin: 0 auto; border-collapse: separate; border-spacing: 0; font-family: "Inter", Helvetica, sans-serif; background: transparent; }
         .balance-sheet-report th, .balance-sheet-report td { white-space: normal !important; word-wrap: break-word; }
-        .report-title { text-align: center; padding: 20px 0 30px; border: none !important; line-height: 1.4; }
-        .section-header { font-weight: 700; font-size: 1.15rem; padding: 16px 20px; text-transform: uppercase; background-color: #d1fae5; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; border-radius: 6px; }
-        .subsection-header { font-weight: 600; padding: 15px 0 8px; color: #374151; font-size: 1.05rem; }
-        .item-label { padding: 12px 0 12px 20px; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; border-radius: 6px 0 0 6px; }
-        .amount-col1 { text-align: right; padding: 12px 20px 12px 0; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; }
-        .amount-col2 { text-align: right; padding: 12px 20px 12px 0; color: #6b7280; font-size: 0.95rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; border-radius: 0 6px 6px 0; }
+        .report-title { text-align: center; padding: 15px 0 20px; border: none !important; line-height: 1.3; }
+        .section-header { font-weight: 700; font-size: 0.95rem; padding: 10px 12px; text-transform: uppercase; background-color: #d1fae5 !important; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; }
+        .subsection-header { font-weight: 600; padding: 8px 0 6px 12px; color: #374151; font-size: 0.875rem; border-bottom: 1px solid #cbd5e1; }
+        .item-label { padding: 8px 0 8px 12px; color: #111827; font-size: 0.825rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; }
+        .amount-col1 { text-align: right; padding: 8px 12px 8px 0; color: #111827; font-size: 0.825rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; }
+        .amount-col2 { text-align: right; padding: 8px 12px 8px 0; color: #6b7280; font-size: 0.825rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; }
         .item-row { transition: all 0.2s ease; cursor: default; }
         .item-row:nth-child(even) td { background-color: #f9fafb !important; }
         .item-row:hover td { background-color: #f3f4f6 !important; }
-        .total-label { padding: 16px 0 16px 20px; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; border-radius: 6px 0 0 6px; }
-        .total-amount-col1 { text-align: right; padding: 16px 20px 16px 0; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; font-variant-numeric: tabular-nums; }
-        .total-amount-col2 { text-align: right; padding: 16px 20px 16px 0; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
-        .grand-total-label { padding: 20px 0 20px 20px; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; text-transform: uppercase; border: none !important; border-top: 3px double #10b981 !important; border-radius: 6px 0 0 6px; }
-        .grand-total-amount-col1 { text-align: right; padding: 20px 20px 20px 0; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; border: none !important; border-top: 3px double #10b981 !important; font-variant-numeric: tabular-nums; }
-        .grand-total-amount-col2 { text-align: right; padding: 20px 20px 20px 0; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; border: none !important; border-top: 3px double #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
-        .balance-warning { color: #b91c1c; font-weight: 600; text-align: center; padding: 15px; background: #fef2f2; border: 1px solid #fca5a5; margin-top: 35px; border-radius: 8px; font-size: 1rem; }
+        .total-label { padding: 10px 0 10px 12px; font-weight: 700; color: #111827; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; }
+        .total-amount-col1 { text-align: right; padding: 10px 12px 10px 0; font-weight: 700; color: #111827; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; font-variant-numeric: tabular-nums; }
+        .total-amount-col2 { text-align: right; padding: 10px 12px 10px 0; font-weight: 700; color: #6b7280; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; font-variant-numeric: tabular-nums; }
+        .grand-total-label { padding: 12px 0 12px 12px; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; text-transform: uppercase; border: none !important; border-top: 2px double #10b981 !important; }
+        .grand-total-amount-col1 { text-align: right; padding: 12px 12px 12px 0; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; border: none !important; border-top: 2px double #10b981 !important; font-variant-numeric: tabular-nums; }
+        .grand-total-amount-col2 { text-align: right; padding: 12px 12px 12px 0; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; border: none !important; border-top: 2px double #10b981 !important; font-variant-numeric: tabular-nums; }
+        .balance-warning { color: #b91c1c; font-weight: 600; text-align: center; padding: 15px; background: #fef2f2; border: 1px solid #fca5a5; margin-top: 35px; font-size: 1rem; }
         .balance-sheet-report td { background: transparent; }
-        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 800px; margin: 15px auto; box-sizing: border-box; }
+        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 800px; margin: 15px auto; box-sizing: border-box; }
     </style>';
 
     if (isset($_POST['PrintPDF'])) {
@@ -309,9 +309,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	</tr>';
 
     // ASSETS
-    $HTML .= '<tr><td colspan="3"><div class="section-header">' . __('ASSETS') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="section-header">' . __('ASSETS') . '</td></tr>';
     
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header">' . __('Non-current assets') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Non-current assets') . '</td></tr>';
     foreach($bsData['assets']['non_current'] as $item) {
         if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
             continue;
@@ -320,7 +320,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     }
     $HTML .= '<tr><td class="total-label">' . __('Total non-current assets') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalNonCurrentAssets) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalNonCurrentAssetsLY) . '</td></tr>';
 
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header">' . __('Current Assets') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Current Assets') . '</td></tr>';
     foreach($bsData['assets']['current'] as $item) {
         if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
             continue;
@@ -335,10 +335,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     $HTML .= '<tr><td colspan="3">&nbsp;</td></tr>';
 
     // EQUITY AND LIABILITIES
-    $HTML .= '<tr><td colspan="3"><div class="section-header">' . __('EQUITY AND LIABILITIES') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="section-header">' . __('EQUITY AND LIABILITIES') . '</td></tr>';
 
     // EQUITY
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header">' . __('Equity') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Equity') . '</td></tr>';
     foreach($bsData['equity']['none'] as $item) {
         if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
             continue;
@@ -348,9 +348,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     $HTML .= '<tr><td class="total-label">' . __('Total equity') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalEquity) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalEquityLY) . '</td></tr>';
 
     // LIABILITIES
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header">' . __('Liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Liabilities') . '</td></tr>';
     
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header" style="padding-left: 20px;">' . __('Non-current liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header" style="padding-left: 20px;">' . __('Non-current liabilities') . '</td></tr>';
     foreach($bsData['liabilities']['non_current'] as $item) {
         if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
             continue;
@@ -359,7 +359,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     }
     $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total non-current liabilities') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalNonCurrentLiabilities) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalNonCurrentLiabilitiesLY) . '</td></tr>';
 
-    $HTML .= '<tr><td colspan="3"><div class="subsection-header" style="padding-left: 20px;">' . __('Current liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header" style="padding-left: 20px;">' . __('Current liabilities') . '</td></tr>';
     foreach($bsData['liabilities']['current'] as $item) {
         if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
             continue;

@@ -220,7 +220,7 @@ echo '<div class="db-card"><div class="db-card-header"><i class="fas fa-plus-cir
 echo '<div class="db-card-body"><form method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF']) . '"><input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 if (isset($_GET['SelectedAccountGroup'])) echo '<input name="SelectedAccountGroup" type="hidden" value="', $_GET['SelectedAccountGroup'], '" />';
 
-echo '<div class="db-form-group"><label class="db-label">Group Name</label><input class="db-input" maxlength="30" name="GroupName" required value="' . $_POST['GroupName'] . '" /></div>';
+echo '<div class="db-form-group"><label class="db-label">Group Name</label><input class="db-input" maxlength="90" name="GroupName" required value="' . $_POST['GroupName'] . '" /></div>';
 echo '<div class="db-form-group"><label class="db-label">Parent Group</label><select name="ParentGroupName" class="db-select"><option value="">Top Level Group</option>';
 $GroupResult = DB_query("SELECT groupname FROM accountgroups");
 while($GR = DB_fetch_array($GroupResult)) echo '<option '.($_POST['ParentGroupName']==$GR['groupname']?'selected':'').' value="'.$GR['groupname'].'">'.$GR['groupname'].'</option>';

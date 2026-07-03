@@ -62,6 +62,9 @@ class ZERPXMLRPCClient {
 			throw new InvalidArgumentException('The ZERP XML-RPC endpoint is not configured.');
 		}
 		$this->username = (string)($config['username'] ?? '');
+		echo 'user name:'. $this->username;
+		echo 'password:'. $this->password;
+		exit;
 		$this->password = (string)($config['password'] ?? '');
 		if ($this->username === '' || $this->password === '') {
 			throw new InvalidArgumentException('The ZERP XML-RPC username and password are required.');

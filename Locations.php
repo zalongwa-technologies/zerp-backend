@@ -196,7 +196,6 @@ if (isset($_POST['submit'])) {
 									glaccountcode = '" . $_POST['GLAccountCode'] . "',
 									allowinvoicing = '" . $_POST['AllowInvoicing'] . "'
 						WHERE loccode = '" . $SelectedLocation . "'";
-                        echo $SQL;
 		$ErrMsg = __('An error occurred updating the') . ' ' . $SelectedLocation . ' ' . __('location record because');
 		$Result = DB_query($SQL, $ErrMsg);
 		prnMsg(__('The location record has been updated'),'success');
@@ -206,7 +205,6 @@ if (isset($_POST['submit'])) {
 		$Managed = (isset($_POST['Managed']) and $_POST['Managed'] == 'on') ? 1 : 0;
 		$SQL = "INSERT INTO locations (loccode, locationname, deladd1, deladd2, deladd3, deladd4, deladd5, deladd6, tel, fax, email, contact, taxprovinceid, cashsalecustomer, cashsalebranch, managed, internalrequest, usedforwo, glaccountcode, allowinvoicing)
 						VALUES ('" . $_POST['LocCode'] . "', '" . $_POST['LocationName'] . "', '" . $_POST['DelAdd1'] ."', '" . $_POST['DelAdd2'] ."', '" . $_POST['DelAdd3'] . "', '" . $_POST['DelAdd4'] . "', '" . $_POST['DelAdd5'] . "', '" . $_POST['DelAdd6'] . "', '" . $_POST['Tel'] . "', '" . $_POST['Fax'] . "', '" . $_POST['Email'] . "', '" . $_POST['Contact'] . "', '" . $_POST['TaxProvince'] . "', '" . $_POST['CashSaleCustomer'] . "', '" . $_POST['CashSaleBranch'] . "', '" . $Managed . "', '" . $_POST['InternalRequest'] . "', '" . $_POST['UsedForWO'] . "', '" . $_POST['GLAccountCode'] . "', '" . $_POST['AllowInvoicing'] . "')";
-		echo $SQL;
 		$ErrMsg = __('An error occurred inserting the new location record because');
 		$Result = DB_query($SQL, $ErrMsg);
 		$SQL = "INSERT INTO locstock (loccode, stockid, quantity, reorderlevel) SELECT '" . $_POST['LocCode'] . "', stockmaster.stockid, 0, 0 FROM stockmaster";

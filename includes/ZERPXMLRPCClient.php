@@ -152,7 +152,7 @@ class ZERPXMLRPCClient {
 
 		if ($response->faultCode() !== 0) {
 			throw new ZERPXMLRPCException(
-				'XML-RPC fault from ' . $method . ': ' . $response->faultString(),
+				'XML-RPC fault from ' . $method . ': ' . $response->faultString() . $this->httpDetail($response),
 				$response->faultCode()
 			);
 		}
@@ -169,6 +169,22 @@ class ZERPXMLRPCClient {
 			throw new ZERPXMLRPCException($method . ' returned an unexpected response.');
 		}
 		return $result;
+	}
+
+	// The phpxmlrpc library's own fault string for transport-level failures (e.g.
+	// "Invalid response payload... empty document") hides the actual HTTP status
+	// and body that would explain why — surface a snippet of both.
+	private function httpDetail($response) {
+		$http = $response->httpResponse();
+		$detail = '';
+		if (isset($http['status_code']) && $http['status_code'] !== null) {
+			$detail .= ' (HTTP ' . $http['status_code'] . ')';
+		}
+		$snippet = trim(preg_replace('/\s+/', ' ', substr((string)($http['raw_data'] ?? ''), 0, 240)));
+		if ($snippet !== '') {
+			$detail .= ' Body: ' . $snippet;
+		}
+		return $detail;
 	}
 
 	private function firstCode(array $result) {

@@ -87,6 +87,48 @@ class SARISAPIClient {
 		return $snippet;
 	}
 
+	private function isConnectPhaseTimeout($errno, $error, $httpCode, $connectTime, $appConnectTime) {
+		if ($errno !== CURLE_OPERATION_TIMEDOUT || $httpCode > 0) {
+			return false;
+		}
+
+		$message = strtolower(trim((string)$error));
+		foreach ([
+			'failed to connect',
+			'could not connect',
+			'couldn\'t connect',
+			'connection timed out',
+		] as $needle) {
+			if ($message !== '' && strpos($message, $needle) !== false) {
+				return true;
+			}
+		}
+
+		// If TLS/app-connect never completed, treat the timeout as transport-level.
+		if ((float)$appConnectTime <= 0) {
+			return true;
+		}
+
+		// A timeout very close to the connect timeout is still in the connect phase.
+		return (float)$connectTime > 0 && (float)$connectTime < $this->timeout;
+	}
+
+	private function shouldRetryTransportFailure($errno, $error, $httpCode, $connectTime, $appConnectTime) {
+		if ($this->isConnectPhaseTimeout($errno, $error, $httpCode, $connectTime, $appConnectTime)) {
+			return true;
+		}
+
+		return in_array($errno, [
+			CURLE_COULDNT_CONNECT,
+			CURLE_COULDNT_RESOLVE_HOST,
+			CURLE_COULDNT_RESOLVE_PROXY,
+			CURLE_SEND_ERROR,
+			CURLE_RECV_ERROR,
+			CURLE_GOT_NOTHING,
+			CURLE_SSL_CONNECT_ERROR,
+		], true);
+	}
+
 	private function extractTokenPayload(array $response) {
 		$candidates = [
 			$response['results'] ?? null,
@@ -297,6 +339,8 @@ class SARISAPIClient {
 			$error = curl_error($ch);
 			$errno = curl_errno($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			$connectTime = curl_getinfo($ch, CURLINFO_CONNECT_TIME);
+			$appConnectTime = curl_getinfo($ch, CURLINFO_APPCONNECT_TIME);
 			curl_close($ch);
 			$elapsed = round(microtime(true) - $requestStarted, 1);
 			if ($result !== false) {
@@ -304,10 +348,10 @@ class SARISAPIClient {
 				break;
 			}
 			saris_cli_log("  -> failed after {$elapsed}s: {$error}");
-			// A timeout means the server already took the full $this->timeout
-			// seconds without responding — retrying just multiplies that wait
-			// for no benefit. Only retry fast-failing connection errors.
-			if ($errno === CURLE_OPERATION_TIMEDOUT) break;
+			// Retry only transient transport failures. Once the request fully
+			// connected and timed out waiting on the server response, retries
+			// just multiply the wait without changing the outcome.
+			if (!$this->shouldRetryTransportFailure($errno, $error, $httpCode, $connectTime, $appConnectTime)) break;
 			if ($attempt < 3) sleep(5 * $attempt);
 		}
 

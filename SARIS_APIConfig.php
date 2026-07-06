@@ -31,40 +31,89 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'test') {
 	}
 
 	$url     = $baseUrl . $tokenPath;
-	$payload = http_build_query([
-		'client_id'     => $clientId,
-		'client_secret' => $clientSecret,
-		'grant_type'    => 'client_credentials',
-		'scope'         => 'SARIS',
-	]);
-	$ch = curl_init($url);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, [
-		'Content-Type: application/x-www-form-urlencoded',
-		'Accept: application/json',
-	]);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-	$result   = curl_exec($ch);
-	$curlErr  = curl_error($ch);
-	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	curl_close($ch);
+	$attempts = [
+		[
+			'label' => 'oauth-form-with-scope',
+			'body' => http_build_query([
+				'client_id'     => $clientId,
+				'client_secret' => $clientSecret,
+				'grant_type'    => 'client_credentials',
+				'scope'         => 'SARIS',
+			]),
+			'headers' => [
+				'Content-Type: application/x-www-form-urlencoded',
+				'Accept: application/json',
+			],
+		],
+		[
+			'label' => 'oauth-json-with-scope',
+			'body' => json_encode([
+				'client_id'     => $clientId,
+				'client_secret' => $clientSecret,
+				'grant_type'    => 'client_credentials',
+				'scope'         => 'SARIS',
+			]),
+			'headers' => [
+				'Content-Type: application/json',
+				'Accept: application/json',
+			],
+		],
+		[
+			'label' => 'oauth-form-no-scope',
+			'body' => http_build_query([
+				'client_id'     => $clientId,
+				'client_secret' => $clientSecret,
+				'grant_type'    => 'client_credentials',
+			]),
+			'headers' => [
+				'Content-Type: application/x-www-form-urlencoded',
+				'Accept: application/json',
+			],
+		],
+	];
+	$result = false;
+	$curlErr = '';
+	$httpCode = 0;
+	$lastVariant = '';
+	foreach ($attempts as $attempt) {
+		$lastVariant = $attempt['label'];
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $attempt['body']);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $attempt['headers']);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+		$result   = curl_exec($ch);
+		$curlErr  = curl_error($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+		if ($result !== false && $httpCode >= 200 && $httpCode < 300) {
+			break;
+		}
+	}
 
 	if ($result === false) {
 		echo json_encode(['success' => false, 'message' => __('Connection failed') . ': ' . $curlErr]);
 		exit();
 	}
 	$response = json_decode($result, true);
+	$bodySnippet = trim(preg_replace('/\s+/', ' ', substr((string)$result, 0, 240)));
 	if (!is_array($response)) {
-		echo json_encode(['success' => false, 'message' => __('Server returned an invalid response') . ' (HTTP ' . $httpCode . ')']);
+		$msg = __('Server returned an invalid response') . ' (HTTP ' . $httpCode . ', ' . $lastVariant . ')';
+		if ($bodySnippet !== '') {
+			$msg .= ': ' . $bodySnippet;
+		}
+		echo json_encode(['success' => false, 'message' => $msg]);
 		exit();
 	}
 	if (!empty($response['success']) && !empty($response['results']['access_token'])) {
 		$expiresIn = isset($response['results']['expires_in']) ? (int)$response['results']['expires_in'] : 3600;
 		echo json_encode(['success' => true, 'message' => __('Connection successful.') . ' ' . __('Token valid for') . ' ' . $expiresIn . ' ' . __('seconds') . '.']);
 	} else {
-		$msg = isset($response['message']) ? $response['message'] : __('Authentication failed') . ' (HTTP ' . $httpCode . ')';
+		$msg = isset($response['message']) ? $response['message'] : __('Authentication failed') . ' (HTTP ' . $httpCode . ', ' . $lastVariant . ')';
+		if ($bodySnippet !== '') {
+			$msg .= ': ' . $bodySnippet;
+		}
 		echo json_encode(['success' => false, 'message' => $msg]);
 	}
 	exit();

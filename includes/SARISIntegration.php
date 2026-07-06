@@ -31,6 +31,57 @@ class SARISAPIClient {
 	private $timeout = 120;
 	private $settings = null; // lazy-loaded from saris_api_settings on first use
 
+	private function buildAuthAttempts() {
+		$clientId = $this->cfg('client_id');
+		$clientSecret = $this->cfg('client_secret');
+
+		return [
+			[
+				'label' => 'oauth-form-with-scope',
+				'body' => http_build_query([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+					'scope'         => 'SARIS',
+				]),
+				'headers' => [
+					'Content-Type: application/x-www-form-urlencoded',
+					'Accept: application/json',
+				],
+			],
+			[
+				'label' => 'oauth-json-with-scope',
+				'body' => json_encode([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+					'scope'         => 'SARIS',
+				]),
+				'headers' => [
+					'Content-Type: application/json',
+					'Accept: application/json',
+				],
+			],
+			[
+				'label' => 'oauth-form-no-scope',
+				'body' => http_build_query([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+				]),
+				'headers' => [
+					'Content-Type: application/x-www-form-urlencoded',
+					'Accept: application/json',
+				],
+			],
+		];
+	}
+
+	private function responseSnippet($body) {
+		$snippet = trim(preg_replace('/\s+/', ' ', substr((string)$body, 0, 240)));
+		return $snippet;
+	}
+
 	private function extractTokenPayload(array $response) {
 		$candidates = [
 			$response['results'] ?? null,
@@ -144,28 +195,21 @@ class SARISAPIClient {
 	private function authenticate() {
 		$this->ensureCredentials();
 		$url = $this->baseUrl() . $this->cfg('token_endpoint');
-		// IAE v1 uses OAuth2 client_credentials with form-encoded body
-		$payload = http_build_query([
-			'client_id'     => $this->cfg('client_id'),
-			'client_secret' => $this->cfg('client_secret'),
-			'grant_type'    => 'client_credentials',
-			'scope'         => 'SARIS',
-		]);
-
+		$attempts = $this->buildAuthAttempts();
 		$result = false;
 		$error = '';
 		$httpCode = 0;
-		for ($attempt = 1; $attempt <= 3; $attempt++) {
+		$lastVariant = '';
+		for ($attempt = 1; $attempt <= count($attempts); $attempt++) {
+			$request = $attempts[$attempt - 1];
+			$lastVariant = $request['label'];
 			$ch = curl_init($url);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, [
-				'Content-Type: application/x-www-form-urlencoded',
-				'Accept: application/json',
-			]);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $request['headers']);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-			saris_cli_log("Authenticating with SARIS (attempt {$attempt}/3)...");
+			saris_cli_log("Authenticating with SARIS (attempt {$attempt}/" . count($attempts) . ", {$request['label']})...");
 			$requestStarted = microtime(true);
 			$result = curl_exec($ch);
 			$error = curl_error($ch);
@@ -174,15 +218,17 @@ class SARISAPIClient {
 			$elapsed = round(microtime(true) - $requestStarted, 1);
 			if ($result !== false) {
 				if ($httpCode >= 200 && $httpCode < 300) {
-					saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s)");
+					saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s, {$request['label']})");
 					break;
 				}
-				saris_cli_log("Auth attempt {$attempt} returned HTTP {$httpCode} in {$elapsed}s");
-				if ($attempt < 3 && $httpCode >= 500) sleep(5 * $attempt);
+				$snippet = $this->responseSnippet($result);
+				$detail = $snippet !== '' ? " Body: {$snippet}" : '';
+				saris_cli_log("Auth attempt {$attempt} returned HTTP {$httpCode} in {$elapsed}s ({$request['label']}).{$detail}");
+				if ($attempt < count($attempts)) sleep(2 * $attempt);
 				continue;
 			}
-			saris_cli_log("Auth attempt {$attempt} failed after {$elapsed}s: {$error}");
-			if ($attempt < 3) sleep(5 * $attempt);
+			saris_cli_log("Auth attempt {$attempt} failed after {$elapsed}s ({$request['label']}): {$error}");
+			if ($attempt < count($attempts)) sleep(2 * $attempt);
 		}
 
 		if ($result === false) {
@@ -194,13 +240,11 @@ class SARISAPIClient {
 		// Also accept alternate envelopes used by related integrations.
 		if (!is_array($response) || !$this->isSuccessfulAuthResponse($response) || $tokenPayload === null) {
 			$msg = isset($response['message']) ? $response['message'] : 'Unexpected response (HTTP ' . $httpCode . ')';
-			if (!is_array($response)) {
-				$bodySnippet = trim(preg_replace('/\s+/', ' ', substr((string)$result, 0, 240)));
-				if ($bodySnippet !== '') {
-					$msg .= ' Body: ' . $bodySnippet;
-				}
+			$bodySnippet = $this->responseSnippet($result);
+			if ($bodySnippet !== '') {
+				$msg .= ' Body: ' . $bodySnippet;
 			}
-			throw new Exception('SARIS authentication failed: ' . $msg);
+			throw new Exception('SARIS authentication failed (' . $lastVariant . '): ' . $msg);
 		}
 		$expiresIn = $tokenPayload['expires_in'];
 		$_SESSION['SARISAPI_TOKEN'] = $tokenPayload['token'];

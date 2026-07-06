@@ -22,6 +22,7 @@ class ZERPXMLRPCClient {
 	private $encoder;
 	private $username;
 	private $password;
+	private $endpointUrl;
 
 	private const ERROR_MESSAGES = [
 		1 => 'No authorisation',
@@ -61,16 +62,59 @@ class ZERPXMLRPCClient {
 		if ($url === '') {
 			throw new InvalidArgumentException('The ZERP XML-RPC endpoint is not configured.');
 		}
+		$url = $this->normalizeEndpointUrl($url);
 		$this->username = (string)($config['username'] ?? '');
 		$this->password = (string)($config['password'] ?? '');
 		if ($this->username === '' || $this->password === '') {
 			throw new InvalidArgumentException('The ZERP XML-RPC username and password are required.');
 		}
 
+		$this->endpointUrl = $url;
 		$this->client = new Client($url);
 		$this->client->setOption(Client::OPT_TIMEOUT, max(1, (int)($config['timeout'] ?? 60)));
 		$this->client->setOption(Client::OPT_ACCEPTED_COMPRESSION, []);
 		$this->encoder = new Encoder();
+	}
+
+	private function normalizeEndpointUrl($url) {
+		$parts = parse_url($url);
+		if (!is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+			throw new InvalidArgumentException('The ZERP XML-RPC endpoint must be an absolute URL.');
+		}
+
+		$path = isset($parts['path']) ? $parts['path'] : '';
+		if ($path === '' || $path === '/') {
+			$parts['path'] = '/api/api_xml-rpc.php';
+		} elseif (substr($path, -1) === '/') {
+			$parts['path'] = rtrim($path, '/') . '/api_xml-rpc.php';
+		} elseif (preg_match('#/api/api_xmlrpc\.php$#i', $path)) {
+			$parts['path'] = preg_replace('#/api/api_xmlrpc\.php$#i', '/api/api_xml-rpc.php', $path);
+		}
+
+		return $this->unparseUrl($parts);
+	}
+
+	private function unparseUrl(array $parts) {
+		$url = $parts['scheme'] . '://';
+		if (isset($parts['user'])) {
+			$url .= $parts['user'];
+			if (isset($parts['pass'])) {
+				$url .= ':' . $parts['pass'];
+			}
+			$url .= '@';
+		}
+		$url .= $parts['host'];
+		if (isset($parts['port'])) {
+			$url .= ':' . $parts['port'];
+		}
+		$url .= $parts['path'] ?? '';
+		if (isset($parts['query'])) {
+			$url .= '?' . $parts['query'];
+		}
+		if (isset($parts['fragment'])) {
+			$url .= '#' . $parts['fragment'];
+		}
+		return $url;
 	}
 
 	public function insertCustomer(array $customer) {
@@ -151,8 +195,13 @@ class ZERPXMLRPCClient {
 		}
 
 		if ($response->faultCode() !== 0) {
+			$message = 'XML-RPC fault from ' . $method . ': ' . $response->faultString() . $this->httpDetail($response);
+			if (strpos($response->faultString(), 'Invalid response payload') !== false) {
+				$message .= ' Endpoint: ' . $this->endpointUrl
+					. '. Verify that ZERP_EndPoint points to /api/api_xml-rpc.php and that the remote web server returns XML-RPC responses from that URL.';
+			}
 			throw new ZERPXMLRPCException(
-				'XML-RPC fault from ' . $method . ': ' . $response->faultString() . $this->httpDetail($response),
+				$message,
 				$response->faultCode()
 			);
 		}

@@ -31,6 +31,75 @@ class SARISAPIClient {
 	private $timeout = 120;
 	private $settings = null; // lazy-loaded from saris_api_settings on first use
 
+	private function extractTokenPayload(array $response) {
+		$candidates = [
+			$response['results'] ?? null,
+			$response['data'] ?? null,
+			$response,
+		];
+
+		foreach ($candidates as $candidate) {
+			if (!is_array($candidate)) {
+				continue;
+			}
+
+			$token = '';
+			foreach (['access_token', 'token', 'bearer_token'] as $tokenKey) {
+				if (!empty($candidate[$tokenKey]) && is_string($candidate[$tokenKey])) {
+					$token = trim($candidate[$tokenKey]);
+					break;
+				}
+			}
+
+			if ($token === '') {
+				continue;
+			}
+
+			$expiresIn = 3600;
+			foreach (['expires_in', 'expires', 'expiresIn'] as $expiryKey) {
+				if (isset($candidate[$expiryKey]) && is_numeric($candidate[$expiryKey])) {
+					$expiresIn = (int)$candidate[$expiryKey];
+					break;
+				}
+			}
+
+			$tokenType = '';
+			if (!empty($candidate['token_type']) && is_string($candidate['token_type'])) {
+				$tokenType = strtolower(trim($candidate['token_type']));
+			} elseif (!empty($candidate['type']) && is_string($candidate['type'])) {
+				$tokenType = strtolower(trim($candidate['type']));
+			}
+
+			return [
+				'token' => $token,
+				'expires_in' => max(60, $expiresIn),
+				'token_type' => $tokenType,
+			];
+		}
+
+		return null;
+	}
+
+	private function isSuccessfulAuthResponse(array $response) {
+		if (!empty($response['success'])) {
+			return true;
+		}
+		if (isset($response['statusCode']) && (int)$response['statusCode'] === 200) {
+			return true;
+		}
+		if (isset($response['code']) && (int)$response['code'] === 200) {
+			return true;
+		}
+		if (isset($response['status']) && is_string($response['status'])) {
+			$status = strtolower(trim($response['status']));
+			if (in_array($status, ['success', 'ok'], true)) {
+				return true;
+			}
+		}
+
+		return $this->extractTokenPayload($response) !== null;
+	}
+
 	private function loadSettings() {
 		if ($this->settings !== null) {
 			return;
@@ -104,8 +173,13 @@ class SARISAPIClient {
 			curl_close($ch);
 			$elapsed = round(microtime(true) - $requestStarted, 1);
 			if ($result !== false) {
-				saris_cli_log("Authenticated (HTTP {$httpCode}, {$elapsed}s)");
-				break;
+				if ($httpCode >= 200 && $httpCode < 300) {
+					saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s)");
+					break;
+				}
+				saris_cli_log("Auth attempt {$attempt} returned HTTP {$httpCode} in {$elapsed}s");
+				if ($attempt < 3 && $httpCode >= 500) sleep(5 * $attempt);
+				continue;
 			}
 			saris_cli_log("Auth attempt {$attempt} failed after {$elapsed}s: {$error}");
 			if ($attempt < 3) sleep(5 * $attempt);
@@ -115,14 +189,23 @@ class SARISAPIClient {
 			throw new Exception('Could not connect to SARIS token endpoint: ' . $error);
 		}
 		$response = json_decode($result, true);
-		// IAE v1 success: {success:true, results:{access_token, expires_in, ...}}
-		if (!is_array($response) || empty($response['success']) || empty($response['results']['access_token'])) {
+		$tokenPayload = is_array($response) ? $this->extractTokenPayload($response) : null;
+		// Primary success shape: {success:true, results:{access_token, expires_in, ...}}
+		// Also accept alternate envelopes used by related integrations.
+		if (!is_array($response) || !$this->isSuccessfulAuthResponse($response) || $tokenPayload === null) {
 			$msg = isset($response['message']) ? $response['message'] : 'Unexpected response (HTTP ' . $httpCode . ')';
+			if (!is_array($response)) {
+				$bodySnippet = trim(preg_replace('/\s+/', ' ', substr((string)$result, 0, 240)));
+				if ($bodySnippet !== '') {
+					$msg .= ' Body: ' . $bodySnippet;
+				}
+			}
 			throw new Exception('SARIS authentication failed: ' . $msg);
 		}
-		$expiresIn = isset($response['results']['expires_in']) ? (int)$response['results']['expires_in'] : 3600;
-		$_SESSION['SARISAPI_TOKEN'] = $response['results']['access_token'];
+		$expiresIn = $tokenPayload['expires_in'];
+		$_SESSION['SARISAPI_TOKEN'] = $tokenPayload['token'];
 		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + $expiresIn - 30;
+		saris_cli_log('Authenticated with SARIS token; expires in ' . $expiresIn . 's');
 		return $_SESSION['SARISAPI_TOKEN'];
 	}
 

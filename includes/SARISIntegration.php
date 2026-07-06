@@ -29,6 +29,11 @@ function getSarisSetting($key, $default = null) {
 
 class SARISAPIClient {
 	private $timeout = 120;
+	// Bounds only the connect/handshake phase. Without this, a connection that
+	// never completes (server not responding, network black-holing packets)
+	// burns the entire $timeout before curl gives up, instead of failing fast
+	// so the retry loop can move on.
+	private $connectTimeout = 15;
 	private $settings = null; // lazy-loaded from saris_api_settings on first use
 
 	private function buildAuthAttempts() {
@@ -196,39 +201,51 @@ class SARISAPIClient {
 		$this->ensureCredentials();
 		$url = $this->baseUrl() . $this->cfg('token_endpoint');
 		$attempts = $this->buildAuthAttempts();
+		// SARIS's endpoint has been observed as intermittently unreachable (connect
+		// hangs) rather than consistently down — one variant in a cycle can hang
+		// while another connects fine seconds later. Now that a hung connection
+		// only costs $connectTimeout (not the old 120s), it's cheap to run the
+		// whole variant cycle more than once before giving up.
+		$maxPasses = 2;
+		$totalAttempts = $maxPasses * count($attempts);
 		$result = false;
 		$error = '';
 		$httpCode = 0;
 		$lastVariant = '';
-		for ($attempt = 1; $attempt <= count($attempts); $attempt++) {
-			$request = $attempts[$attempt - 1];
-			$lastVariant = $request['label'];
-			$ch = curl_init($url);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, $request['headers']);
-			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-			saris_cli_log("Authenticating with SARIS (attempt {$attempt}/" . count($attempts) . ", {$request['label']})...");
-			$requestStarted = microtime(true);
-			$result = curl_exec($ch);
-			$error = curl_error($ch);
-			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
-			$elapsed = round(microtime(true) - $requestStarted, 1);
-			if ($result !== false) {
-				if ($httpCode >= 200 && $httpCode < 300) {
-					saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s, {$request['label']})");
-					break;
+		$attemptNum = 0;
+		for ($pass = 1; $pass <= $maxPasses; $pass++) {
+			for ($i = 0; $i < count($attempts); $i++) {
+				$attemptNum++;
+				$request = $attempts[$i];
+				$lastVariant = $request['label'];
+				$ch = curl_init($url);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_POST, true);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
+				curl_setopt($ch, CURLOPT_HTTPHEADER, $request['headers']);
+				curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
+				saris_cli_log("Authenticating with SARIS (attempt {$attemptNum}/{$totalAttempts}, {$request['label']})...");
+				$requestStarted = microtime(true);
+				$result = curl_exec($ch);
+				$error = curl_error($ch);
+				$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+				curl_close($ch);
+				$elapsed = round(microtime(true) - $requestStarted, 1);
+				if ($result !== false) {
+					if ($httpCode >= 200 && $httpCode < 300) {
+						saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s, {$request['label']})");
+						break 2;
+					}
+					$snippet = $this->responseSnippet($result);
+					$detail = $snippet !== '' ? " Body: {$snippet}" : '';
+					saris_cli_log("Auth attempt {$attemptNum} returned HTTP {$httpCode} in {$elapsed}s ({$request['label']}).{$detail}");
+					if ($attemptNum < $totalAttempts) sleep(2 * $pass);
+					continue;
 				}
-				$snippet = $this->responseSnippet($result);
-				$detail = $snippet !== '' ? " Body: {$snippet}" : '';
-				saris_cli_log("Auth attempt {$attempt} returned HTTP {$httpCode} in {$elapsed}s ({$request['label']}).{$detail}");
-				if ($attempt < count($attempts)) sleep(2 * $attempt);
-				continue;
+				saris_cli_log("Auth attempt {$attemptNum} failed after {$elapsed}s ({$request['label']}): {$error}");
+				if ($attemptNum < $totalAttempts) sleep(2 * $pass);
 			}
-			saris_cli_log("Auth attempt {$attempt} failed after {$elapsed}s ({$request['label']}): {$error}");
-			if ($attempt < count($attempts)) sleep(2 * $attempt);
 		}
 
 		if ($result === false) {
@@ -273,6 +290,7 @@ class SARISAPIClient {
 				'Accept: application/json',
 			]);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
 			saris_cli_log("GET {$url} (attempt {$attempt}/3)...");
 			$requestStarted = microtime(true);
 			$result = curl_exec($ch);

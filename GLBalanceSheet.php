@@ -92,68 +92,6 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
         }
     }
 
-    // --- MAPPING FUNCTION ---
-    if (!function_exists('mapAccountToReportCategory')) {
-        function mapAccountToReportCategory($accountName, $groupName) {
-            $acc = strtolower($accountName);
-            $grp = strtolower($groupName);
-            $combined = $acc . ' ' . $grp;
-
-            // ASSETS - NON-CURRENT
-            if (strpos($combined, 'ppe') !== false || strpos($combined, 'property') !== false || strpos($combined, 'plant') !== false || strpos($combined, 'equipment') !== false || strpos($combined, 'fixed asset') !== false || strpos($combined, 'depreciation') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'ppe'];
-            }
-            if (strpos($combined, 'donated') !== false || strpos($combined, 'idb') !== false || strpos($combined, 'dbe') !== false || strpos($combined, 'dx') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'cost_donated'];
-            }
-            if (strpos($combined, 'wip') !== false || strpos($combined, 'chingya') !== false || strpos($combined, 'work in progress') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'wip_chingya_building'];
-            }
-
-            // ASSETS - CURRENT
-            if (strpos($combined, 'trade') !== false && strpos($combined, 'receivable') !== false || strpos($combined, 'debtor') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'trade_receivable'];
-            }
-            if (strpos($combined, 'receivable') !== false || strpos($combined, 'prepayment') !== false || strpos($combined, 'inventory') !== false || strpos($combined, 'stock') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'other_receivable'];
-            }
-            if (strpos($combined, 'cash') !== false || strpos($combined, 'bank') !== false || strpos($combined, 'petty') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'cash_bank_balance'];
-            }
-
-            // EQUITY
-            if (strpos($combined, 'accumulated') !== false && strpos($combined, 'fund') !== false) {
-                return ['type' => 'equity', 'sub' => 'none', 'key' => 'accumulated_fund'];
-            }
-            if (strpos($combined, 'retain') !== false || strpos($combined, 'earning') !== false || strpos($combined, 'profit') !== false || strpos($combined, 'equity') !== false || strpos($combined, 'capital') !== false) {
-                return ['type' => 'equity', 'sub' => 'none', 'key' => 'retained_earnings'];
-            }
-
-            // LIABILITIES - NON-CURRENT
-            if (strpos($combined, 'soft loan') !== false || (strpos($combined, 'loan') !== false && strpos($combined, 'long') !== false)) {
-                return ['type' => 'liabilities', 'sub' => 'non_current', 'key' => 'soft_loan_from_donor'];
-            }
-            if (strpos($combined, 'grant') !== false || strpos($combined, 'adbf') !== false || strpos($combined, 'donor aid') !== false || strpos($combined, 'deferred') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'non_current', 'key' => 'grant_from_adbf_idb_donor_aid'];
-            }
-
-            // LIABILITIES - CURRENT
-            if (strpos($combined, 'trade payable') !== false || strpos($combined, 'creditor') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
-            }
-            if (strpos($combined, 'accrue') !== false || strpos($combined, 'charge') !== false || strpos($combined, 'tax') !== false || strpos($combined, 'provision') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable_accrued_charges'];
-            }
-            if (strpos($combined, 'payable') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
-            }
-
-            // FALLBACKS
-            if (strpos($combined, 'asset') !== false) return ['type' => 'assets', 'sub' => 'current', 'key' => 'other_receivable'];
-            return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
-        }
-    }
-
     if (!function_exists('formatMoneyBS')) {
         function formatMoneyBS($amount) {
             if (abs($amount) < 0.005) return locale_number_format(0, 2);
@@ -163,32 +101,15 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
     $bsData = [
         'assets' => [
-            'non_current' => [
-                'ppe' => ['label' => 'PPE Property plant & equipment', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'cost_donated' => ['label' => 'Cost donated by DBE, IDB, DX', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'wip_chingya_building' => ['label' => 'WIP - Chingya building', 'amount' => 0.0, 'ly_amount' => 0.0],
-            ],
-            'current' => [
-                'trade_receivable' => ['label' => 'Trade receivable', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'other_receivable' => ['label' => 'Other receivable', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'cash_bank_balance' => ['label' => 'Cash & bank balance', 'amount' => 0.0, 'ly_amount' => 0.0],
-            ]
+            'non_current' => [],
+            'current' => []
         ],
         'equity' => [
-            'none' => [
-                'accumulated_fund' => ['label' => 'Accumulated fund', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'retained_earnings' => ['label' => 'Retained earnings', 'amount' => 0.0, 'ly_amount' => 0.0],
-            ]
+            'none' => []
         ],
         'liabilities' => [
-            'non_current' => [
-                'soft_loan_from_donor' => ['label' => 'Soft loan from donor', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'grant_from_adbf_idb_donor_aid' => ['label' => 'Grant from ADBF, IDB & donor aid', 'amount' => 0.0, 'ly_amount' => 0.0],
-            ],
-            'current' => [
-                'other_payable' => ['label' => 'Other payable', 'amount' => 0.0, 'ly_amount' => 0.0],
-                'other_payable_accrued_charges' => ['label' => 'Other payable & accrued charges', 'amount' => 0.0, 'ly_amount' => 0.0],
-            ]
+            'non_current' => [],
+            'current' => []
         ]
     ];
 
@@ -202,26 +123,81 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
             $retainedEarningsProcessed = true;
         }
 
-        $map = mapAccountToReportCategory($MyRow['accountname'], $MyRow['group_']);
-        if ($map['type'] === 'assets') {
-            $bsData[$map['type']][$map['sub']][$map['key']]['amount'] += $AccountBalance;
-            $bsData[$map['type']][$map['sub']][$map['key']]['ly_amount'] += $AccountBalanceLY;
-        } else {
-            $bsData[$map['type']][$map['sub']][$map['key']]['amount'] -= $AccountBalance;
-            $bsData[$map['type']][$map['sub']][$map['key']]['ly_amount'] -= $AccountBalanceLY;
+        $sectionId = $MyRow['sectionid'];
+        $type = '';
+        $sub = '';
+        
+        if ($sectionId == 10) { // Fixed Assets
+            $type = 'assets';
+            $sub = 'non_current';
+        } elseif ($sectionId == 15 || $sectionId == 20 || $sectionId == 25) { // Inventory, Current Assets, Cash & Equivalents
+            $type = 'assets';
+            $sub = 'current';
+        } elseif ($sectionId == 50) { // Equity
+            $type = 'equity';
+            $sub = 'none';
+        } elseif ($sectionId == 35) { // Long Term Liabilities
+            $type = 'liabilities';
+            $sub = 'non_current';
+        } elseif ($sectionId == 30) { // Current Liabilities
+            $type = 'liabilities';
+            $sub = 'current';
+        }
+        
+        if ($type != '') {
+            if ($ShowDetail == 'Detailed') {
+                $key = $MyRow['accountcode'];
+                $label = $MyRow['accountcode'] . ' - ' . $MyRow['accountname'];
+            } else {
+                $key = $MyRow['group_'];
+                $label = $MyRow['group_'];
+            }
+            
+            if (!isset($bsData[$type][$sub][$key])) {
+                $bsData[$type][$sub][$key] = [
+                    'label' => $label,
+                    'amount' => 0.0,
+                    'ly_amount' => 0.0
+                ];
+            }
+            
+            if ($type === 'assets') {
+                $bsData[$type][$sub][$key]['amount'] += $AccountBalance;
+                $bsData[$type][$sub][$key]['ly_amount'] += $AccountBalanceLY;
+            } else {
+                $bsData[$type][$sub][$key]['amount'] -= $AccountBalance;
+                $bsData[$type][$sub][$key]['ly_amount'] -= $AccountBalanceLY;
+            }
         }
     }
 
     // Defensive injection: If Retained Earnings was skipped by the loop query (e.g. pandl config or permissions)
     // we must manually roll up the P&L into Equity for the Balance Sheet to balance.
     if (!$retainedEarningsProcessed) {
+        $type = 'equity';
+        $sub = 'none';
+        $key = 'retained_earnings_fallback';
+        $label = __('Retained Earnings');
+        if ($ShowDetail == 'Detailed') {
+            $key = $RetainedEarningsAct;
+            $label = $RetainedEarningsAct . ' - ' . __('Retained Earnings');
+        }
+        
+        if (!isset($bsData[$type][$sub][$key])) {
+            $bsData[$type][$sub][$key] = [
+                'label' => $label,
+                'amount' => 0.0,
+                'ly_amount' => 0.0
+            ];
+        }
+        
         $AccountBalance = $ThisYearActuals[$RetainedEarningsAct] ?? 0;
         $AccountBalance += $ThisYearRetainedEarningsRow['retainedearnings'];
+        $bsData[$type][$sub][$key]['amount'] -= $AccountBalance;
+
         $AccountBalanceLY = $LastYearActuals[$RetainedEarningsAct] ?? 0;
         $AccountBalanceLY += $LastYearRetainedEarningsRow['retainedearnings'];
-        
-        $bsData['equity']['none']['retained_earnings']['amount'] -= $AccountBalance;
-        $bsData['equity']['none']['retained_earnings']['ly_amount'] -= $AccountBalanceLY;
+        $bsData[$type][$sub][$key]['ly_amount'] -= $AccountBalanceLY;
     }
 
     // CALCULATIONS
@@ -248,6 +224,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     $balanceDiffLY = abs($totalAssetsLY - $totalEquityAndLiabilitiesLY);
 
     // RENDERING
+    //demo
     $HTML = '';
     
     if (isset($_POST['PrintPDF'])) {

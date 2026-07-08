@@ -331,7 +331,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					WHEN accountgroups.groupname = 'Equity' THEN 3
 					WHEN accountgroups.groupname IN ('Non-current Liabilities', 'Non-current liabilities') THEN 4
 					WHEN accountgroups.groupname = 'Current Liabilities' THEN 5
-					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange') THEN 6
+					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange', 'Revenue from Non - Exchange Transactions') THEN 6
 					WHEN accountgroups.groupname IN ('Revenue from exchange transactions', 'Revenue from Exchange', 'Revenue') THEN 7
 					WHEN accountgroups.groupname IN ('Operating and administrative expenses', 'Operating and Administrative E') THEN 8
 					WHEN accountgroups.groupname IN ('Wages salaries and employee benefits') THEN 9

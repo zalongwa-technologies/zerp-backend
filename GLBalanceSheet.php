@@ -40,7 +40,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$ThisYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $PeriodTo . "' AND pandl=1"));
 	$LastYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $LastYearPeriod . "' AND pandl=1"));
 
-	$AccountListResult = DB_query("SELECT sectionid, sectionname, sectioninaccounts, parentgroupname, chartmaster.accountcode, group_, accountname, pandl FROM chartmaster INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ INNER JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts WHERE pandl=0 ORDER BY sequenceintb, group_, accountcode");
+	$AccountListResult = DB_query("SELECT accountsection.sectionid, accountsection.sectionname, accountgroups.sectioninaccounts, accountgroups.parentgroupname, chartmaster.accountcode, chartmaster.group_, chartmaster.accountname, accountgroups.pandl FROM chartmaster INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ LEFT JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts WHERE accountgroups.pandl=0 ORDER BY accountgroups.sequenceintb, chartmaster.group_, chartmaster.accountcode");
 	
     $ResultActual = DB_query("SELECT account, ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $PeriodTo . "' GROUP BY account");
 	while ($R = DB_fetch_array($ResultActual)) $ThisYearActuals[$R['account']] = $R['accounttotal'];
@@ -123,25 +123,83 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
             $retainedEarningsProcessed = true;
         }
 
-        $sectionId = $MyRow['sectionid'];
+        $sectionId = (int)$MyRow['sectionid'];
+        $secName = strtolower(trim((string)$MyRow['sectionname']));
+        $grpName = strtolower(trim((string)$MyRow['group_']));
         $type = '';
         $sub = '';
         
-        if ($sectionId == 10) { // Fixed Assets
+        if ($sectionId == 10 || 
+            strpos($secName, 'fixed') !== false || 
+            strpos($secName, 'non-current') !== false || 
+            strpos($secName, 'non current') !== false ||
+            strpos($grpName, 'fixed') !== false ||
+            strpos($grpName, 'non-current') !== false ||
+            strpos($grpName, 'non current') !== false) {
+            
             $type = 'assets';
             $sub = 'non_current';
-        } elseif ($sectionId == 15 || $sectionId == 20 || $sectionId == 25) { // Inventory, Current Assets, Cash & Equivalents
+        } elseif ($sectionId == 15 || $sectionId == 20 || $sectionId == 25 || 
+                  strpos($secName, 'current asset') !== false || 
+                  strpos($secName, 'inventory') !== false || 
+                  strpos($secName, 'cash') !== false || 
+                  strpos($secName, 'bank') !== false || 
+                  strpos($secName, 'receivable') !== false ||
+                  strpos($grpName, 'current asset') !== false ||
+                  strpos($grpName, 'cash') !== false ||
+                  strpos($grpName, 'bank') !== false ||
+                  strpos($grpName, 'receivable') !== false ||
+                  strpos($grpName, 'prepayment') !== false ||
+                  strpos($grpName, 'inventory') !== false ||
+                  strpos($grpName, 'stock') !== false) {
+                  
             $type = 'assets';
             $sub = 'current';
-        } elseif ($sectionId == 50) { // Equity
+        } elseif ($sectionId == 50 || 
+                  strpos($secName, 'equity') !== false || 
+                  strpos($secName, 'capital') !== false || 
+                  strpos($secName, 'retained') !== false || 
+                  strpos($secName, 'fund') !== false ||
+                  strpos($grpName, 'equity') !== false ||
+                  strpos($grpName, 'capital') !== false ||
+                  strpos($grpName, 'retained') !== false ||
+                  strpos($grpName, 'fund') !== false) {
+                  
             $type = 'equity';
             $sub = 'none';
-        } elseif ($sectionId == 35) { // Long Term Liabilities
+        } elseif ($sectionId == 35 || 
+                  strpos($secName, 'long term') !== false || 
+                  strpos($secName, 'long-term') !== false || 
+                  strpos($secName, 'non-current liability') !== false || 
+                  strpos($secName, 'non current liability') !== false ||
+                  strpos($grpName, 'long term') !== false ||
+                  strpos($grpName, 'long-term') !== false ||
+                  strpos($grpName, 'non-current liability') !== false ||
+                  strpos($grpName, 'non current liability') !== false) {
+                  
             $type = 'liabilities';
             $sub = 'non_current';
-        } elseif ($sectionId == 30) { // Current Liabilities
+        } elseif ($sectionId == 30 || 
+                  strpos($secName, 'current liab') !== false || 
+                  strpos($secName, 'payable') !== false || 
+                  strpos($secName, 'accrued') !== false ||
+                  strpos($grpName, 'current liab') !== false ||
+                  strpos($grpName, 'payable') !== false ||
+                  strpos($grpName, 'accrued') !== false) {
+                  
             $type = 'liabilities';
             $sub = 'current';
+        }
+        
+        if ($type == '') {
+            // Fallback safety net for any unclassified Balance Sheet accounts
+            if ($AccountBalance >= 0) {
+                $type = 'assets';
+                $sub = 'current';
+            } else {
+                $type = 'liabilities';
+                $sub = 'current';
+            }
         }
         
         if ($type != '') {

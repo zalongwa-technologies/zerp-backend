@@ -266,7 +266,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])) {
         $Title = __('Financial Statement View'); include(__DIR__ . '/includes/header.php');
         echo $HTML;
         echo '<div class="centre" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
-                <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '" target="_blank">
+                <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">
                     <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                     <input type="hidden" name="PeriodFrom" value="' . $_POST['PeriodFrom'] . '" />
                     <input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />
@@ -303,7 +303,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View'])) {
     echo '<div class="aw-page"><div class="aw-card">
             <div class="aw-card-header"><h3 class="aw-card-title"><i class="fas fa-file-invoice-dollar"></i> ' . __('Profit and Loss Statement') . '</h3></div>
             <div class="aw-card-body">
-                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post" target="_blank">
+                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post">
                 <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">

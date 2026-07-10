@@ -484,7 +484,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
                 ' . $HTML . '
                 </form>
                 <div class="centre" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
-                    <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '" target="_blank">
+                    <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">
                         <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                         <input type="hidden" name="PeriodTo" value="' . $PeriodTo . '" />
                         <input type="hidden" name="ShowDetail" value="' . $ShowDetail . '" />
@@ -520,7 +520,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     echo '<div class="db-page"><div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title">' . __('Balance Sheet Generator') . '</h3></div>
             <div class="db-card-body">
-                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post" target="_blank">
+                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post">
                 <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                 <div class="db-field"><label class="db-label">Balance As At Date</label><select name="PeriodTo" class="db-select">';
                 $Pers = DB_query("SELECT periodno, lastdate_in_period FROM periods ORDER BY periodno DESC");

@@ -42,7 +42,39 @@ echo '
 	body { background-color: var(--bg-workspace); font-family: "Inter", -apple-system, sans-serif; color: var(--text-main); }
 	.aw-container { padding: 12px; max-width: 1600px; margin: 0 auto; }
 	.aw-page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-	.aw-breadcrumb { font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2px; }
+	.aw-breadcrumb {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		font-size: 0.825rem;
+		font-weight: 600;
+		color: var(--text-muted);
+		margin-bottom: var(--space-1);
+		flex-wrap: wrap;
+	}
+	.aw-breadcrumb a {
+		color: var(--primary);
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		transition: color var(--transition-fast);
+	}
+	.aw-breadcrumb a:hover {
+		color: var(--primary-hover);
+		text-decoration: none;
+	}
+	.aw-breadcrumb .separator {
+		display: inline-flex;
+		align-items: center;
+		color: var(--text-muted);
+		opacity: 0.5;
+		font-size: 0.7rem;
+	}
+	.aw-breadcrumb span.active-page {
+		color: var(--primary-dark);
+		font-weight: 700;
+	}
 	.aw-page-title { font-size: 1.5rem; font-weight: 950; letter-spacing: -0.04em; color: var(--primary-dark); margin: 0; }
 
 	.aw-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
@@ -190,7 +222,22 @@ if (isset($_POST['EnterLine'])){
 
 echo '<div class="aw-page-header">
 		<div>
-			<div class="aw-breadcrumb">Purchasing / Batch Operations</div>
+			<div class="aw-breadcrumb">
+				<a href="index.php"><i class="fa-solid fa-house" style="font-size: 0.8rem;"></i> ' . __('Home') . '</a>
+				<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+				<a href="index.php?Application=PO">' . __('Purchases') . '</a>
+				<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+				';
+			if (!empty($_SESSION['ExistingOrder'])) {
+				echo '<a href="' . $RootPath . '/PO_SelectOSPurchOrder.php">' . __('Purchase Orders') . '</a>
+					<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+					<a href="' . $RootPath . '/PO_Header.php?identifier=' . $identifier . '">' . __('Edit Purchase Order') . '</a>';
+			} else {
+				echo '<a href="' . $RootPath . '/PO_Header.php?identifier=' . $identifier . '">' . __('New Purchase Order') . '</a>';
+			}
+			echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+				<span class="active-page">' . __('PO Items') . '</span>
+			</div>'
 			<h1 class="aw-page-title">' . $Title . '</h1>
 		</div>
 		<div class="aw-actions">

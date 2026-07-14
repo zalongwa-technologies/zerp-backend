@@ -90,7 +90,7 @@ $ExtraHeadContent = '
     
     .db-form-container {
         width: 100%;
-        max-width: 900px;
+        max-width: 100%;
         margin: 0 auto;
     }
 

@@ -1,0 +1,8 @@
+# Never expose Git repository metadata through Apache.
+RedirectMatch 404 (?i)(^|/)\.git(/|$)
+
+RedirectMatch 403 /\..*$
+Options -Indexes
+
+php_value memory_limit 1024M
+ErrorDocument 404 /404.php

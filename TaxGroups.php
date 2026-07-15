@@ -10,142 +10,197 @@ include(__DIR__ . '/includes/header.php');
 // Inject premium Architect styles
 echo '<style>
     :root {
-        --primary: #059669;
-        --primary-dark: #065f46;
-        --primary-light: #ecfdf5;
-        --page-padding: 40px;
+        --primary: hsl(145, 63%, 38%);
+        --primary-hover: hsl(145, 63%, 32%);
+        --primary-dark: hsl(145, 45%, 22%);
+        --primary-light: hsl(145, 40%, 95%);
+        --primary-glow: hsla(145, 63%, 38%, 0.15);
+        --page-padding: 30px;
+        --border-color: #e5e7eb;
+        --radius: 12px;
+        --text-main: #111827;
+        --text-muted: #6b7280;
     }
     .db-page {
-        padding: 0 var(--page-padding);
-        max-width: 1600px;
+        padding: var(--page-padding);
+        max-width: 1400px;
         margin: 0 auto;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+    
+    /* Header Section */
     .premium-header { 
-        margin-bottom: 30px; 
-        padding: 24px 30px; 
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid #e5e7eb;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    }
-    .premium-header-inner {
+        margin-bottom: 24px; 
+        padding: 24px; 
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
         display: flex; 
         justify-content: space-between; 
         align-items: center;
         gap: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     }
+    .premium-header-title h1 {
+        font-size: 1.75rem; 
+        font-weight: 800; 
+        color: var(--text-main); 
+        margin: 0; 
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+        background: transparent !important;
+        text-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+    }
+    .premium-header-title .breadcrumbs {
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        color: var(--primary); 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+        margin-bottom: 8px; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+    }
+
+    /* Layout */
     .db-bottom-layout {
-        display: grid;
-        grid-template-columns: 400px 1fr;
-        gap: 32px;
-        align-items: start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-start;
         padding-bottom: 50px;
     }
+    .db-col-aside {
+        flex: 1 1 350px;
+        min-width: 320px;
+        max-width: 450px;
+    }
+    .db-col-main {
+        flex: 2 1 600px;
+        min-width: 0; /* Prevents flex children from overflowing */
+    }
+
+    /* Cards */
     .arch-card { 
         background: #ffffff; 
-        border-radius: 16px; 
-        border: 1px solid #e5e7eb; 
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        border-radius: var(--radius); 
+        border: 1px solid var(--border-color); 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
         overflow: hidden;
-        margin-bottom: 32px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
     }
     .arch-card-header { 
         background: #f9fafb; 
-        border-bottom: 1px solid #f3f4f6; 
-        padding: 20px 30px;
+        border-bottom: 1px solid var(--border-color); 
+        padding: 16px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 15px;
     }
     .arch-card-title {
-        font-size: 0.95rem; font-weight: 850; color: #064e3b; margin:0;
-        display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+        font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin:0;
+        display: flex; align-items: center; gap: 10px;
     }
+
+    /* Buttons */
     .arch-btn {
-        display: inline-flex; align-items: center; gap: 8px;
+        display: inline-flex; align-items: center; gap: 8px; justify-content: center;
         padding: 10px 20px; border-radius: 8px;
-        background: #059669; color: #ffffff; border: none;
-        font-weight: 700; font-size: 0.85rem; cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        white-space: nowrap;
+        background: var(--primary); color: #ffffff; border: none;
+        font-weight: 600; font-size: 0.9rem; cursor: pointer;
+        transition: all 0.2s ease; text-decoration: none;
     }
-    .arch-btn:hover { background: #065f46; transform: translateY(-1px); }
-    .arch-btn-secondary { background: #f3f4f6; color: #374151; }
-    .arch-btn-secondary:hover { background: #e5e7eb; }
+    .arch-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .arch-btn-secondary { background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); }
+    .arch-btn-secondary:hover { background: #f3f4f6; }
+    .arch-btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .arch-btn-danger:hover { background: #fecaca; }
+
+    /* Currency/Tax List */
+    .list-container {
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+    }
+    .list-item {
+        padding: 16px 24px; border-bottom: 1px solid var(--border-color); 
+        transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 16px; 
+        text-decoration: none; color: inherit; background: #ffffff;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item:hover { background: #f9fafb; }
+    .list-item.active { background: var(--primary-light); border-left: 4px solid var(--primary); padding-left: 20px; }
     
-    .arch-badge { padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; }
-    .arch-badge-success { background: #dcfce7; color: #166534; }
+    .arch-badge { padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }
+    .arch-badge-success { background: var(--primary-light); color: var(--primary-dark); }
     .arch-badge-neutral { background: #f3f4f6; color: #4b5563; }
-    
+
+    /* Form Grid */
     .arch-form-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 24px 40px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        padding: 0;
     }
-    .arch-form-label { display: block; font-size: 0.72rem; font-weight: 900; color: #064e3b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-    .arch-form-input { width: 100%; height: 48px; border-radius: 8px; border: 1.5px solid #d1fae5; padding: 0 16px; font-weight: 600; font-size: 0.95rem; transition: border-color 0.2s; }
-    .arch-form-input:focus { border-color: #059669; outline: none; box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1); }
-
-    .list-item {
-        padding: 16px 20px; border-bottom: 1px solid #f3f4f6; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;
+    .arch-form-field { display: flex; flex-direction: column; gap: 8px; }
+    .arch-form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    .arch-form-input { 
+        width: 100%; height: 44px; border-radius: 8px; border: 1px solid var(--border-color); 
+        padding: 0 16px; font-size: 0.95rem; transition: all 0.2s; color: var(--text-main); background: #ffffff;
+        box-sizing: border-box;
     }
-    .list-item:hover { background: #f0fdf4; }
-    .list-item.active { background: #ecfdf5; border-left: 4px solid #059669; padding-left: 16px; }
+    .arch-form-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-glow); }
 
-    .arch-table th { background: #f9fafb; color: #064e3b; font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #ecfdf5; padding: 15px 20px; text-align: left; }
-    .arch-table td { padding: 15px 20px; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; font-weight: 600; }
+    /* Tables */
+    .arch-table { width: 100%; border-collapse: collapse; }
+    .arch-table th { background: #f9fafb; color: var(--text-muted); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color); padding: 16px 20px; text-align: left; }
+    .arch-table td { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; font-weight: 600; color: var(--text-main); }
+    .arch-table tr:last-child td { border-bottom: none; }
 
     .section-divider {
         margin: 40px 0 24px 0;
         padding-bottom: 10px;
-        border-bottom: 1px solid #f3f4f6;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 12px;
-        color: #065f46;
+        color: var(--text-main);
     }
     .section-title {
-        font-size: 0.75rem;
-        font-weight: 950;
+        font-size: 0.85rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
+        letter-spacing: 1px;
     }
 
     @media (max-width: 992px) {
-        .db-bottom-layout { grid-template-columns: 1fr; }
-        .premium-header { position: relative; border-radius: 0; margin-left: calc(-1 * var(--page-padding)); margin-right: calc(-1 * var(--page-padding)); }
+        .db-bottom-layout { flex-direction: column; }
+        .db-col-aside, .db-col-main { width: 100%; max-width: none; }
         .db-col-aside { order: 2; }
         .db-col-main { order: 1; }
-    }
-
-    @media (max-width: 640px) {
-        :root { --page-padding: 15px; }
-        .premium-header-inner { flex-direction: column; align-items: flex-start; }
-        .arch-form-grid { grid-template-columns: 1fr; gap: 20px; }
+        .premium-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+        .list-container { max-height: 400px; }
     }
 </style>';
 
 echo '<div class="db-page">
 		<header class="premium-header">
-			<div class="premium-header-inner">
-                <div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-percent"></i> ' . __('Tax Setup') . ' <i class="fas fa-chevron-right" style="font-size: 0.6rem; opacity: 0.5;"></i> ' . __('Groups') . '
-                    </div>
-                    <h1 style="font-size: 2.2rem; font-weight: 950; letter-spacing: -1.5px; color: #064e3b; margin: 0; line-height: 1;">' . $Title . '</h1>
+			<div class="premium-header-title">
+                <div class="breadcrumbs">
+                    <i class="fas fa-percent"></i> ' . __('Tax Setup') . ' <i class="fas fa-chevron-right" style="font-size: 0.6rem; opacity: 0.5;"></i> ' . __('Groups') . '
                 </div>
-                <div>
-                    <a href="' . $RootPath . '/SelectOrderItems.php" class="arch-btn arch-btn-secondary">
-                        <i class="fas fa-arrow-left"></i> ' . __('Back to Orders') . '
-                    </a>
-                </div>
-			</div>
+                <h1>' . $Title . '</h1>
+            </div>
+            <div>
+                <a href="' . $RootPath . '/SelectOrderItems.php" class="arch-btn arch-btn-secondary">
+                    <i class="fas fa-arrow-left"></i> ' . __('Back to Orders') . '
+                </a>
+            </div>
 		</header>';
 
 if (isset($_GET['SelectedGroup'])) {

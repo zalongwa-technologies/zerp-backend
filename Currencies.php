@@ -15,138 +15,187 @@ include(__DIR__ . '/includes/header.php');
 // Inject premium Architect styles
 echo '<style>
     :root {
-        --primary: #059669;
-        --primary-dark: #065f46;
-        --primary-light: #ecfdf5;
-        --page-padding: 40px;
+        --primary: hsl(145, 63%, 38%);
+        --primary-hover: hsl(145, 63%, 32%);
+        --primary-dark: hsl(145, 45%, 22%);
+        --primary-light: hsl(145, 40%, 95%);
+        --primary-glow: hsla(145, 63%, 38%, 0.15);
+        --page-padding: 30px;
+        --border-color: #e5e7eb;
+        --radius: 12px;
+        --text-main: #111827;
+        --text-muted: #6b7280;
     }
     .db-page {
-        padding: 0 var(--page-padding);
-        max-width: 1600px;
+        padding: var(--page-padding);
+        max-width: 1400px;
         margin: 0 auto;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+    
+    /* Header Section */
     .premium-header { 
-        margin-bottom: 30px; 
-        padding: 24px 30px; 
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid #e5e7eb;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-    }
-    .premium-header-inner {
+        margin-bottom: 24px; 
+        padding: 24px; 
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
         display: flex; 
         justify-content: space-between; 
         align-items: center;
         gap: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     }
+    .premium-header-title h1 {
+        font-size: 1.75rem; 
+        font-weight: 800; 
+        color: var(--text-main); 
+        margin: 0; 
+        letter-spacing: -0.5px; /* Fixed extreme overlap issue */
+        line-height: 1.2;
+    }
+    .premium-header-title .breadcrumbs {
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        color: var(--primary); 
+        text-transform: uppercase; 
+        letter-spacing: 0.5px; 
+        margin-bottom: 8px; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px;
+    }
+
+    /* Layout */
     .db-bottom-layout {
-        display: grid;
-        grid-template-columns: 400px 1fr;
-        gap: 32px;
-        align-items: start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-start;
         padding-bottom: 50px;
     }
+    .db-col-aside {
+        flex: 1 1 350px;
+        min-width: 320px;
+        max-width: 450px;
+    }
+    .db-col-main {
+        flex: 2 1 600px;
+        min-width: 0; /* Prevents flex children from overflowing */
+    }
+
+    /* Cards */
     .arch-card { 
         background: #ffffff; 
-        border-radius: 16px; 
-        border: 1px solid #e5e7eb; 
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        border-radius: var(--radius); 
+        border: 1px solid var(--border-color); 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
         overflow: hidden;
-        margin-bottom: 32px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
     }
     .arch-card-header { 
         background: #f9fafb; 
-        border-bottom: 1px solid #f3f4f6; 
-        padding: 20px 30px;
+        border-bottom: 1px solid var(--border-color); 
+        padding: 16px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 15px;
     }
     .arch-card-title {
-        font-size: 0.95rem; font-weight: 850; color: #064e3b; margin:0;
-        display: flex; align-items: center; gap: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+        font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin:0;
+        display: flex; align-items: center; gap: 10px;
     }
+
+    /* Buttons */
     .arch-btn {
-        display: inline-flex; align-items: center; gap: 8px;
+        display: inline-flex; align-items: center; gap: 8px; justify-content: center;
         padding: 10px 20px; border-radius: 8px;
-        background: #059669; color: #ffffff; border: none;
-        font-weight: 700; font-size: 0.85rem; cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        white-space: nowrap;
+        background: var(--primary); color: #ffffff; border: none;
+        font-weight: 600; font-size: 0.9rem; cursor: pointer;
+        transition: all 0.2s ease; text-decoration: none;
     }
-    .arch-btn:hover { background: #065f46; transform: translateY(-1px); }
-    .arch-btn-secondary { background: #f3f4f6; color: #374151; }
-    .arch-btn-secondary:hover { background: #e5e7eb; }
+    .arch-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .arch-btn-secondary { background: #ffffff; color: var(--text-main); border: 1px solid var(--border-color); }
+    .arch-btn-secondary:hover { background: #f3f4f6; }
+    .arch-btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .arch-btn-danger:hover { background: #fecaca; }
+
+    /* Currency List */
+    .currency-list-container {
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+    }
+    .currency-list-item {
+        padding: 16px 24px; border-bottom: 1px solid var(--border-color); 
+        transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 16px; 
+        text-decoration: none; color: inherit; background: #ffffff;
+    }
+    .currency-list-item:last-child { border-bottom: none; }
+    .currency-list-item:hover { background: #f9fafb; }
+    .currency-list-item.active { background: var(--primary-light); border-left: 4px solid var(--primary); padding-left: 20px; }
     
-    .arch-badge { padding: 4px 10px; border-radius: 10px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; }
-    .arch-badge-success { background: #dcfce7; color: #166534; }
-    .arch-badge-neutral { background: #f3f4f6; color: #4b5563; }
-    
+    .arch-badge { padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }
+
+    /* Form Grid */
     .arch-form-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px 50px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        padding: 24px;
     }
-    .arch-form-field { margin-bottom: 24px; }
-    .arch-form-label { display: block; font-size: 0.72rem; font-weight: 900; color: #064e3b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-    .arch-form-input { width: 100%; height: 48px; border-radius: 8px; border: 1.5px solid #d1fae5; padding: 0 16px; font-weight: 600; font-size: 0.95rem; transition: border-color 0.2s; }
-    .arch-form-input:focus { border-color: #059669; outline: none; box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1); }
+    .arch-form-field { display: flex; flex-direction: column; gap: 8px; }
+    .arch-form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    .arch-form-input { 
+        width: 100%; height: 44px; border-radius: 8px; border: 1px solid var(--border-color); 
+        padding: 0 16px; font-size: 0.95rem; transition: all 0.2s; color: var(--text-main); background: #ffffff;
+        box-sizing: border-box;
+    }
+    .arch-form-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px var(--primary-glow); }
+    .arch-form-input:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
 
-    .currency-list-item {
-        padding: 16px 20px; border-bottom: 1px solid #f3f4f6; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit;
+    /* Functional Currency Summary */
+    .summary-card {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #ffffff;
+        padding: 32px 40px;
+        border-radius: var(--radius);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 15px -3px var(--primary-glow);
+        position: relative;
+        overflow: hidden;
     }
-    .currency-list-item:hover { background: #f0fdf4; }
-    .currency-list-item.active { background: #ecfdf5; border-left: 4px solid #059669; padding-left: 16px; }
-
-    /* Summary Card Responsiveness */
-    .summary-card-content {
-        padding: 40px; color: #ffffff; display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden;
-    }
-
-    @media (max-width: 1024px) {
-        .db-bottom-layout { grid-template-columns: 320px 1fr; gap: 20px; }
-        :root { --page-padding: 20px; }
-    }
+    .summary-icon { position: absolute; right: -20px; top: -30px; font-size: 12rem; opacity: 0.08; transform: rotate(-15deg); }
 
     @media (max-width: 992px) {
-        .db-bottom-layout { grid-template-columns: 1fr; }
-        .premium-header { position: relative; border-radius: 0; margin-left: calc(-1 * var(--page-padding)); margin-right: calc(-1 * var(--page-padding)); }
+        .db-bottom-layout { flex-direction: column; }
+        .db-col-aside, .db-col-main { width: 100%; max-width: none; }
         .db-col-aside { order: 2; }
         .db-col-main { order: 1; }
-    }
-
-    @media (max-width: 640px) {
-        :root { --page-padding: 15px; }
-        .premium-header-inner { flex-direction: column; align-items: flex-start; }
-        .arch-form-grid { grid-template-columns: 1fr; gap: 20px; }
-        .summary-card-content { flex-direction: column; align-items: flex-start; gap: 20px; padding: 30px; }
-        .summary-card-content h2 { font-size: 2rem !important; }
-        .arch-card-header { padding: 15px 20px; flex-direction: column; align-items: flex-start; gap: 10px; }
-        .db-card-body { padding: 20px !important; }
+        .summary-card { flex-direction: column; align-items: flex-start; gap: 24px; padding: 24px; }
+        .premium-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+        .currency-list-container { max-height: 400px; }
     }
 </style>';
 
 echo '<div class="db-page">
 		<header class="premium-header">
-			<div class="premium-header-inner">
-                <div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-globe-africa"></i> ' . __('Internationalization') . ' <i class="fas fa-chevron-right" style="font-size: 0.6rem; opacity: 0.5;"></i> ' . __('Core Setup') . '
-                    </div>
-                    <h1 style="font-size: 2.2rem; font-weight: 950; letter-spacing: -1.5px; color: #064e3b; margin: 0; line-height: 1;">' . $Title . '</h1>
+			<div class="premium-header-title">
+                <div class="breadcrumbs">
+                    <i class="fas fa-globe-africa"></i> ' . __('Internationalization') . ' <i class="fas fa-chevron-right" style="font-size: 0.6rem; opacity: 0.5;"></i> ' . __('Core Setup') . '
                 </div>
-                <div>
-                    <a href="' . $RootPath . '/SelectOrderItems.php" class="arch-btn arch-btn-secondary">
-                        <i class="fas fa-arrow-left"></i> ' . __('Back to Orders') . '
-                    </a>
-                </div>
-			</div>
+                <h1>' . $Title . '</h1>
+            </div>
+            <div>
+                <a href="' . $RootPath . '/SelectOrderItems.php" class="arch-btn arch-btn-secondary">
+                    <i class="fas fa-arrow-left"></i> ' . __('Back to Orders') . '
+                </a>
+            </div>
 		</header>';
 
 include_once(__DIR__ . '/includes/CountriesArray.php');
@@ -299,9 +348,9 @@ echo '<div class="db-bottom-layout">
         <aside class="db-col-aside">
             <div class="arch-card" style="position: sticky; top: 100px;">
                 <div class="arch-card-header">
-                    <h3 class="arch-card-title"><i class="fas fa-list-ul"></i> ' . __('All Currencies') . '</h3>
+                    <h3 class="arch-card-title"><i class="fas fa-list-ul" style="color:var(--primary);"></i> ' . __('All Currencies') . '</h3>
                 </div>
-                <div class="db-card-body" style="padding:0; max-height: calc(100vh - 250px); overflow-y: auto;">';
+                <div class="currency-list-container">';
 
     $SQL = "SELECT currabrev, country, hundredsname, rate, decimalplaces, webcart FROM currencies ORDER BY currabrev";
     $Result = DB_query($SQL);
@@ -314,13 +363,13 @@ echo '<div class="db-bottom-layout">
         if (!file_exists('images/flags/' . $ImageFile)) $ImageFile = 'blank.gif';
 
         echo '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?SelectedCurrency=' . $MyRow['currabrev'] . '" class="currency-list-item ' . $isActive . '">
-                <img alt="" src="' . $RootPath . '/images/flags/' . $ImageFile . '" style="width:20px; border-radius:2px;" />
+                <img alt="" src="' . $RootPath . '/images/flags/' . $ImageFile . '" style="width:24px; border-radius:3px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
                 <div style="flex:1;">
-                    <div style="font-weight: 800; font-size: 0.85rem;">' . $MyRow['currabrev'] . ' ' . ($isFunctional ? '<span class="arch-badge arch-badge-neutral" style="font-size:0.55rem; padding:2px 6px; background:#e0f2fe; color:#0369a1;">BASE</span>' : '') . '</div>
-                    <div style="font-size: 0.72rem; color:#6b7280; font-weight:600;">' . $CurrencyName[$MyRow['currabrev']] . '</div>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-main); margin-bottom: 2px;">' . $MyRow['currabrev'] . ' ' . ($isFunctional ? '<span class="arch-badge" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.6rem;">BASE</span>' : '') . '</div>
+                    <div style="font-size: 0.8rem; color:var(--text-muted);">' . $CurrencyName[$MyRow['currabrev']] . '</div>
                 </div>
-                <div class="text-right">
-                    <div style="font-weight: 800; font-size: 0.8rem; font-family:var(--font-mono); color:#111827;">' . locale_number_format($MyRow['rate'], 'Variable') . '</div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 700; font-size: 0.9rem; font-family: monospace; color: var(--text-main);">' . locale_number_format($MyRow['rate'], 'Variable') . '</div>
                 </div>
               </a>';
     }
@@ -331,18 +380,16 @@ echo '<div class="db-bottom-layout">
 
         <main class="db-col-main">
             <!-- Functional Currency Summary Card -->
-            <div class="arch-card" style="background: linear-gradient(135deg, #059669 0%, #064e3b 100%); border: none;">
-                <div class="summary-card-content">
-                    <i class="fas fa-coins" style="font-size: 8rem; opacity: 0.1; position: absolute; right: -20px; top: -10px; transform: rotate(-15deg);"></i>
-                    <div style="position: relative; z-index: 2;">
-                        <div style="font-size: 0.72rem; font-weight: 850; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; margin-bottom: 8px;">System Functional Currency</div>
-                        <h2 style="font-size: 2.8rem; font-weight: 950; margin: 0; color: #ffffff; line-height: 1; letter-spacing: -1.5px;">' . $FunctionalCurrency . '</h2>
-                        <div style="font-size: 1.1rem; font-weight: 600; opacity: 0.9; margin-top: 5px;">' . $CurrencyName[$FunctionalCurrency] . '</div>
-                    </div>
-                    <div style="text-align: right; position: relative; z-index: 2;" class="summary-card-rate-box">
-                        <div style="font-size: 0.72rem; font-weight: 850; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; opacity: 0.8;">Base Exchange Rate</div>
-                        <div style="font-size: 2rem; font-weight: 950; font-family: var(--font-mono); letter-spacing: -1px;">1.0000</div>
-                    </div>
+            <div class="summary-card">
+                <i class="fas fa-coins summary-icon"></i>
+                <div style="position: relative; z-index: 2;">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; margin-bottom: 8px;">System Functional Currency</div>
+                    <h2 style="font-size: 2.5rem; font-weight: 800; margin: 0; color: #ffffff; line-height: 1;">' . $FunctionalCurrency . '</h2>
+                    <div style="font-size: 1.05rem; font-weight: 500; opacity: 0.9; margin-top: 8px;">' . $CurrencyName[$FunctionalCurrency] . '</div>
+                </div>
+                <div style="text-align: right; position: relative; z-index: 2;">
+                    <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; opacity: 0.9;">Base Exchange Rate</div>
+                    <div style="font-size: 2rem; font-weight: 800; font-family: monospace;">1.0000</div>
                 </div>
             </div>';
 
@@ -366,7 +413,7 @@ echo '<div class="db-bottom-layout">
             echo '<input type="hidden" name="Abbreviation" value="' . $_POST['Abbreviation'] . '" />';
 
             $formTitle = __('Currency Maintenance');
-            $formSubtitle = __('Updating') . ' <span style="color:#059669; font-weight:900;">' . $_POST['Abbreviation'] . '</span>';
+            $formSubtitle = __('Updating') . ' <span style="color:var(--primary); font-weight:700;">' . $_POST['Abbreviation'] . '</span>';
             $formIcon = 'fas fa-edit';
         } else {
             if (!isset($_POST['Abbreviation'])) $_POST['Abbreviation'] = '';
@@ -384,20 +431,20 @@ echo '<div class="db-bottom-layout">
         echo '<div class="arch-card">
                 <div class="arch-card-header">
                     <div>
-                        <h3 class="arch-card-title"><i class="' . $formIcon . '" style="color:#059669;"></i> ' . $formTitle . '</h3>
-                        <div style="font-size: 0.75rem; color: #6b7280; margin-top: 5px; font-weight:600;">' . $formSubtitle . '</div>
+                        <h3 class="arch-card-title"><i class="' . $formIcon . '" style="color:var(--primary);"></i> ' . $formTitle . '</h3>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">' . $formSubtitle . '</div>
                     </div>
-                    ' . (isset($SelectedCurrency) ? '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" class="arch-btn arch-btn-secondary" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; padding:8px 16px;">
-                        <i class="fas fa-times-circle"></i> ' . __('Exit Editor') . '
+                    ' . (isset($SelectedCurrency) ? '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" class="arch-btn arch-btn-danger">
+                        <i class="fas fa-times"></i> ' . __('Exit Editor') . '
                     </a>' : '') . '
                 </div>
-                <div class="db-card-body">
+                <div style="padding: 0;">
                     <div class="arch-form-grid">';
 
         if (isset($SelectedCurrency)) {
             echo '<div class="arch-form-field">
                     <label class="arch-form-label">' . __('ISO 4217 Currency Code') . '</label>
-                    <input type="text" class="arch-form-input" style="background:#f9fafb; color:#9ca3af; border-color:#e5e7eb; cursor:not-allowed;" value="' . $_POST['Abbreviation'] . '" disabled />
+                    <input type="text" class="arch-form-input" value="' . $_POST['Abbreviation'] . '" disabled />
                 </div>';
         } else {
             echo '<div class="arch-form-field">
@@ -415,7 +462,7 @@ echo '<div class="db-bottom-layout">
         if ($_POST['Abbreviation'] != $FunctionalCurrency) {
             echo '<input type="text" name="Country" class="arch-form-input" required maxlength="50" value="' . $_POST['Country'] . '" />';
         } else {
-            echo '<input type="text" class="arch-form-input" style="background:#f9fafb; color:#9ca3af; border-color:#e5e7eb; cursor:not-allowed;" value="' . $_POST['Country'] . '" disabled />';
+            echo '<input type="text" class="arch-form-input" value="' . $_POST['Country'] . '" disabled />';
             echo '<input type="hidden" name="Country" value="' . $_POST['Country'] . '" />';
         }
         echo '</div>';
@@ -435,7 +482,7 @@ echo '<div class="db-bottom-layout">
         if ($_POST['Abbreviation'] != $FunctionalCurrency) {
             echo '<input type="text" name="ExchangeRate" class="arch-form-input number" required value="' . $_POST['ExchangeRate'] . '" />';
         } else {
-            echo '<input type="text" class="arch-form-input" style="background:#f9fafb; color:#9ca3af; border-color:#e5e7eb; cursor:not-allowed;" value="' . $_POST['ExchangeRate'] . '" disabled />';
+            echo '<input type="text" class="arch-form-input" value="' . $_POST['ExchangeRate'] . '" disabled />';
             echo '<input type="hidden" name="ExchangeRate" value="' . $_POST['ExchangeRate'] . '" />';
         }
         echo '</div>';
@@ -447,12 +494,11 @@ echo '<div class="db-bottom-layout">
                     <option value="0" ' . (($_POST['webcart'] == 0) ? 'selected' : '') . '>' . __('No') . '</option>
                 </select>
             </div>
-        </div></div>'; // End grid & db-card-body
+        </div></div>'; // End grid
 
-        echo '<div style="padding: 32px 50px; background: #f9fafb; border-top: 1px solid #f3f4f6; display: flex; justify-content: center;" class="arch-form-footer">
-                <button type="submit" name="submit" class="arch-btn" style="padding:16px 60px; font-size:1.05rem; box-shadow: 0 10px 25px -5px rgba(5, 150, 105, 0.4);">
-                    <i class="fas fa-check-double" style="margin-right:12px;"></i>
-                    ' . (isset($SelectedCurrency) ? __('Update Currency') : __('Create Currency')) . '
+        echo '<div style="padding: 24px; background: #f9fafb; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;" class="arch-form-footer">
+                <button type="submit" name="submit" class="arch-btn">
+                    <i class="fas fa-check"></i> ' . (isset($SelectedCurrency) ? __('Update Currency') : __('Create Currency')) . '
                 </button>
             </div>
         </div></form>';

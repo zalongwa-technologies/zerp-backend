@@ -91,6 +91,7 @@ $ExtraHeadContent = '
         max-width: 1400px;
         margin-left: auto;
         margin-right: auto;
+        width: 100%;
 	}
 	.db-card-header { 
 		background: #f9fafb; 
@@ -108,19 +109,23 @@ $ExtraHeadContent = '
 		text-transform: uppercase;
 		letter-spacing: 1px;
 	}
-    .db-card-body { padding: 40px; }
+    .db-card-body { 
+        padding: 40px; 
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 30px 40px;
+    }
 	
     /* Target legacy webERP field structure */
     fieldset { border: none; padding: 0; margin: 0; }
     legend { display: none; }
     
     field {
-        display: block;
-        margin-bottom: 24px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #f9fafb;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
     }
-    field:last-child { border-bottom: none; }
     
     field label {
         font-size: 0.75rem; 
@@ -129,7 +134,7 @@ $ExtraHeadContent = '
         letter-spacing: 1.2px; 
         color: var(--primary-dark); 
         display: block; 
-        margin-bottom: 10px;
+        margin-bottom: 0;
         line-height: 1.4;
         overflow-wrap: break-word;
         white-space: normal;
@@ -590,7 +595,7 @@ echo '<div class="db-page">
 		</div>';
 
 echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '">
-        <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
+        <input type="hidden" name="FormID" value="' . (isset($_SESSION['FormID']) ? $_SESSION['FormID'] : '') . '" />
         
         <div class="db-main-content">
                 <!-- Panel 1: General -->

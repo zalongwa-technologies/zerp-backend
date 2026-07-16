@@ -204,19 +204,7 @@ if (isset($_POST['submit'])) {
 			$safe[$k] = DB_escape_string(isset($_POST[$k]) ? (string)$_POST[$k] : '');
 		}
 
-		$CompanyFileHandler = @fopen($PathPrefix . 'companies/' . $_SESSION['DatabaseName'] . '/Companies.php', 'w');
-		if ($CompanyFileHandler) {
-			$Contents = "<?php\n\n";
-			$Contents.= "\$CompanyName['" . $_SESSION['DatabaseName'] . "'] = '" . addslashes($_POST['CoyName']) . "';\n";
-			$Contents.= "?>";
 
-			if (!fwrite($CompanyFileHandler, $Contents)) {
-				prnMsg(__('Cannot write to the Companies.php file'), 'error');
-			}
-			fclose($CompanyFileHandler);
-		} else {
-			prnMsg(__('Cannot open the Companies.php file for writing. Please check folder permissions.'), 'warn');
-		}
 
 		$SQL = "UPDATE companies SET coyname='" . $safe['CoyName'] . "',
 									companynumber = '" . $safe['CompanyNumber'] . "',

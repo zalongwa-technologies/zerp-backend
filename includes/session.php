@@ -419,7 +419,7 @@ if ($FirstLogin) {
 ///       the form. Or just also do the check on Login...
 if (!isset($_POST['CompanyNameField']) and sizeof($_POST) > 0 and !isset($AllowAnyone)) {
 	/* Security check to ensure that the form submitted is originally sourced from webERP with the FormID = $_SESSION['FormID'] - which is set before the first login */
-	if (!isset($_POST['FormID']) or ($_POST['FormID'] != $_SESSION['FormID'])) {
+	if (!isset($_POST['FormID']) or ($_POST['FormID'] != ($_SESSION['FormID'] ?? ''))) {
 		$Title = __('Error in form verification');
 		include('includes/header.php');
 		prnMsg(__('This form was not submitted with a correct ID'), 'error');

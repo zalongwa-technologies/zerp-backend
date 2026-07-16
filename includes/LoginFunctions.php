@@ -211,9 +211,11 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 									if ($NewRate == '') {
 										$NewRate = 1;
 									}
-									DB_query("UPDATE currencies
-											SET rate='" . $NewRate . "'
-											WHERE currabrev='" . $CurrencyRow[0] . "'");
+									if ($NewRate != '' && is_numeric($NewRate) && $NewRate > 0) {
+										DB_query("UPDATE currencies
+												SET rate='" . $NewRate . "'
+												WHERE currabrev='" . $CurrencyRow[0] . "'");
+									}
 								}
 							}
 						}
@@ -227,9 +229,11 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 									$CurrencyRatesArray = array();
 								}
 								$NewRate = GetCurrencyRate($CurrencyRow[0], $CurrencyRatesArray);
-								DB_query("UPDATE currencies
-											SET rate='" . $NewRate . "'
-											WHERE currabrev='" . $CurrencyRow[0] . "'");
+								if ($NewRate != '' && is_numeric($NewRate) && $NewRate > 0) {
+									DB_query("UPDATE currencies
+												SET rate='" . $NewRate . "'
+												WHERE currabrev='" . $CurrencyRow[0] . "'");
+								}
 							}
 						}
 					}

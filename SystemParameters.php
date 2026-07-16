@@ -193,6 +193,35 @@ if (isset($_POST['submit'])) {
 	//initialise no input errors assumed initially before we test
 	$InputError = 0;
 
+    // Ensure all config keys that are expected in POST are initialized to avoid PHP 8 warnings
+    $expected_keys = [
+        'X_PastDueDays1', 'X_PastDueDays2', 'X_DefaultCreditLimit', 'X_RomalpaClause',
+        'X_QuickEntries', 'X_MaxSerialItemsIssued', 'X_FreightChargeAppliesIfLessThan',
+        'X_StandardCostDecimalPlaces', 'X_TaxAuthorityReferenceName', 'X_CountryOfOperation',
+        'X_NumberOfPeriodsOfStockUsage', 'X_Check_Price_Charged_vs_Order_Price',
+        'X_Check_Qty_Charged_vs_Del_Qty', 'X_OverChargeProportion', 'X_OverReceiveProportion',
+        'X_PO_AllowSameItemMultipleTimes', 'X_So_AllowSameItemMultipleTimes', 'X_YearEnd',
+        'X_PageLength', 'X_DefaultTheme', 'X_DefaultBlindPackNote', 'X_Show_Settlement_Discount',
+        'X_Show_Value_On_GRN', 'X_PackNoteFormat', 'X_DispatchCutOffTime', 'X_AllowSalesOfZeroCostItems',
+        'X_CreditingControlledItems_MustExist', 'X_DefaultPriceList', 'X_Default_Shipper',
+        'X_DoFreightCalc', 'X_FreightTaxCategory', 'X_ExchangeRateFeed', 'X_CurrencyUpdatedDaily',
+        'X_UpdateCurrencyRatesDaily', 'X_FactoryManagerEmail', 'X_PurchasingManagerEmail',
+        'X_InventoryManagerEmail', 'X_AutoCreateWOs', 'X_DefaultFactoryLocation', 'X_WikiApp',
+        'X_WikiPath', 'X_ProhibitPostingsBefore', 'X_ProhibitJournalsToControlAccounts',
+        'X_InvoicePortraitFormat', 'X_AllowOrderLineItemNarrative', 'X_RequireSelectingASalesman',
+        'X_UpdateCSVs', 'X_ProhibitNegativeStock', 'X_PO_AuthorisationEnable',
+        'X_WeightedAverageCosting', 'X_AutoDebtorNo', 'X_AutoSupplierNo', 'X_DB_Maintenance',
+        'X_RadBeaconFTP', 'X_RadBeaconUserName', 'X_RadBeaconPassword', 'X_RadBeaconSystemIP',
+        'X_part_pics_dir', 'X_reports_dir', 'X_VersionNumber', 'X_SmtpSetting', 'X_LogPath', 'X_LogSeverity',
+        'X_NumberOfMonthMustBeShown', 'X_MaxImageSize', 'X_ShowStockidOnImages'
+    ];
+    foreach ($expected_keys as $key) {
+        if (!isset($_POST[$key])) {
+            $sess_key = str_replace('X_', '', $key);
+            $_POST[$key] = $_SESSION[$sess_key] ?? '';
+        }
+    }
+
 	/* actions to take once the user has clicked the submit button
 	ie the page has called itself with some user input */
 
@@ -408,10 +437,10 @@ if (isset($_POST['submit'])) {
 		if ($_SESSION['NumberOfMonthMustBeShown'] != $_POST['X_NumberOfMonthMustBeShown'] ) {
 			$SQL[] = "UPDATE config SET confvalue = '".$_POST['X_NumberOfMonthMustBeShown']."' WHERE confname = 'NumberOfMonthMustBeShown'";
 		}
-		if ($_SESSION['part_pics_dir'] != $_POST['X_part_pics_dir'] ) {
+		if (($_SESSION['part_pics_dir'] ?? '') != $_POST['X_part_pics_dir'] ) {
 			$SQL[] = "UPDATE config SET confvalue = 'companies/" . $_SESSION['DatabaseName'] . '/' . $_POST['X_part_pics_dir']."' WHERE confname = 'part_pics_dir'";
 		}
-		if ($_SESSION['reports_dir'] != $_POST['X_reports_dir'] ) {
+		if (($_SESSION['reports_dir'] ?? '') != $_POST['X_reports_dir'] ) {
 			$SQL[] = "UPDATE config SET confvalue = 'companies/" . $_SESSION['DatabaseName'] . '/' . $_POST['X_reports_dir']."' WHERE confname = 'reports_dir'";
 		}
 		if ($_SESSION['AutoDebtorNo'] != $_POST['X_AutoDebtorNo'] ) {
@@ -577,7 +606,9 @@ if (isset($_POST['submit'])) {
 
 } /* end of if submit */
 
-echo '<div class="db-page">
+echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '">
+        <input type="hidden" name="FormID" value="' . (isset($_SESSION['FormID']) ? $_SESSION['FormID'] : '') . '" />
+        <div class="db-page">
 		<div class="premium-header">
 			<div class="premium-header-inner">
 				<div>
@@ -587,16 +618,13 @@ echo '<div class="db-page">
 					<div class="premium-header-title"><h1>' . $Title . '</h1></div>
 				</div>
                 <div>
-                     <button type="submit" form="main-form" name="submit" class="architect-btn">
+                     <button type="submit" name="submit" class="architect-btn">
                         <i class="fas fa-cloud-upload-alt"></i> ' . __('Update System Parameters') . '
                     </button>
                 </div>
 			</div>
-		</div>';
+		</div>
 
-echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '">
-        <input type="hidden" name="FormID" value="' . (isset($_SESSION['FormID']) ? $_SESSION['FormID'] : '') . '" />
-        
         <div class="db-main-content">
                 <!-- Panel 1: General -->
                 
@@ -1137,8 +1165,8 @@ echo '<!-- Panel 5: Inventory -->
                 // Storage
                 echo '<div style="margin-top: 40px; border-top: 2px solid #f3f4f6; padding-top: 30px;">
                         <h4 style="font-size: 0.8rem; text-transform: uppercase; font-weight: 850; color: #065f46; margin-bottom: 25px;">' . __('Asset & Storage Paths') . '</h4>';
-                    echo '<field><label for="X_part_pics_dir">' . __('Product Images Directory') . ':</label><input type="text" name="X_part_pics_dir" placeholder="e.g. part_pics" value="' . basename($_SESSION['part_pics_dir']) . '" /><fieldhelp>' . __('Folder name inside your company directory.') . '</fieldhelp></field>';
-                    echo '<field><label for="X_reports_dir">' . __('Report PDF Directory') . ':</label><input type="text" name="X_reports_dir" placeholder="e.g. reports" value="' . basename($_SESSION['reports_dir']) . '" /><fieldhelp>' . __('Folder name for generated PDF files.') . '</fieldhelp></field>';
+                    echo '<field><label for="X_part_pics_dir">' . __('Product Images Directory') . ':</label><input type="text" name="X_part_pics_dir" placeholder="e.g. part_pics" value="' . basename(($_SESSION['part_pics_dir'] ?? '')) . '" /><fieldhelp>' . __('Folder name inside your company directory.') . '</fieldhelp></field>';
+                    echo '<field><label for="X_reports_dir">' . __('Report PDF Directory') . ':</label><input type="text" name="X_reports_dir" placeholder="e.g. reports" value="' . basename(($_SESSION['reports_dir'] ?? '')) . '" /><fieldhelp>' . __('Folder name for generated PDF files.') . '</fieldhelp></field>';
                     echo '<field><label for="X_MaxImageSize">' . __('Max Image Size (KB)') . ':</label><input type="text" name="X_MaxImageSize" value="' . $_SESSION['MaxImageSize'] . '" /></field>';
                 echo '</div>';
 
@@ -1243,8 +1271,8 @@ echo '<!-- Panel 6: System -->
                 </div>
             </div>
         </div>
-    </form>
-</div>
+    </div>
+</form>
 <?php
 include(__DIR__ . '/includes/footer.php');
 ?>

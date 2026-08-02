@@ -125,12 +125,34 @@ echo '
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
-		font-size: 0.75rem;
-		font-weight: 700;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--primary);
+		font-size: 0.825rem;
+		font-weight: 600;
+		color: var(--text-muted);
 		margin-bottom: var(--space-1);
+		flex-wrap: wrap;
+	}
+	.aw-breadcrumb a {
+		color: var(--primary);
+		text-decoration: none;
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		transition: color var(--transition-fast);
+	}
+	.aw-breadcrumb a:hover {
+		color: var(--primary-hover);
+		text-decoration: none;
+	}
+	.aw-breadcrumb .separator {
+		display: inline-flex;
+		align-items: center;
+		color: var(--text-muted);
+		opacity: 0.5;
+		font-size: 0.7rem;
+	}
+	.aw-breadcrumb span.active-page {
+		color: var(--primary-dark);
+		font-weight: 700;
 	}
 
 	.aw-grid-main {
@@ -366,10 +388,19 @@ if (isset($_POST['EnterLines']) or isset($_POST['AllowRePrint'])) {
 echo '<div class="aw-page-header">
 		<div class="aw-page-title-group">
 			<div class="aw-breadcrumb">
-				<span>' . __('Purchasing') . '</span>
-				<span>/</span>
-				<span>' . __('Orders') . '</span>
-			</div>
+				<a href="index.php"><i class="fa-solid fa-house" style="font-size: 0.8rem;"></i> ' . __('Home') . '</a>
+				<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+				<a href="index.php?Application=PO">' . __('Purchases') . '</a>
+				<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+				';
+			if (!empty($_SESSION['ExistingOrder'])) {
+				echo '<a href="' . $RootPath . '/PO_SelectOSPurchOrder.php">' . __('Purchase Orders') . '</a>
+					<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>
+					<span class="active-page">' . __('Edit Purchase Order') . ' (' . $_SESSION['ExistingOrder'] . ')</span>';
+			} else {
+				echo '<span class="active-page">' . __('New Purchase Order') . '</span>';
+			}
+			echo '</div>'
 			<h1>' . $Title . '</h1>
 		</div>
 		<div class="aw-page-actions">

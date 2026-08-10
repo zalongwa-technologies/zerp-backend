@@ -90,7 +90,11 @@ $ExtraHeadContent = '
     
     .db-form-container {
         width: 100%;
+<<<<<<< HEAD
         max-width: 900px;
+=======
+        max-width: 1000px;
+>>>>>>> e520f144b3ba92ff7454aa7087eb6424c4b6d323
         margin: 0 auto;
     }
 
@@ -213,8 +217,6 @@ if (isset($_POST['submit'])) {
 			fclose($CompanyFileHandler);
 			echo '<div class="error">' . __('Cannot write to the Companies.php file') . '</div>';
 		}
-		//close file
-		fclose($CompanyFileHandler);
 
 		$SQL = "UPDATE companies SET coyname='" . $safe['CoyName'] . "',
 									companynumber = '" . $safe['CompanyNumber'] . "',
@@ -259,9 +261,13 @@ if (isset($_POST['submit'])) {
 			$NewCurrencyRate=$MyRow[0];
 
 			/* Set new rates */
-			$SQL="UPDATE currencies SET rate=rate/" . $NewCurrencyRate;
-			$ErrMsg =  __('Could not update the currency rates');
-			$Result = DB_query($SQL, $ErrMsg);
+			if (is_numeric($NewCurrencyRate) && floatval($NewCurrencyRate) > 0) {
+				$SQL="UPDATE currencies SET rate=rate/" . floatval($NewCurrencyRate);
+				$ErrMsg =  __('Could not update the currency rates');
+				$Result = DB_query($SQL, $ErrMsg);
+			} else {
+				prnMsg(__('Could not update currency rates because the default currency rate is invalid.'), 'warn');
+			}
 
 			/* End of update currencies */
 

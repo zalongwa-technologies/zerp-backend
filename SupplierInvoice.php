@@ -1349,10 +1349,10 @@ if (!isset($_POST['PostInvoice'])) {
 
     // --- ACTION TOOLBAR ---
     echo '<div style="margin-bottom: 16px; display: flex; gap: 20px;">
-            <button type="submit" name="GRNS" value="' . __('Purchase Orders') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-shopping-cart"></i> ' . __('+ PO Items') . '</button>
-            <button type="submit" name="Shipts" value="' . __('Shipments') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-truck"></i> ' . __('+ Shipment') . '</button>
-            <button type="submit" name="Contracts" value="' . __('Contracts') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-file-contract"></i> ' . __('+ Contract') . '</button>
-            <button type="submit" name="FixedAssets" value="' . __('Fixed Assets') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-briefcase"></i> ' . __('+ Fixed Asset') . '</button>
+            <button type="submit" formnovalidate="formnovalidate" name="GRNS" value="' . __('Purchase Orders') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-shopping-cart"></i> ' . __('+ PO Items') . '</button>
+            <button type="submit" formnovalidate="formnovalidate" name="Shipts" value="' . __('Shipments') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-truck"></i> ' . __('+ Shipment') . '</button>
+            <button type="submit" formnovalidate="formnovalidate" name="Contracts" value="' . __('Contracts') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-file-contract"></i> ' . __('+ Contract') . '</button>
+            <button type="submit" formnovalidate="formnovalidate" name="FixedAssets" value="' . __('Fixed Assets') . '" style="background:none; border:none; padding:0; cursor:pointer; color: #059669; font-weight: 700;"><i class="fas fa-briefcase"></i> ' . __('+ Fixed Asset') . '</button>
           </div>';
 
     // --- THE SPREADSHEET TABLE ---

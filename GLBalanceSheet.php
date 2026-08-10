@@ -19,17 +19,32 @@ if (isset($_GET['ShowDetail'])) $_POST['ShowDetail'] = $_GET['ShowDetail'];
 if (isset($_GET['ShowZeroBalance'])) $_POST['ShowZeroBalance'] = $_GET['ShowZeroBalance'];
 
 if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsheet'])) {
-	$RetainedEarningsAct = $_SESSION['CompanyRecord']['retainedearnings'];
-	$BalanceDate = ConvertSQLDate(EndDateSQLFromPeriodNo($_POST['PeriodTo']));
-
-	$ThisYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $_POST['PeriodTo'] . "' AND pandl=1"));
-	$LastYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . ($_POST['PeriodTo'] - 12) . "' AND pandl=1"));
-
-	$AccountListResult = DB_query("SELECT sectionid, sectionname, sectioninaccounts, parentgroupname, chartmaster.accountcode, group_, accountname, pandl FROM chartmaster INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ INNER JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts WHERE pandl=0 ORDER BY sequenceintb, group_, accountcode");
+	$RetainedEarningsAct = $_SESSION['CompanyRecord']['retainedearnings'] ?? 0;
+	$DecimalPlaces = isset($_SESSION['CompanyRecord']['decimalplaces']) ? (int)$_SESSION['CompanyRecord']['decimalplaces'] : 2;
+	$PeriodTo = isset($_POST['PeriodTo']) ? (int)$_POST['PeriodTo'] : 0;
+	$ShowDetail = $_POST['ShowDetail'] ?? 'Detailed';
 	
-    $ResultActual = DB_query("SELECT account, ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $_POST['PeriodTo'] . "' GROUP BY account");
+	$ThisYearSQLDate = EndDateSQLFromPeriodNo($PeriodTo);
+	$BalanceDate = !empty($ThisYearSQLDate) ? ConvertSQLDate($ThisYearSQLDate) : '';
+	
+	$LastYearPeriod = $PeriodTo - 12;
+	$LastYearSQLDate = EndDateSQLFromPeriodNo($LastYearPeriod);
+	$LastYearBalanceDate = !empty($LastYearSQLDate) ? ConvertSQLDate($LastYearSQLDate) : '';
+	
+	$ThisYearTimestamp = !empty($ThisYearSQLDate) ? strtotime($ThisYearSQLDate) : false;
+	$ThisYear = ($ThisYearTimestamp !== false) ? (int)date('Y', $ThisYearTimestamp) : (int)date('Y');
+	
+	$LastYearTimestamp = !empty($LastYearSQLDate) ? strtotime($LastYearSQLDate) : false;
+	$LastYear = ($LastYearTimestamp !== false) ? (int)date('Y', $LastYearTimestamp) : ($ThisYear - 1);
+
+	$ThisYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $PeriodTo . "' AND pandl=1"));
+	$LastYearRetainedEarningsRow = DB_fetch_array(DB_query("SELECT ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS retainedearnings FROM gltrans INNER JOIN chartmaster ON gltrans.account=chartmaster.accountcode INNER JOIN accountgroups ON chartmaster.group_=accountgroups.groupname WHERE periodno<='" . $LastYearPeriod . "' AND pandl=1"));
+
+	$AccountListResult = DB_query("SELECT accountsection.sectionid, accountsection.sectionname, accountgroups.sectioninaccounts, accountgroups.parentgroupname, chartmaster.accountcode, chartmaster.group_, chartmaster.accountname, accountgroups.pandl FROM chartmaster INNER JOIN glaccountusers ON glaccountusers.accountcode=chartmaster.accountcode AND glaccountusers.userid='" . $_SESSION['UserID'] . "' AND glaccountusers.canview=1 INNER JOIN accountgroups ON accountgroups.groupname=chartmaster.group_ LEFT JOIN accountsection ON accountsection.sectionid=accountgroups.sectioninaccounts WHERE accountgroups.pandl=0 ORDER BY accountgroups.sequenceintb, chartmaster.group_, chartmaster.accountcode");
+	
+    $ResultActual = DB_query("SELECT account, ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $PeriodTo . "' GROUP BY account");
 	while ($R = DB_fetch_array($ResultActual)) $ThisYearActuals[$R['account']] = $R['accounttotal'];
-	$ResultLY = DB_query("SELECT account, ROUND(SUM(amount), " . $_SESSION['CompanyRecord']['decimalplaces'] . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . ($_POST['PeriodTo'] - 12) . "' GROUP BY account");
+	$ResultLY = DB_query("SELECT account, ROUND(SUM(amount), " . $DecimalPlaces . " +1) AS accounttotal FROM gltrans WHERE periodno<='" . $LastYearPeriod . "' GROUP BY account");
 	while ($R = DB_fetch_array($ResultLY)) $LastYearActuals[$R['account']] = $R['accounttotal'];
 
 	$HTML = '';
@@ -70,72 +85,10 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     } else {
 		$HTML .= '<form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">';
 		$HTML .= '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
-		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />';
-        $HTML .= '<input type="hidden" name="ShowDetail" value="' . $_POST['ShowDetail'] . '" />';
-        if (isset($_POST['ShowZeroBalance'])) {
+		$HTML .= '<input type="hidden" name="PeriodTo" value="' . $PeriodTo . '" />';
+        $HTML .= '<input type="hidden" name="ShowDetail" value="' . $ShowDetail . '" />';
+        if (!empty($_POST['ShowZeroBalance'])) {
             $HTML .= '<input type="hidden" name="ShowZeroBalance" value="1" />';
-        }
-    }
-
-    // --- MAPPING FUNCTION ---
-    if (!function_exists('mapAccountToReportCategory')) {
-        function mapAccountToReportCategory($accountName, $groupName) {
-            $acc = strtolower($accountName);
-            $grp = strtolower($groupName);
-            $combined = $acc . ' ' . $grp;
-
-            // ASSETS - NON-CURRENT
-            if (strpos($combined, 'ppe') !== false || strpos($combined, 'property') !== false || strpos($combined, 'plant') !== false || strpos($combined, 'equipment') !== false || strpos($combined, 'fixed asset') !== false || strpos($combined, 'depreciation') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'ppe'];
-            }
-            if (strpos($combined, 'donated') !== false || strpos($combined, 'idb') !== false || strpos($combined, 'dbe') !== false || strpos($combined, 'dx') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'cost_donated'];
-            }
-            if (strpos($combined, 'wip') !== false || strpos($combined, 'chingya') !== false || strpos($combined, 'work in progress') !== false) {
-                return ['type' => 'assets', 'sub' => 'non_current', 'key' => 'wip_chingya_building'];
-            }
-
-            // ASSETS - CURRENT
-            if (strpos($combined, 'trade') !== false && strpos($combined, 'receivable') !== false || strpos($combined, 'debtor') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'trade_receivable'];
-            }
-            if (strpos($combined, 'receivable') !== false || strpos($combined, 'prepayment') !== false || strpos($combined, 'inventory') !== false || strpos($combined, 'stock') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'other_receivable'];
-            }
-            if (strpos($combined, 'cash') !== false || strpos($combined, 'bank') !== false || strpos($combined, 'petty') !== false) {
-                return ['type' => 'assets', 'sub' => 'current', 'key' => 'cash_bank_balance'];
-            }
-
-            // EQUITY
-            if (strpos($combined, 'accumulated') !== false && strpos($combined, 'fund') !== false) {
-                return ['type' => 'equity', 'sub' => 'none', 'key' => 'accumulated_fund'];
-            }
-            if (strpos($combined, 'retain') !== false || strpos($combined, 'earning') !== false || strpos($combined, 'profit') !== false || strpos($combined, 'equity') !== false || strpos($combined, 'capital') !== false) {
-                return ['type' => 'equity', 'sub' => 'none', 'key' => 'retained_earnings'];
-            }
-
-            // LIABILITIES - NON-CURRENT
-            if (strpos($combined, 'soft loan') !== false || (strpos($combined, 'loan') !== false && strpos($combined, 'long') !== false)) {
-                return ['type' => 'liabilities', 'sub' => 'non_current', 'key' => 'soft_loan_from_donor'];
-            }
-            if (strpos($combined, 'grant') !== false || strpos($combined, 'adbf') !== false || strpos($combined, 'donor aid') !== false || strpos($combined, 'deferred') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'non_current', 'key' => 'grant_from_adbf_idb_donor_aid'];
-            }
-
-            // LIABILITIES - CURRENT
-            if (strpos($combined, 'trade payable') !== false || strpos($combined, 'creditor') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
-            }
-            if (strpos($combined, 'accrue') !== false || strpos($combined, 'charge') !== false || strpos($combined, 'tax') !== false || strpos($combined, 'provision') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable_accrued_charges'];
-            }
-            if (strpos($combined, 'payable') !== false) {
-                return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
-            }
-
-            // FALLBACKS
-            if (strpos($combined, 'asset') !== false) return ['type' => 'assets', 'sub' => 'current', 'key' => 'other_receivable'];
-            return ['type' => 'liabilities', 'sub' => 'current', 'key' => 'other_payable'];
         }
     }
 
@@ -148,75 +101,188 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
     $bsData = [
         'assets' => [
-            'non_current' => [
-                'ppe' => ['label' => 'PPE Property plant & equipment', 'amount' => 0.0],
-                'cost_donated' => ['label' => 'Cost donated by DBE, IDB, DX', 'amount' => 0.0],
-                'wip_chingya_building' => ['label' => 'WIP - Chingya building', 'amount' => 0.0],
-            ],
-            'current' => [
-                'trade_receivable' => ['label' => 'Trade receivable', 'amount' => 0.0],
-                'other_receivable' => ['label' => 'Other receivable', 'amount' => 0.0],
-                'cash_bank_balance' => ['label' => 'Cash & bank balance', 'amount' => 0.0],
-            ]
+            'non_current' => [],
+            'current' => []
         ],
         'equity' => [
-            'none' => [
-                'accumulated_fund' => ['label' => 'Accumulated fund', 'amount' => 0.0],
-                'retained_earnings' => ['label' => 'Retained earnings', 'amount' => 0.0],
-            ]
+            'none' => []
         ],
         'liabilities' => [
-            'non_current' => [
-                'soft_loan_from_donor' => ['label' => 'Soft loan from donor', 'amount' => 0.0],
-                'grant_from_adbf_idb_donor_aid' => ['label' => 'Grant from ADBF, IDB & donor aid', 'amount' => 0.0],
-            ],
-            'current' => [
-                'other_payable' => ['label' => 'Other payable', 'amount' => 0.0],
-                'other_payable_accrued_charges' => ['label' => 'Other payable & accrued charges', 'amount' => 0.0],
-            ]
+            'non_current' => [],
+            'current' => []
         ]
     ];
 
     $retainedEarningsProcessed = false;
 	while ($MyRow = DB_fetch_array($AccountListResult)) {
 		$AccountBalance = $ThisYearActuals[$MyRow['accountcode']] ?? 0;
+		$AccountBalanceLY = $LastYearActuals[$MyRow['accountcode']] ?? 0;
 		if ($MyRow['accountcode'] == $RetainedEarningsAct) { 
             $AccountBalance += $ThisYearRetainedEarningsRow['retainedearnings']; 
+            $AccountBalanceLY += $LastYearRetainedEarningsRow['retainedearnings']; 
             $retainedEarningsProcessed = true;
         }
 
-        $map = mapAccountToReportCategory($MyRow['accountname'], $MyRow['group_']);
-        if ($map['type'] === 'assets') {
-            $bsData[$map['type']][$map['sub']][$map['key']]['amount'] += $AccountBalance;
-        } else {
-            $bsData[$map['type']][$map['sub']][$map['key']]['amount'] -= $AccountBalance;
+        $sectionId = (int)$MyRow['sectionid'];
+        $secName = strtolower(trim((string)$MyRow['sectionname']));
+        $grpName = strtolower(trim((string)$MyRow['group_']));
+        $type = '';
+        $sub = '';
+        
+        if ($sectionId == 10 || 
+            strpos($secName, 'fixed') !== false || 
+            strpos($secName, 'non-current') !== false || 
+            strpos($secName, 'non current') !== false ||
+            strpos($grpName, 'fixed') !== false ||
+            strpos($grpName, 'non-current') !== false ||
+            strpos($grpName, 'non current') !== false) {
+            
+            $type = 'assets';
+            $sub = 'non_current';
+        } elseif ($sectionId == 15 || $sectionId == 20 || $sectionId == 25 || 
+                  strpos($secName, 'current asset') !== false || 
+                  strpos($secName, 'inventory') !== false || 
+                  strpos($secName, 'cash') !== false || 
+                  strpos($secName, 'bank') !== false || 
+                  strpos($secName, 'receivable') !== false ||
+                  strpos($grpName, 'current asset') !== false ||
+                  strpos($grpName, 'cash') !== false ||
+                  strpos($grpName, 'bank') !== false ||
+                  strpos($grpName, 'receivable') !== false ||
+                  strpos($grpName, 'prepayment') !== false ||
+                  strpos($grpName, 'inventory') !== false ||
+                  strpos($grpName, 'stock') !== false) {
+                  
+            $type = 'assets';
+            $sub = 'current';
+        } elseif ($sectionId == 50 || 
+                  strpos($secName, 'equity') !== false || 
+                  strpos($secName, 'capital') !== false || 
+                  strpos($secName, 'retained') !== false || 
+                  strpos($secName, 'fund') !== false ||
+                  strpos($grpName, 'equity') !== false ||
+                  strpos($grpName, 'capital') !== false ||
+                  strpos($grpName, 'retained') !== false ||
+                  strpos($grpName, 'fund') !== false) {
+                  
+            $type = 'equity';
+            $sub = 'none';
+        } elseif ($sectionId == 35 || 
+                  strpos($secName, 'long term') !== false || 
+                  strpos($secName, 'long-term') !== false || 
+                  strpos($secName, 'non-current liability') !== false || 
+                  strpos($secName, 'non current liability') !== false ||
+                  strpos($grpName, 'long term') !== false ||
+                  strpos($grpName, 'long-term') !== false ||
+                  strpos($grpName, 'non-current liability') !== false ||
+                  strpos($grpName, 'non current liability') !== false) {
+                  
+            $type = 'liabilities';
+            $sub = 'non_current';
+        } elseif ($sectionId == 30 || 
+                  strpos($secName, 'current liab') !== false || 
+                  strpos($secName, 'payable') !== false || 
+                  strpos($secName, 'accrued') !== false ||
+                  strpos($grpName, 'current liab') !== false ||
+                  strpos($grpName, 'payable') !== false ||
+                  strpos($grpName, 'accrued') !== false) {
+                  
+            $type = 'liabilities';
+            $sub = 'current';
+        }
+        
+        if ($type == '') {
+            // Fallback safety net for any unclassified Balance Sheet accounts
+            if ($AccountBalance >= 0) {
+                $type = 'assets';
+                $sub = 'current';
+            } else {
+                $type = 'liabilities';
+                $sub = 'current';
+            }
+        }
+        
+        if ($type != '') {
+            if ($ShowDetail == 'Detailed') {
+                $key = $MyRow['accountcode'];
+                $label = $MyRow['accountcode'] . ' - ' . $MyRow['accountname'];
+            } else {
+                $key = $MyRow['group_'];
+                $label = $MyRow['group_'];
+            }
+            
+            if (!isset($bsData[$type][$sub][$key])) {
+                $bsData[$type][$sub][$key] = [
+                    'label' => $label,
+                    'amount' => 0.0,
+                    'ly_amount' => 0.0
+                ];
+            }
+            
+            if ($type === 'assets') {
+                $bsData[$type][$sub][$key]['amount'] += $AccountBalance;
+                $bsData[$type][$sub][$key]['ly_amount'] += $AccountBalanceLY;
+            } else {
+                $bsData[$type][$sub][$key]['amount'] -= $AccountBalance;
+                $bsData[$type][$sub][$key]['ly_amount'] -= $AccountBalanceLY;
+            }
         }
     }
 
     // Defensive injection: If Retained Earnings was skipped by the loop query (e.g. pandl config or permissions)
     // we must manually roll up the P&L into Equity for the Balance Sheet to balance.
     if (!$retainedEarningsProcessed) {
+        $type = 'equity';
+        $sub = 'none';
+        $key = 'retained_earnings_fallback';
+        $label = __('Retained Earnings');
+        if ($ShowDetail == 'Detailed') {
+            $key = $RetainedEarningsAct;
+            $label = $RetainedEarningsAct . ' - ' . __('Retained Earnings');
+        }
+        
+        if (!isset($bsData[$type][$sub][$key])) {
+            $bsData[$type][$sub][$key] = [
+                'label' => $label,
+                'amount' => 0.0,
+                'ly_amount' => 0.0
+            ];
+        }
+        
         $AccountBalance = $ThisYearActuals[$RetainedEarningsAct] ?? 0;
         $AccountBalance += $ThisYearRetainedEarningsRow['retainedearnings'];
-        
-        $bsData['equity']['none']['retained_earnings']['amount'] -= $AccountBalance;
+        $bsData[$type][$sub][$key]['amount'] -= $AccountBalance;
+
+        $AccountBalanceLY = $LastYearActuals[$RetainedEarningsAct] ?? 0;
+        $AccountBalanceLY += $LastYearRetainedEarningsRow['retainedearnings'];
+        $bsData[$type][$sub][$key]['ly_amount'] -= $AccountBalanceLY;
     }
 
     // CALCULATIONS
     $totalNonCurrentAssets = array_sum(array_column($bsData['assets']['non_current'], 'amount'));
+    $totalNonCurrentAssetsLY = array_sum(array_column($bsData['assets']['non_current'], 'ly_amount'));
     $totalCurrentAssets = array_sum(array_column($bsData['assets']['current'], 'amount'));
+    $totalCurrentAssetsLY = array_sum(array_column($bsData['assets']['current'], 'ly_amount'));
     $totalAssets = $totalNonCurrentAssets + $totalCurrentAssets;
+    $totalAssetsLY = $totalNonCurrentAssetsLY + $totalCurrentAssetsLY;
 
     $totalEquity = array_sum(array_column($bsData['equity']['none'], 'amount'));
+    $totalEquityLY = array_sum(array_column($bsData['equity']['none'], 'ly_amount'));
 
     $totalNonCurrentLiabilities = array_sum(array_column($bsData['liabilities']['non_current'], 'amount'));
+    $totalNonCurrentLiabilitiesLY = array_sum(array_column($bsData['liabilities']['non_current'], 'ly_amount'));
     $totalCurrentLiabilities = array_sum(array_column($bsData['liabilities']['current'], 'amount'));
+    $totalCurrentLiabilitiesLY = array_sum(array_column($bsData['liabilities']['current'], 'ly_amount'));
     $totalLiabilities = $totalNonCurrentLiabilities + $totalCurrentLiabilities;
+    $totalLiabilitiesLY = $totalNonCurrentLiabilitiesLY + $totalCurrentLiabilitiesLY;
 
     $totalEquityAndLiabilities = $totalEquity + $totalLiabilities;
+    $totalEquityAndLiabilitiesLY = $totalEquityLY + $totalLiabilitiesLY;
     $balanceDiff = abs($totalAssets - $totalEquityAndLiabilities);
+    $balanceDiffLY = abs($totalAssetsLY - $totalEquityAndLiabilitiesLY);
 
     // RENDERING
+    //demo
     $HTML = '';
     
     if (isset($_POST['PrintPDF'])) {
@@ -229,21 +295,24 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     $HTML .= '
         .balance-sheet-report { table-layout: fixed; width: 100% !important; margin: 0 auto; border-collapse: separate; border-spacing: 0; font-family: "Inter", Helvetica, sans-serif; background: transparent; }
         .balance-sheet-report th, .balance-sheet-report td { white-space: normal !important; word-wrap: break-word; }
-        .report-title { text-align: center; font-size: 1.5rem; font-weight: 700; padding: 20px 0 30px; text-transform: uppercase; color: #111827; border: none !important; line-height: 1.4; }
-        .section-header { font-weight: 700; font-size: 1.15rem; padding: 16px 20px; text-transform: uppercase; background-color: #d1fae5; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; border-radius: 6px; }
-        .subsection-header { font-weight: 600; padding: 15px 0 8px; color: #374151; font-size: 1.05rem; }
-        .item-label { padding: 12px 0 12px 20px; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; border-radius: 6px 0 0 6px; }
-        .amount { text-align: right; padding: 12px 20px 12px 0; color: #111827; font-size: 0.95rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; border-radius: 0 6px 6px 0; }
+        .report-title { text-align: center; padding: 15px 0 20px; border: none !important; line-height: 1.3; }
+        .section-header { font-weight: 700; font-size: 0.95rem; padding: 10px 12px; text-transform: uppercase; background-color: #d1fae5 !important; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; }
+        .subsection-header { font-weight: 600; padding: 8px 0 6px 12px; color: #374151; font-size: 0.875rem; border-bottom: 1px solid #cbd5e1; }
+        .item-label { padding: 8px 0 8px 12px; color: #111827; font-size: 0.825rem; border: none !important; font-weight: 400; border-bottom: 1px solid #e5e7eb !important; }
+        .amount-col1 { text-align: right; padding: 8px 12px 8px 0; color: #111827; font-size: 0.825rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; }
+        .amount-col2 { text-align: right; padding: 8px 12px 8px 0; color: #6b7280; font-size: 0.825rem; border: none !important; font-weight: 500; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e5e7eb !important; }
         .item-row { transition: all 0.2s ease; cursor: default; }
         .item-row:nth-child(even) td { background-color: #f9fafb !important; }
         .item-row:hover td { background-color: #f3f4f6 !important; }
-        .total-label { padding: 16px 0 16px 20px; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; border-radius: 6px 0 0 6px; }
-        .total-amount { text-align: right; padding: 16px 20px 16px 0; font-weight: 700; color: #064e3b; background-color: #ecfdf5; border: none !important; font-size: 1rem; border-top: 2px solid #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
-        .grand-total-label { padding: 20px 0 20px 20px; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; text-transform: uppercase; border: none !important; border-top: 3px double #10b981 !important; border-radius: 6px 0 0 6px; }
-        .grand-total-amount { text-align: right; padding: 20px 20px 20px 0; font-weight: 800; font-size: 1.15rem; color: #064e3b; background-color: #d1fae5; border: none !important; border-top: 3px double #10b981 !important; font-variant-numeric: tabular-nums; border-radius: 0 6px 6px 0; }
-        .balance-warning { color: #b91c1c; font-weight: 600; text-align: center; padding: 15px; background: #fef2f2; border: 1px solid #fca5a5; margin-top: 35px; border-radius: 8px; font-size: 1rem; }
+        .total-label { padding: 10px 0 10px 12px; font-weight: 700; color: #111827; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; }
+        .total-amount-col1 { text-align: right; padding: 10px 12px 10px 0; font-weight: 700; color: #111827; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; font-variant-numeric: tabular-nums; }
+        .total-amount-col2 { text-align: right; padding: 10px 12px 10px 0; font-weight: 700; color: #6b7280; border: none !important; font-size: 0.875rem; border-top: 1.5px solid #cbd5e1 !important; font-variant-numeric: tabular-nums; }
+        .grand-total-label { padding: 12px 0 12px 12px; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; text-transform: uppercase; border: none !important; border-top: 2px double #10b981 !important; }
+        .grand-total-amount-col1 { text-align: right; padding: 12px 12px 12px 0; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; border: none !important; border-top: 2px double #10b981 !important; font-variant-numeric: tabular-nums; }
+        .grand-total-amount-col2 { text-align: right; padding: 12px 12px 12px 0; font-weight: 800; font-size: 0.95rem; color: #064e3b; background-color: #d1fae5 !important; border: none !important; border-top: 2px double #10b981 !important; font-variant-numeric: tabular-nums; }
+        .balance-warning { color: #b91c1c; font-weight: 600; text-align: center; padding: 15px; background: #fef2f2; border: 1px solid #fca5a5; margin-top: 35px; font-size: 1rem; }
         .balance-sheet-report td { background: transparent; }
-        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 800px; margin: 15px auto; box-sizing: border-box; }
+        .report-wrapper { padding: 20px; background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); max-width: 800px; margin: 15px auto; box-sizing: border-box; }
     </style>';
 
     if (isset($_POST['PrintPDF'])) {
@@ -252,66 +321,96 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 
     $HTML .= '<div class="report-wrapper"><table class="balance-sheet-report">
     <colgroup>
-        <col style="width: 75%;">
-        <col style="width: 25%;">
+        <col style="width: 60%;">
+        <col style="width: 20%;">
+        <col style="width: 20%;">
     </colgroup>';
     
     // Title
-    $HTML .= '<tr><th colspan="2" class="report-title">' . __('STATEMENT OF FINANCIAL POSITION AS AT') . ' ' . date('d M Y') . '</th></tr>';
+    $HTML .= '<tr>
+		<th colspan="3" class="report-title">
+			<div style="font-size: 1.4rem; font-weight: 700; color: #111827; margin-bottom: 5px; text-transform: uppercase;">' . $_SESSION['CompanyRecord']['coyname'] . '</div>
+			<b style="font-size: 1.2rem; color: #059669; text-transform: uppercase;">' . __('Balance Sheet') . '</b><br>
+			<span style="font-weight: normal; font-size: 0.9rem; color: #4b5563;">' . __('As at') . ' ' . $BalanceDate . '</span>
+		</th>
+	</tr>';
+
+	// Column Headers
+	$FormattedBalanceDate = ($ThisYearTimestamp !== false) ? date('d.m.Y', $ThisYearTimestamp) : str_replace(['/', '-'], '.', $BalanceDate);
+	$HTML .= '<tr>
+		<th style="text-align: left; padding: 10px 0 10px 20px; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;"></th>
+		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151;">' . $FormattedBalanceDate . '<br><span style="font-size: 0.85em; color: #6b7280;">TZS</span></th>
+		<th style="text-align: right; padding: 10px 20px 10px 0; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #6b7280;">31.12.' . $LastYear . '<br><span style="font-size: 0.85em;">TZS</span></th>
+	</tr>';
 
     // ASSETS
-    $HTML .= '<tr><td colspan="2"><div class="section-header">' . __('ASSETS') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="section-header">' . __('ASSETS') . '</td></tr>';
     
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header">' . __('Non-current asset') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Non-current assets') . '</td></tr>';
     foreach($bsData['assets']['non_current'] as $item) {
-        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount">' . formatMoneyBS($item['amount']) . '</td></tr>';
+        if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
+            continue;
+        }
+        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount-col1">' . formatMoneyBS($item['amount']) . '</td><td class="amount-col2">' . formatMoneyBS($item['ly_amount']) . '</td></tr>';
     }
-    $HTML .= '<tr><td class="total-label">' . __('Total non-current asset') . '</td><td class="total-amount">' . formatMoneyBS($totalNonCurrentAssets) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label">' . __('Total non-current assets') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalNonCurrentAssets) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalNonCurrentAssetsLY) . '</td></tr>';
 
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header">' . __('Current Assets') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Current Assets') . '</td></tr>';
     foreach($bsData['assets']['current'] as $item) {
-        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount">' . formatMoneyBS($item['amount']) . '</td></tr>';
+        if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
+            continue;
+        }
+        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount-col1">' . formatMoneyBS($item['amount']) . '</td><td class="amount-col2">' . formatMoneyBS($item['ly_amount']) . '</td></tr>';
     }
-    $HTML .= '<tr><td class="total-label">' . __('Total current asset') . '</td><td class="total-amount">' . formatMoneyBS($totalCurrentAssets) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label">' . __('Total current assets') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalCurrentAssets) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalCurrentAssetsLY) . '</td></tr>';
 
-    $HTML .= '<tr><td class="grand-total-label" style="padding-left: 20px;">' . __('Total asset') . '</td><td class="grand-total-amount">' . formatMoneyBS($totalAssets) . '</td></tr>';
+    $HTML .= '<tr><td class="grand-total-label" style="padding-left: 20px;">' . __('Total assets') . '</td><td class="grand-total-amount-col1">' . formatMoneyBS($totalAssets) . '</td><td class="grand-total-amount-col2">' . formatMoneyBS($totalAssetsLY) . '</td></tr>';
 
     // SPACE
-    $HTML .= '<tr><td colspan="2">&nbsp;</td></tr>';
+    $HTML .= '<tr><td colspan="3">&nbsp;</td></tr>';
 
     // EQUITY AND LIABILITIES
-    $HTML .= '<tr><td colspan="2"><div class="section-header">' . __('EQUITY AND LIABILITIES') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="section-header">' . __('EQUITY AND LIABILITIES') . '</td></tr>';
 
     // EQUITY
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header">' . __('Equity') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Equity') . '</td></tr>';
     foreach($bsData['equity']['none'] as $item) {
-        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount">' . formatMoneyBS($item['amount']) . '</td></tr>';
+        if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
+            continue;
+        }
+        $HTML .= '<tr class="item-row"><td class="item-label">' . $item['label'] . '</td><td class="amount-col1">' . formatMoneyBS($item['amount']) . '</td><td class="amount-col2">' . formatMoneyBS($item['ly_amount']) . '</td></tr>';
     }
-    $HTML .= '<tr><td class="total-label">' . __('Total equity') . '</td><td class="total-amount">' . formatMoneyBS($totalEquity) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label">' . __('Total equity') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalEquity) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalEquityLY) . '</td></tr>';
 
     // LIABILITIES
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header">' . __('Liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header">' . __('Liabilities') . '</td></tr>';
     
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header" style="padding-left: 20px;">' . __('Non-current liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header" style="padding-left: 20px;">' . __('Non-current liabilities') . '</td></tr>';
     foreach($bsData['liabilities']['non_current'] as $item) {
-        $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px;">' . $item['label'] . '</td><td class="amount">' . formatMoneyBS($item['amount']) . '</td></tr>';
+        if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
+            continue;
+        }
+        $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px;">' . $item['label'] . '</td><td class="amount-col1">' . formatMoneyBS($item['amount']) . '</td><td class="amount-col2">' . formatMoneyBS($item['ly_amount']) . '</td></tr>';
     }
-    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total non-current liabilities') . '</td><td class="total-amount">' . formatMoneyBS($totalNonCurrentLiabilities) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total non-current liabilities') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalNonCurrentLiabilities) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalNonCurrentLiabilitiesLY) . '</td></tr>';
 
-    $HTML .= '<tr><td colspan="2"><div class="subsection-header" style="padding-left: 20px;">' . __('Current liabilities') . '</div></td></tr>';
+    $HTML .= '<tr><td colspan="3" class="subsection-header" style="padding-left: 20px;">' . __('Current liabilities') . '</td></tr>';
     foreach($bsData['liabilities']['current'] as $item) {
-        $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px;">' . $item['label'] . '</td><td class="amount">' . formatMoneyBS($item['amount']) . '</td></tr>';
+        if (empty($_POST['ShowZeroBalance']) && abs($item['amount']) < 0.005 && abs($item['ly_amount']) < 0.005) {
+            continue;
+        }
+        $HTML .= '<tr class="item-row"><td class="item-label" style="padding-left: 40px;">' . $item['label'] . '</td><td class="amount-col1">' . formatMoneyBS($item['amount']) . '</td><td class="amount-col2">' . formatMoneyBS($item['ly_amount']) . '</td></tr>';
     }
-    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total current liabilities') . '</td><td class="total-amount">' . formatMoneyBS($totalCurrentLiabilities) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total current liabilities') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalCurrentLiabilities) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalCurrentLiabilitiesLY) . '</td></tr>';
 
-    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total liabilities') . '</td><td class="total-amount">' . formatMoneyBS($totalLiabilities) . '</td></tr>';
+    $HTML .= '<tr><td class="total-label" style="padding-left: 20px;">' . __('Total liabilities') . '</td><td class="total-amount-col1">' . formatMoneyBS($totalLiabilities) . '</td><td class="total-amount-col2">' . formatMoneyBS($totalLiabilitiesLY) . '</td></tr>';
 
-    $HTML .= '<tr><td class="grand-total-label">' . __('Total Equity and liabilities') . '</td><td class="grand-total-amount">' . formatMoneyBS($totalEquityAndLiabilities) . '</td></tr>';
+    $HTML .= '<tr><td class="grand-total-label">' . __('Total Equity and liabilities') . '</td><td class="grand-total-amount-col1">' . formatMoneyBS($totalEquityAndLiabilities) . '</td><td class="grand-total-amount-col2">' . formatMoneyBS($totalEquityAndLiabilitiesLY) . '</td></tr>';
 
     $HTML .= '</table></div>';
 
-    if ($balanceDiff > 0.01) {
-        $HTML .= '<div class="balance-warning">' . __('WARNING: The Balance Sheet does not balance! Difference: ') . formatMoneyBS($balanceDiff) . '</div>';
+    if ($balanceDiff > 0.01 || $balanceDiffLY > 0.01) {
+        $HTML .= '<div class="balance-warning">' . __('WARNING: The Balance Sheet does not balance! Difference: ') . formatMoneyBS($balanceDiff) . ' / ' . formatMoneyBS($balanceDiffLY) . '</div>';
     }
 
 	if (isset($_POST['PrintPDF'])) {
@@ -336,10 +435,11 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$SpreadsheetHTML = '<html><head><meta charset="UTF-8"><style>
 				th { font-weight: bold; background-color: #f3f4f6; color: #111827; text-align: left; border: 1px solid #d1d5db; }
 				td { border: 1px solid #d1d5db; }
-				.number { text-align: right; }
-				.total_row td { font-weight: bold; border-top: 1px solid #000; }
-				.section_row td { font-weight: bold; background-color: #d1fae5; color: #065f46; }
-				.check_totals_row td { font-weight: bold; background-color: #ecfdf5; color: #064e3b; }
+				.amount-col1, .amount-col2 { text-align: right; }
+				.total-label { font-weight: bold; border-top: 1px solid #000; }
+				.total-amount-col1, .total-amount-col2 { font-weight: bold; background-color: #ecfdf5; color: #064e3b; border-top: 1px solid #000; }
+				.section-header { font-weight: bold; background-color: #d1fae5; color: #065f46; }
+				.grand-total-label, .grand-total-amount-col1, .grand-total-amount-col2 { font-weight: bold; background-color: #d1fae5; color: #064e3b; }
 			</style></head><body>' . $Table . '</body></html>';
 		} else {
 			$SpreadsheetHTML = '<html><head><meta charset="UTF-8"></head><body><table><tbody></tbody></table></body></html>';
@@ -384,11 +484,11 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
                 ' . $HTML . '
                 </form>
                 <div class="centre" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
-                    <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '" target="_blank">
+                    <form method="post" action="' . htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8') . '">
                         <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
-                        <input type="hidden" name="PeriodTo" value="' . $_POST['PeriodTo'] . '" />
-                        <input type="hidden" name="ShowDetail" value="' . $_POST['ShowDetail'] . '" />
-                        <input type="hidden" name="ShowZeroBalance" value="' . (isset($_POST['ShowZeroBalance']) ? 1 : 0) . '" />
+                        <input type="hidden" name="PeriodTo" value="' . $PeriodTo . '" />
+                        <input type="hidden" name="ShowDetail" value="' . $ShowDetail . '" />
+                        <input type="hidden" name="ShowZeroBalance" value="' . (empty($_POST['ShowZeroBalance']) ? 0 : 1) . '" />
                         <button type="submit" name="PrintPDF" class="db-btn db-btn-secondary" title="Produce PDF Report"><i class="fas fa-file-pdf"></i> ' . __('Print PDF') . '</button>
                         <button type="submit" name="Spreadsheet" class="db-btn db-btn-secondary" title="Spreadsheet"><i class="fas fa-file-excel"></i> ' . __('Spreadsheet') . '</button>
                     </form>
@@ -420,7 +520,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
     echo '<div class="db-page"><div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title">' . __('Balance Sheet Generator') . '</h3></div>
             <div class="db-card-body">
-                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post" target="_blank">
+                <form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post">
                 <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
                 <div class="db-field"><label class="db-label">Balance As At Date</label><select name="PeriodTo" class="db-select">';
                 $Pers = DB_query("SELECT periodno, lastdate_in_period FROM periods ORDER BY periodno DESC");

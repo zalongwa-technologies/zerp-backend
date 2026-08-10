@@ -116,9 +116,35 @@ $ExtraHeadContent = '
 		to { opacity: 1; transform: translateY(0); }
 	}
 
-	.breadcrumb-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; transition: all 0.2s; font-size: 0.72rem; font-weight: 700; text-transform: lowercase; letter-spacing: 1px; }
-	.breadcrumb-item:hover { color: #059669; }
-	.breadcrumb-separator { font-size: 0.6rem; opacity: 0.4; margin: 0 4px; }
+	.breadcrumb-item {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		color: var(--primary) !important;
+		text-decoration: none;
+		transition: color var(--transition-fast);
+		font-size: 0.825rem;
+		font-weight: 600;
+		letter-spacing: normal;
+		text-transform: none;
+	}
+	.breadcrumb-item:hover {
+		color: var(--primary-hover) !important;
+		text-decoration: none;
+	}
+	.breadcrumb-separator {
+		display: inline-flex;
+		align-items: center;
+		color: var(--text-muted);
+		opacity: 0.5;
+		font-size: 0.7rem;
+		margin: 0 var(--space-1);
+	}
+	.breadcrumb-active {
+		color: var(--primary-dark);
+		font-weight: 700;
+		font-size: 0.825rem;
+	}
 	
 	.db-card-body { padding: 30px; }
 	.db-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -183,14 +209,14 @@ echo '<div class="db-page">
 		<div class="premium-header">
 			<div style="display: flex; justify-content: space-between; align-items: flex-end;">
 				<div>
-					<div style="font-size: 0.72rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; text-transform: lowercase; letter-spacing: 1px;">
-					<a href="index.php" class="breadcrumb-item"><i class="fas fa-home"></i> ' . __('home') . '</a>
-					<i class="fas fa-chevron-right breadcrumb-separator"></i>
-					<a href="index.php?Application=AR" class="breadcrumb-item">' . __('receivables') . '</a>
-					<i class="fas fa-chevron-right breadcrumb-separator"></i>
-					<a href="SelectCustomer.php" class="breadcrumb-item">' . __('search customers') . '</a>
-					<i class="fas fa-chevron-right breadcrumb-separator"></i>
-					<span style="color: #064e3b; opacity: 0.9;">' . __('customer maintenance') . '</span>
+					<div style="font-size: 0.825rem; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap;">
+					<a href="index.php" class="breadcrumb-item"><i class="fa-solid fa-house" style="font-size: 0.8rem;"></i> ' . __('Home') . '</a>
+					<i class="fa-solid fa-chevron-right breadcrumb-separator"></i>
+					<a href="index.php?Application=AR" class="breadcrumb-item">' . __('Receivables') . '</a>
+					<i class="fa-solid fa-chevron-right breadcrumb-separator"></i>
+					<a href="SelectCustomer.php" class="breadcrumb-item">' . __('Select Customer') . '</a>
+					<i class="fa-solid fa-chevron-right breadcrumb-separator"></i>
+					<span class="breadcrumb-active">' . __('Customer Maintenance') . '</span>
 				</div>
 					<div>
 						<h1 style="font-size: 2.5rem; font-weight: 950; letter-spacing: -2px; color: #064e3b; margin: 0; line-height: 1;">' . $Title . '</h1>

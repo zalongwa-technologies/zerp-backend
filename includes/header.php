@@ -741,18 +741,6 @@ if (!isset($NoMenu) || $NoMenu != 1) {
 
 echo '<div id="MessageContainerHead"></div>';
 
-echo '<div id="mask"></div>
-	<dialog id="logoutDialog">
-		<div id="DialogContainer">
-			<h3 id="LogoutDialogHeader">', __('Confirm Logout'), '</h3>
-			<p id="LogoutDialogText">', __('Are you sure you wish to logout?'), '</p>
-			<div id="DialogButtonContainer">
-				<button id="cancelLogout">', __('Cancel'), '</button>
-				<button id="confirmLogout">', __('Logout'), '</button>
-			</div>
-		</div>
-	</dialog>
-	<script async src="', $RootPath, '/javascripts/dialogs.js?version=1.0"></script>
 	<script>
 		const sidebarToggle = document.getElementById("SidebarToggle");
 		const sidebarMask = document.getElementById("SidebarMask");

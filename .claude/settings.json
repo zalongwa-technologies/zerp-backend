@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l /Users/user/Documents/Projects2/zerp-backend/Locations.php)",
+      "Bash(grep -n '\\\\$Messages' /Users/user/Documents/Projects2/zerp-backend/includes/header.php /Users/user/Documents/Projects2/zerp-backend/includes/footer.php)"
+    ]
+  }
+}

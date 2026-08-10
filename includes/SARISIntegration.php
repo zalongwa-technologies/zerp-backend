@@ -2,158 +2,414 @@
 
 require_once(__DIR__ . '/ZERPSync.php');
 
-class SARISAPIClient {
-	private $baseUrl = 'https://star.mum.ac.tz';
-	private $clientId = '';
-	private $clientSecret = '';
-	private $timeout = 60;
+// Progress logging for CLI runs only — no-op under the web SAPI so browser-
+// triggered syncs (SARIS_Students.php, SARIS_Payments.php) are unaffected.
+function saris_cli_log($message) {
+	if (PHP_SAPI === 'cli') {
+		echo '[' . date('H:i:s') . '] ' . $message . "\n";
+		@flush();
+	}
+}
 
-	public function __construct() {
-		$SARIS_API_BASE_URL = '';
-		$SARIS_API_CLIENT_ID = '';
-		$SARIS_API_CLIENT_SECRET = '';
-		$configFile = __DIR__ . '/../config.php';
-		if (file_exists($configFile)) {
-			include($configFile);
+// Retrieve a value from the saris_api_settings table, with an optional default.
+function getSarisSetting($key, $default = null) {
+	try {
+		$row = saris_fetch_one(
+			'SELECT setting_value FROM saris_api_settings WHERE setting_key = ?',
+			[$key]
+		);
+		if ($row !== null && $row['setting_value'] !== null) {
+			return $row['setting_value'];
 		}
-		if ($SARIS_API_BASE_URL !== '') {
-			$this->baseUrl = rtrim($SARIS_API_BASE_URL, '/');
+	} catch (Exception $e) {
+		// table does not exist yet (pre-migration); fall through to default
+	}
+	return $default;
+}
+
+class SARISAPIClient {
+	private $timeout = 120;
+	// Bounds only the connect/handshake phase. Without this, a connection that
+	// never completes (server not responding, network black-holing packets)
+	// burns the entire $timeout before curl gives up, instead of failing fast
+	// so the retry loop can move on.
+	private $connectTimeout = 15;
+	private $settings = null; // lazy-loaded from saris_api_settings on first use
+
+	private function buildAuthAttempts() {
+		$clientId = $this->cfg('client_id');
+		$clientSecret = $this->cfg('client_secret');
+
+		return [
+			[
+				'label' => 'oauth-form-with-scope',
+				'body' => http_build_query([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+					'scope'         => 'SARIS',
+				]),
+				'headers' => [
+					'Content-Type: application/x-www-form-urlencoded',
+					'Accept: application/json',
+				],
+			],
+			[
+				'label' => 'oauth-json-with-scope',
+				'body' => json_encode([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+					'scope'         => 'SARIS',
+				]),
+				'headers' => [
+					'Content-Type: application/json',
+					'Accept: application/json',
+				],
+			],
+			[
+				'label' => 'oauth-form-no-scope',
+				'body' => http_build_query([
+					'client_id'     => $clientId,
+					'client_secret' => $clientSecret,
+					'grant_type'    => 'client_credentials',
+				]),
+				'headers' => [
+					'Content-Type: application/x-www-form-urlencoded',
+					'Accept: application/json',
+				],
+			],
+		];
+	}
+
+	private function responseSnippet($body) {
+		$snippet = trim(preg_replace('/\s+/', ' ', substr((string)$body, 0, 240)));
+		return $snippet;
+	}
+
+	private function isConnectPhaseTimeout($errno, $error, $httpCode, $connectTime, $appConnectTime) {
+		if ($errno !== CURLE_OPERATION_TIMEDOUT || $httpCode > 0) {
+			return false;
 		}
-		$this->clientId = $SARIS_API_CLIENT_ID;
-		$this->clientSecret = $SARIS_API_CLIENT_SECRET;
+
+		$message = strtolower(trim((string)$error));
+		foreach ([
+			'failed to connect',
+			'could not connect',
+			'couldn\'t connect',
+			'connection timed out',
+		] as $needle) {
+			if ($message !== '' && strpos($message, $needle) !== false) {
+				return true;
+			}
+		}
+
+		// If TLS/app-connect never completed, treat the timeout as transport-level.
+		if ((float)$appConnectTime <= 0) {
+			return true;
+		}
+
+		// A timeout very close to the connect timeout is still in the connect phase.
+		return (float)$connectTime > 0 && (float)$connectTime < $this->timeout;
+	}
+
+	private function shouldRetryTransportFailure($errno, $error, $httpCode, $connectTime, $appConnectTime) {
+		if ($this->isConnectPhaseTimeout($errno, $error, $httpCode, $connectTime, $appConnectTime)) {
+			return true;
+		}
+
+		return in_array($errno, [
+			CURLE_COULDNT_CONNECT,
+			CURLE_COULDNT_RESOLVE_HOST,
+			CURLE_COULDNT_RESOLVE_PROXY,
+			CURLE_SEND_ERROR,
+			CURLE_RECV_ERROR,
+			CURLE_GOT_NOTHING,
+			CURLE_SSL_CONNECT_ERROR,
+		], true);
+	}
+
+	private function extractTokenPayload(array $response) {
+		$candidates = [
+			$response['results'] ?? null,
+			$response['data'] ?? null,
+			$response,
+		];
+
+		foreach ($candidates as $candidate) {
+			if (!is_array($candidate)) {
+				continue;
+			}
+
+			$token = '';
+			foreach (['access_token', 'token', 'bearer_token'] as $tokenKey) {
+				if (!empty($candidate[$tokenKey]) && is_string($candidate[$tokenKey])) {
+					$token = trim($candidate[$tokenKey]);
+					break;
+				}
+			}
+
+			if ($token === '') {
+				continue;
+			}
+
+			$expiresIn = 3600;
+			foreach (['expires_in', 'expires', 'expiresIn'] as $expiryKey) {
+				if (isset($candidate[$expiryKey]) && is_numeric($candidate[$expiryKey])) {
+					$expiresIn = (int)$candidate[$expiryKey];
+					break;
+				}
+			}
+
+			$tokenType = '';
+			if (!empty($candidate['token_type']) && is_string($candidate['token_type'])) {
+				$tokenType = strtolower(trim($candidate['token_type']));
+			} elseif (!empty($candidate['type']) && is_string($candidate['type'])) {
+				$tokenType = strtolower(trim($candidate['type']));
+			}
+
+			return [
+				'token' => $token,
+				'expires_in' => max(60, $expiresIn),
+				'token_type' => $tokenType,
+			];
+		}
+
+		return null;
+	}
+
+	private function isSuccessfulAuthResponse(array $response) {
+		if (!empty($response['success'])) {
+			return true;
+		}
+		if (isset($response['statusCode']) && (int)$response['statusCode'] === 200) {
+			return true;
+		}
+		if (isset($response['code']) && (int)$response['code'] === 200) {
+			return true;
+		}
+		if (isset($response['status']) && is_string($response['status'])) {
+			$status = strtolower(trim($response['status']));
+			if (in_array($status, ['success', 'ok'], true)) {
+				return true;
+			}
+		}
+
+		return $this->extractTokenPayload($response) !== null;
+	}
+
+	private function loadSettings() {
+		if ($this->settings !== null) {
+			return;
+		}
+		$this->settings = [
+			'base_url'         => getSarisSetting('saris_base_url',         'https://saris.iae.ac.tz'),
+			'client_id'        => getSarisSetting('saris_client_id',        ''),
+			'client_secret'    => getSarisSetting('saris_client_secret',    ''),
+			'token_endpoint'   => getSarisSetting('saris_token_endpoint',   '/api/v1/login'),
+			'student_endpoint' => getSarisSetting('saris_student_endpoint', '/api/v1/students'),
+			'invoice_endpoint' => getSarisSetting('saris_invoice_endpoint', '/api/v1/invoices'),
+			'payment_endpoint' => getSarisSetting('saris_payment_endpoint', '/api/v1/payments'),
+		];
+	}
+
+	private function cfg($key) {
+		$this->loadSettings();
+		return isset($this->settings[$key]) ? $this->settings[$key] : '';
+	}
+
+	private function baseUrl() {
+		return rtrim($this->cfg('base_url'), '/');
 	}
 
 	private function ensureCredentials() {
-		if ($this->clientId === '' || $this->clientSecret === '') {
-			throw new Exception('SARIS API credentials are missing in config.php.');
+		if ($this->cfg('client_id') === '' || $this->cfg('client_secret') === '') {
+			throw new Exception('SARIS API credentials are not configured. Go to SARIS → API Configuration to set the Client ID and Client Secret.');
 		}
+	}
+
+	// Fetch (or return cached) OAuth2 bearer token.
+	public function getToken() {
+		if (!empty($_SESSION['SARISAPI_TOKEN'])
+			&& !empty($_SESSION['SARISAPI_TOKEN_EXPIRES_AT'])
+			&& time() < (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT']
+		) {
+			return $_SESSION['SARISAPI_TOKEN'];
+		}
+		return $this->authenticate();
 	}
 
 	private function authenticate() {
 		$this->ensureCredentials();
-		$url = $this->baseUrl . '/api_erp/v1/auth';
-		$payload = json_encode([
-			'client_id' => $this->clientId,
-			'client_secret' => $this->clientSecret
-		]);
-
-		$maxAttempts = 3;
+		$url = $this->baseUrl() . $this->cfg('token_endpoint');
+		$attempts = $this->buildAuthAttempts();
+		// SARIS's endpoint has been observed as intermittently unreachable (connect
+		// hangs) rather than consistently down — one variant in a cycle can hang
+		// while another connects fine seconds later. Now that a hung connection
+		// only costs $connectTimeout (not the old 120s), it's cheap to run the
+		// whole variant cycle more than once before giving up.
+		$maxPasses = 2;
+		$totalAttempts = $maxPasses * count($attempts);
 		$result = false;
 		$error = '';
 		$httpCode = 0;
-		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-			$ch = curl_init($url);
-			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($ch, CURLOPT_POST, true);
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, [
-				'Accept: application/json',
-				'Content-Type: application/json'
-			]);
-			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-			$result = curl_exec($ch);
-			$error = curl_error($ch);
-			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-			curl_close($ch);
-
-			if ($result !== false) {
-				break;
-			}
-			if ($attempt < $maxAttempts) {
-				sleep(5 * $attempt);
+		$lastVariant = '';
+		$attemptNum = 0;
+		for ($pass = 1; $pass <= $maxPasses; $pass++) {
+			for ($i = 0; $i < count($attempts); $i++) {
+				$attemptNum++;
+				$request = $attempts[$i];
+				$lastVariant = $request['label'];
+				$ch = curl_init($url);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_POST, true);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $request['body']);
+				curl_setopt($ch, CURLOPT_HTTPHEADER, $request['headers']);
+				curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
+				saris_cli_log("Authenticating with SARIS (attempt {$attemptNum}/{$totalAttempts}, {$request['label']})...");
+				$requestStarted = microtime(true);
+				$result = curl_exec($ch);
+				$error = curl_error($ch);
+				$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+				curl_close($ch);
+				$elapsed = round(microtime(true) - $requestStarted, 1);
+				if ($result !== false) {
+					if ($httpCode >= 200 && $httpCode < 300) {
+						saris_cli_log("Authentication response received (HTTP {$httpCode}, {$elapsed}s, {$request['label']})");
+						break 2;
+					}
+					$snippet = $this->responseSnippet($result);
+					$detail = $snippet !== '' ? " Body: {$snippet}" : '';
+					saris_cli_log("Auth attempt {$attemptNum} returned HTTP {$httpCode} in {$elapsed}s ({$request['label']}).{$detail}");
+					if ($attemptNum < $totalAttempts) sleep(2 * $pass);
+					continue;
+				}
+				saris_cli_log("Auth attempt {$attemptNum} failed after {$elapsed}s ({$request['label']}): {$error}");
+				if ($attemptNum < $totalAttempts) sleep(2 * $pass);
 			}
 		}
 
 		if ($result === false) {
-			throw new Exception('Could not authenticate with SARIS: ' . $error);
+			throw new Exception('Could not connect to SARIS token endpoint: ' . $error);
 		}
 		$response = json_decode($result, true);
-		if ($httpCode !== 200 || !is_array($response) || (isset($response['statusCode']) && (int)$response['statusCode'] !== 200) || empty($response['token'])) {
-			throw new Exception('SARIS authentication failed with HTTP ' . $httpCode . '.');
+		$tokenPayload = is_array($response) ? $this->extractTokenPayload($response) : null;
+		// Primary success shape: {success:true, results:{access_token, expires_in, ...}}
+		// Also accept alternate envelopes used by related integrations.
+		if (!is_array($response) || !$this->isSuccessfulAuthResponse($response) || $tokenPayload === null) {
+			$msg = isset($response['message']) ? $response['message'] : 'Unexpected response (HTTP ' . $httpCode . ')';
+			$bodySnippet = $this->responseSnippet($result);
+			if ($bodySnippet !== '') {
+				$msg .= ' Body: ' . $bodySnippet;
+			}
+			throw new Exception('SARIS authentication failed (' . $lastVariant . '): ' . $msg);
 		}
-
-		$_SESSION['SARISAPI_TOKEN'] = $response['token'];
-		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + (isset($response['expires_in']) ? (int)$response['expires_in'] : 900) - 30;
+		$expiresIn = $tokenPayload['expires_in'];
+		$_SESSION['SARISAPI_TOKEN'] = $tokenPayload['token'];
+		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + $expiresIn - 30;
+		saris_cli_log('Authenticated with SARIS token; expires in ' . $expiresIn . 's');
 		return $_SESSION['SARISAPI_TOKEN'];
 	}
 
-	private function getToken() {
-		if (empty($_SESSION['SARISAPI_TOKEN']) || empty($_SESSION['SARISAPI_TOKEN_EXPIRES_AT']) || time() >= (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT']) {
-			return $this->authenticate();
-		}
-		return $_SESSION['SARISAPI_TOKEN'];
-	}
-
-	private function request($endpoint, $params = []) {
-		$url = $this->baseUrl . $endpoint;
+	// Authenticated GET. On INVALID_TOKEN, refreshes once and retries.
+	public function get($endpointUrl, $params = [], $isRetry = false) {
+		$url = $endpointUrl;
 		if (!empty($params)) {
 			$url .= '?' . http_build_query($params);
 		}
 
-		$maxAttempts = 3;
+		$token = $this->getToken();
 		$result = false;
 		$error = '';
+		$errno = 0;
 		$httpCode = 0;
-		for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+		for ($attempt = 1; $attempt <= 3; $attempt++) {
 			$ch = curl_init($url);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, [
-				'Authorization: Bearer ' . $this->getToken(),
-				'Content-Type: application/json'
+				'Authorization: Bearer ' . $token,
+				'Accept: application/json',
 			]);
 			curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+			curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
+			saris_cli_log("GET {$url} (attempt {$attempt}/3)...");
+			$requestStarted = microtime(true);
 			$result = curl_exec($ch);
 			$error = curl_error($ch);
+			$errno = curl_errno($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			$connectTime = curl_getinfo($ch, CURLINFO_CONNECT_TIME);
+			$appConnectTime = curl_getinfo($ch, CURLINFO_APPCONNECT_TIME);
 			curl_close($ch);
-
+			$elapsed = round(microtime(true) - $requestStarted, 1);
 			if ($result !== false) {
+				saris_cli_log("  -> HTTP {$httpCode} in {$elapsed}s");
 				break;
 			}
-			if ($attempt < $maxAttempts) {
-				sleep(5 * $attempt);
-			}
+			saris_cli_log("  -> failed after {$elapsed}s: {$error}");
+			// Retry only transient transport failures. Once the request fully
+			// connected and timed out waiting on the server response, retries
+			// just multiply the wait without changing the outcome.
+			if (!$this->shouldRetryTransportFailure($errno, $error, $httpCode, $connectTime, $appConnectTime)) break;
+			if ($attempt < 3) sleep(5 * $attempt);
 		}
 
 		if ($result === false) {
 			throw new Exception('SARIS API request failed: ' . $error);
 		}
 		$decoded = json_decode($result, true);
-		if ($httpCode === 404) {
-			return ['statusCode' => 404, 'data' => null];
-		}
-		if ($httpCode !== 200) {
-			throw new Exception('SARIS API returned HTTP ' . $httpCode . ' for ' . $endpoint . '.');
-		}
 		if (!is_array($decoded)) {
-			throw new Exception('SARIS API returned an invalid JSON response.');
+			throw new Exception('SARIS API returned invalid JSON (HTTP ' . $httpCode . ')');
 		}
-		if (isset($decoded['statusCode']) && (int)$decoded['statusCode'] === 404) {
-			return ['statusCode' => 404, 'data' => null];
-		}
-		if (isset($decoded['statusCode']) && (int)$decoded['statusCode'] !== 200) {
-			$message = isset($decoded['message']) ? $decoded['message'] : 'Unexpected SARIS API status.';
-			throw new Exception($message);
+
+		if (empty($decoded['success'])) {
+			$errorCode = isset($decoded['results']['error_code']) ? $decoded['results']['error_code'] : '';
+			$message   = isset($decoded['message'])              ? $decoded['message']              : 'Unknown error';
+
+			if ($errorCode === 'INVALID_TOKEN' && !$isRetry) {
+				// Token expired mid-request — clear cache, re-authenticate, retry once
+				unset($_SESSION['SARISAPI_TOKEN'], $_SESSION['SARISAPI_TOKEN_EXPIRES_AT']);
+				$this->authenticate();
+				return $this->get($endpointUrl, $params, true);
+			}
+			if ($errorCode === 'NO_DATA_FOUND') {
+				return ['success' => true, 'message' => 'No data found', 'results' => ['count' => 0, 'data' => []]];
+			}
+			error_log('SARIS API [' . $errorCode . '] ' . $endpointUrl . ': ' . $message);
+			throw new Exception('SARIS API error [' . $errorCode . ']: ' . $message);
 		}
 		return $decoded;
 	}
 
+	public function getStudents(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('student_endpoint'), $filters);
+	}
+
+	public function getInvoices(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('invoice_endpoint'), $filters);
+	}
+
+	public function getPayments(array $filters = []) {
+		return $this->get($this->baseUrl() . $this->cfg('payment_endpoint'), $filters);
+	}
+
+	// Backward-compatible wrappers for any code that still calls the old method names
 	public function getAllInvoices($dateFrom, $dateTo) {
-		return $this->request('/api_erp/v1/get_all_invoices', [
-			'invoice_date_from' => $dateFrom,
-			'invoice_date_to' => $dateTo
-		]);
+		return $this->getInvoices(['date_from' => $dateFrom, 'date_to' => $dateTo, 'limit' => 50]);
 	}
 
 	public function getStudentInfo($regNumber) {
-		return $this->request('/api_erp/v1/get_student_info', ['reg_number' => $regNumber]);
+		$response = $this->getStudents(['regno' => $regNumber, 'limit' => 1]);
+		$data = saris_iae_extract($response);
+		if (empty($data)) {
+			return ['statusCode' => 404, 'data' => null];
+		}
+		return ['success' => true, 'data' => saris_map_student($data[0])];
 	}
 
 	public function getAllPayments($dateFrom, $dateTo) {
-		return $this->request('/api_erp/v1/get_all_payments', [
-			'payment_date_from' => $dateFrom,
-			'payment_date_to' => $dateTo
-		]);
+		return $this->getPayments(['date_from' => $dateFrom, 'date_to' => $dateTo, 'limit' => 50]);
 	}
 }
 
@@ -165,6 +421,64 @@ function saris_extract_records($response) {
 		return $response;
 	}
 	return [];
+}
+
+// Extract data array from IAE v1 response: {success, results:{count, data:[...]}}
+function saris_iae_extract(array $response) {
+	if (!empty($response['success'])
+		&& isset($response['results']['data'])
+		&& is_array($response['results']['data'])
+	) {
+		return $response['results']['data'];
+	}
+	return [];
+}
+
+// Map IAE v1 /students record fields to internal column names.
+function saris_map_student(array $raw) {
+	$classes = (!empty($raw['classes']) && is_array($raw['classes'])) ? $raw['classes'][0] : [];
+	return [
+		'student_regnumber' => isset($raw['RegNo'])            ? $raw['RegNo']            : null,
+		'student_fullname'  => isset($raw['Name'])             ? $raw['Name']             : null,
+		'student_email'     => isset($raw['Email'])            ? $raw['Email']            : null,
+		'student_phone'     => isset($raw['Phone'])            ? $raw['Phone']            : null,
+		'student_programme' => isset($raw['ProgrammeofStudy']) ? $raw['ProgrammeofStudy'] : null,
+		'student_entryyear' => isset($raw['EntryYear'])        ? $raw['EntryYear']        : null,
+		'student_studyyear' => isset($classes['YearOfStudy'])  ? $classes['YearOfStudy']  : null,
+		'student_intake'    => isset($classes['AYear'])        ? $classes['AYear']        : null,
+	];
+}
+
+// Map IAE v1 /invoices record fields to internal column names.
+// Key names shown here are best-guess from the API spec; update if the live
+// response uses different casing or snake_case variants.
+function saris_map_invoice(array $raw) {
+	return [
+		'student_name'             => isset($raw['StudentName'])  ? $raw['StudentName']  : (isset($raw['student_name'])  ? $raw['student_name']  : null),
+		'invoice_reference_number' => isset($raw['InvoiceId'])    ? $raw['InvoiceId']    : (isset($raw['invoice_id'])    ? $raw['invoice_id']    : (isset($raw['control_number']) ? $raw['control_number'] : null)),
+		'student_regnumber'        => isset($raw['StudentId'])     ? $raw['StudentId']    : (isset($raw['student_id'])    ? $raw['student_id']    : null),
+		'invoice_amount'           => isset($raw['Amount'])        ? $raw['Amount']       : (isset($raw['amount'])        ? $raw['amount']        : 0),
+		'invoice_amount_type'      => isset($raw['AmountType'])   ? $raw['AmountType']   : (isset($raw['amount_type'])   ? $raw['amount_type']   : null),
+		'invoice_desciption'       => isset($raw['FeeName'])      ? $raw['FeeName']      : (isset($raw['fee_name'])      ? $raw['fee_name']      : null),
+		'invoice_date'             => isset($raw['InvoiceDate'])  ? $raw['InvoiceDate']  : (isset($raw['invoice_date'])  ? $raw['invoice_date']  : (isset($raw['date']) ? $raw['date'] : null)),
+	];
+}
+
+// Map IAE v1 /payments record fields to internal column names.
+function saris_map_payment(array $raw) {
+	return [
+		'student_name'             => isset($raw['StudentName'])   ? $raw['StudentName']   : (isset($raw['student_name'])   ? $raw['student_name']   : null),
+		'student_regnumber'        => isset($raw['StudentId'])      ? $raw['StudentId']      : (isset($raw['student_id'])      ? $raw['student_id']      : null),
+		'payment_desciption'       => isset($raw['Description'])   ? $raw['Description']   : (isset($raw['fee_category'])   ? $raw['fee_category']   : null),
+		'payment_amount'           => isset($raw['Amount'])        ? $raw['Amount']        : (isset($raw['amount'])        ? $raw['amount']        : 0),
+		'payment_amount_type'      => isset($raw['AmountType'])    ? $raw['AmountType']    : (isset($raw['amount_type'])    ? $raw['amount_type']    : null),
+		'payment_currency'         => isset($raw['Currency'])      ? $raw['Currency']      : (isset($raw['currency'])      ? $raw['currency']      : null),
+		'payment_receipt_number'   => isset($raw['ReceiptNumber']) ? $raw['ReceiptNumber'] : (isset($raw['receipt_number']) ? $raw['receipt_number'] : null),
+		'payment_transaction_ref'  => isset($raw['ControlNumber']) ? $raw['ControlNumber'] : (isset($raw['control_number']) ? $raw['control_number'] : null),
+		'payment_date'             => isset($raw['PaymentDate'])   ? $raw['PaymentDate']   : (isset($raw['payment_date'])   ? $raw['payment_date']   : (isset($raw['date']) ? $raw['date'] : null)),
+		'payment_reference_number' => isset($raw['InvoiceNumber']) ? $raw['InvoiceNumber'] : (isset($raw['invoice_number']) ? $raw['invoice_number'] : null),
+		'payment_source'           => isset($raw['Source'])        ? $raw['Source']        : (isset($raw['source'])        ? $raw['source']        : null),
+	];
 }
 
 function saris_sql_decimal($value) {
@@ -353,49 +667,109 @@ function saris_upsert_payment($payment) {
 	);
 }
 
+// Split a date range into <= 30-day windows so a wide manual sync doesn't
+// force the SARIS server to compute one huge query that exceeds our timeout.
+function saris_date_chunks($startDate, $endDate, $maxDays = 30) {
+	$chunks = [];
+	$start = new DateTime($startDate);
+	$end = new DateTime($endDate);
+	while ($start <= $end) {
+		$chunkEnd = (clone $start)->modify('+' . ($maxDays - 1) . ' days');
+		if ($chunkEnd > $end) {
+			$chunkEnd = clone $end;
+		}
+		$chunks[] = [$start->format('Y-m-d'), $chunkEnd->format('Y-m-d')];
+		$start = (clone $chunkEnd)->modify('+1 day');
+	}
+	return $chunks;
+}
+
 function saris_sync_payments($client, $startDate, $endDate) {
-	$response = $client->getAllPayments($startDate, $endDate);
-	$payments = saris_extract_records($response);
-	$count = 0;
-	foreach ($payments as $payment) {
-		saris_upsert_payment($payment);
-		$count++;
+	$count    = 0;
+	$pageSize = 50;
+	$chunks = saris_date_chunks($startDate, $endDate);
+	$chunkIndex = 0;
+	foreach ($chunks as [$chunkFrom, $chunkTo]) {
+		$chunkIndex++;
+		saris_cli_log("Payments chunk {$chunkIndex}/" . count($chunks) . ": {$chunkFrom} -> {$chunkTo}");
+		$offset = 0;
+		do {
+			$response = $client->getPayments([
+				'date_from'               => $chunkFrom,
+				'date_to'                 => $chunkTo,
+				'include_invoice_details' => 'false', // reduce payload when detail is not needed
+				'limit'                   => $pageSize,
+				'offset'                  => $offset,
+			]);
+			$batch = saris_iae_extract($response);
+			foreach ($batch as $raw) {
+				saris_upsert_payment(saris_map_payment($raw));
+				$count++;
+			}
+			saris_cli_log("  payments page offset={$offset}: " . count($batch) . ' record(s), ' . $count . ' total so far');
+			$offset += $pageSize;
+		} while (count($batch) === $pageSize);
 	}
 	return $count;
 }
 
 function saris_full_sync($client, $startDate, $endDate) {
 	$stats = [
-		'invoices' => 0,
-		'students' => 0,
+		'invoices'         => 0,
+		'students'         => 0,
 		'students_skipped' => 0,
-		'payments' => 0
+		'payments'         => 0,
 	];
-
-	$response = $client->getAllInvoices($startDate, $endDate);
-	$invoices = saris_extract_records($response);
 	$regNumbers = [];
-	foreach ($invoices as $invoice) {
-		saris_upsert_invoice($invoice);
-		$stats['invoices']++;
-		if (!empty($invoice['student_regnumber'])) {
-			$regNumbers[$invoice['student_regnumber']] = true;
-		}
-	}
+	$offset     = 0;
+	$pageSize   = 50;
 
-	foreach (array_keys($regNumbers) as $regNumber) {
-		$response = $client->getStudentInfo($regNumber);
-		if (isset($response['statusCode']) && (int)$response['statusCode'] === 404) {
+	saris_cli_log("== Invoices: {$startDate} -> {$endDate} ==");
+	// Paginated invoice fetch — replaced direct DB queries with IAE v1 API calls
+	do {
+		$response = $client->getInvoices([
+			'date_from' => $startDate,
+			'date_to'   => $endDate,
+			'limit'     => $pageSize,
+			'offset'    => $offset,
+		]);
+		$batch = saris_iae_extract($response);
+		foreach ($batch as $raw) {
+			$invoice = saris_map_invoice($raw);
+			saris_upsert_invoice($invoice);
+			$stats['invoices']++;
+			if (!empty($invoice['student_regnumber'])) {
+				$regNumbers[$invoice['student_regnumber']] = true;
+			}
+		}
+		saris_cli_log("  invoices page offset={$offset}: " . count($batch) . ' record(s), ' . $stats['invoices'] . ' total so far');
+		$offset += $pageSize;
+	} while (count($batch) === $pageSize);
+
+	saris_cli_log('== Students: ' . count($regNumbers) . ' unique registration number(s) ==');
+	// Per-student lookup using the new /students endpoint
+	$studentIndex = 0;
+	foreach (array_keys($regNumbers) as $regNo) {
+		$studentIndex++;
+		saris_cli_log("  student {$studentIndex}/" . count($regNumbers) . ": {$regNo}");
+		$response = $client->getStudents(['regno' => $regNo, 'limit' => 1]);
+		$batch = saris_iae_extract($response);
+		if (empty($batch)) {
 			$stats['students_skipped']++;
+			saris_cli_log("    not found, skipped");
 			continue;
 		}
-		$student = isset($response['data']) && is_array($response['data']) ? $response['data'] : $response;
-		if (is_array($student) && !empty($student['student_regnumber'])) {
+		$student = saris_map_student($batch[0]);
+		if (!empty($student['student_regnumber'])) {
 			saris_upsert_student($student);
 			$stats['students']++;
+		} else {
+			$stats['students_skipped']++;
+			saris_cli_log("    no regnumber in response, skipped");
 		}
 	}
 
+	saris_cli_log("== Payments: {$startDate} -> {$endDate} ==");
 	$stats['payments'] = saris_sync_payments($client, $startDate, $endDate);
 	return $stats;
 }
@@ -707,11 +1081,12 @@ function saris_list_sync_history($limit, $offset, $searchTerm = '', $sort = 'cre
 function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	global $RootPath;
 	$tabs = [
-		'Settings' => '/SARIS_Settings.php',
-		'Students' => '/SARIS_Students.php',
-		'Invoices' => '/SARIS_Invoices.php',
-		'Payments' => '/SARIS_Payments.php',
-		'Sync History' => '/SARIS_SyncHistory.php'
+		'Settings'          => '/SARIS_Settings.php',
+		'API Configuration' => '/SARIS_APIConfig.php',
+		'Students'          => '/SARIS_Students.php',
+		'Invoices'          => '/SARIS_Invoices.php',
+		'Payments'          => '/SARIS_Payments.php',
+		'Sync History'      => '/SARIS_SyncHistory.php',
 	];
 	echo '<div class="noPrint" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center;margin:0 0 24px 0;">';
 	echo '<div style="display:flex;gap:8px;flex-wrap:wrap;">';

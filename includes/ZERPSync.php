@@ -40,9 +40,12 @@ class ZERPSync {
 
 		try {
 			$this->resetStaleClaims();
+			saris_cli_log('== ZERP: students ==');
 			$this->syncStudents();
+			saris_cli_log('== ZERP: invoices ==');
 			$this->syncInvoices();
 			$this->refreshPaymentWaitingStates();
+			saris_cli_log('== ZERP: payments ==');
 			$this->syncPayments();
 			$this->stats['error_summary'] = $this->errorSummary();
 		} finally {
@@ -89,6 +92,7 @@ class ZERPSync {
 					continue;
 				}
 				$row = $this->rowById('students', $row['id']);
+				saris_cli_log("  student id={$row['id']} regno={$row['student_regnumber']}...");
 				try {
 					$code = $row['zerp_customer_code'] ?: self::customerCode($row['student_regnumber']);
 					$branchCode = substr((string)$this->config['branch_code'], 0, 10);
@@ -135,10 +139,12 @@ class ZERPSync {
 
 					$this->markSynced('students', $row['id']);
 					$this->stats['students_synced']++;
+					saris_cli_log("    synced (customer {$code})");
 				} catch (Throwable $exception) {
 					$fresh = $this->rowById('students', $row['id']);
 					$status = !empty($fresh['customer_synced_at']) || !empty($fresh['branch_synced_at']) ? 'partial' : 'failed';
 					$this->markError('students', $row, $status, $exception);
+					saris_cli_log("    {$status}: " . $exception->getMessage());
 				}
 			}
 		}
@@ -169,6 +175,7 @@ class ZERPSync {
 					continue;
 				}
 				$row = $this->rowById('invoices', $row['id']);
+				saris_cli_log("  invoice id={$row['id']} ref={$row['invoice_reference_number']}...");
 				try {
 					if (!empty($row['zerp_invoice_no'])) {
 						$this->markSynced('invoices', $row['id']);
@@ -193,8 +200,10 @@ class ZERPSync {
 					);
 					$stmtUpdate->execute([$invoiceNo, $remoteReference, $row['id']]);
 					$this->stats['invoices_synced']++;
+					saris_cli_log("    synced (ZERP invoice {$invoiceNo})");
 				} catch (Throwable $exception) {
 					$this->markError('invoices', $row, 'failed', $exception);
+					saris_cli_log('    failed: ' . $exception->getMessage());
 				}
 			}
 		}
@@ -237,6 +246,7 @@ class ZERPSync {
 					continue;
 				}
 				$row = $this->rowById('payments', $row['id']);
+				saris_cli_log("  payment id={$row['id']} ref={$row['payment_reference_number']}...");
 				try {
 					if ((float)$row['payment_amount'] <= 0) {
 						throw new InvalidArgumentException('Payment amount must be greater than zero.');
@@ -280,10 +290,12 @@ class ZERPSync {
 					);
 					$stmtDone->execute([$invoice['zerp_invoice_no'], $row['id']]);
 					$this->stats['payments_synced']++;
+					saris_cli_log('    synced');
 				} catch (Throwable $exception) {
 					$fresh = $this->rowById('payments', $row['id']);
 					$status = !empty($fresh['zerp_receipt_no']) ? 'partial' : 'failed';
 					$this->markError('payments', $row, $status, $exception);
+					saris_cli_log("    {$status}: " . $exception->getMessage());
 				}
 			}
 		}

@@ -741,7 +741,8 @@ if (!isset($NoMenu) || $NoMenu != 1) {
 
 echo '<div id="MessageContainerHead"></div>';
 
-echo '	<script>
+?>
+	<script>
 		const sidebarToggle = document.getElementById("SidebarToggle");
 		const sidebarMask = document.getElementById("SidebarMask");
 
@@ -757,4 +758,5 @@ echo '	<script>
 		sidebarMask.onclick = function() {
 			document.body.classList.remove("sidebar-active");
 		};
-	</script>';
+	</script>
+<?php

@@ -90,11 +90,7 @@ $ExtraHeadContent = '
     
     .db-form-container {
         width: 100%;
-<<<<<<< HEAD
-        max-width: 900px;
-=======
         max-width: 1000px;
->>>>>>> e520f144b3ba92ff7454aa7087eb6424c4b6d323
         margin: 0 auto;
     }
 
@@ -208,15 +204,7 @@ if (isset($_POST['submit'])) {
 			$safe[$k] = DB_escape_string(isset($_POST[$k]) ? (string)$_POST[$k] : '');
 		}
 
-		$CompanyFileHandler = fopen($PathPrefix . 'companies/' . $_SESSION['DatabaseName'] . '/Companies.php', 'w');
-		$Contents = "<?php\n\n";
-		$Contents.= "\$CompanyName['" . $_SESSION['DatabaseName'] . "'] = '" . addslashes($_POST['CoyName']) . "';\n";
-		$Contents.= "?>";
 
-		if (!fwrite($CompanyFileHandler, $Contents)) {
-			fclose($CompanyFileHandler);
-			echo '<div class="error">' . __('Cannot write to the Companies.php file') . '</div>';
-		}
 
 		$SQL = "UPDATE companies SET coyname='" . $safe['CoyName'] . "',
 									companynumber = '" . $safe['CompanyNumber'] . "',

@@ -406,7 +406,7 @@ if (in_array(1, $_SESSION['AllowedPageSecurityTokens']) and count($_SESSION['All
 }
 
 if ($FirstLogin) {
-	if (!$SupplierLogin and !$CustomerLogin and $_SESSION['ShowDashboard'] == 1) {
+	if (!$SupplierLogin and !$CustomerLogin) {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/Dashboard.php');
 	} else {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/index.php');

@@ -128,6 +128,22 @@ echo '<div class="help-bubble" id="help-bubble">
 		</div>
 		<div class="help-content" id="help-content"></div>
 	</div>';
+	
+echo '
+	<div id="mask">
+		<div id="dialog"></div>
+	</div>
+	<dialog id="logoutDialog" style="margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;">
+		<div id="DialogContainer">
+			<h3 id="LogoutDialogHeader">', __('Confirm Logout'), '</h3>
+			<p id="LogoutDialogText">', __('Are you sure you wish to logout?'), '</p>
+			<div id="DialogButtonContainer">
+				<button id="cancelLogout">', __('Cancel'), '</button>
+				<button id="confirmLogout">', __('Logout'), '</button>
+			</div>
+		</div>
+	</dialog>
+';
 
 if (!isset($NoMenu) || $NoMenu != 1) {
 	echo '<div class="dashboard-container">
@@ -759,4 +775,4 @@ echo '<div id="MessageContainerHead"></div>';
 			document.body.classList.remove("sidebar-active");
 		};
 	</script>
-<?php
+<?php?>

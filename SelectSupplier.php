@@ -37,17 +37,19 @@ if ($_SESSION['geocode_integration'] == 1 AND isset($_SESSION['SupplierID'])) {
 			ORDER BY suppliers.supplierid";
 	$Result2 = DB_query($SQL);
 	$MyRow2 = DB_fetch_array($Result2);
-	$lat = $MyRow2['lat'];
-	$lng = $MyRow2['lng'];
-	$suppname = $MyRow2['suppname'];
-	$address1 = $MyRow2['address1'];
-	$address2 = $MyRow2['address2'];
-	$address3 = $MyRow2['address3'];
-	$address4 = $MyRow2['address4'];
-	$map_height = $MyRow['map_height'];
-	$map_width = $MyRow['map_width'];
-	$ExtraHeadContent = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>' . "\n";
-	$ExtraHeadContent .= '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>' . "\n";
+	if ($MyRow && $MyRow2) {
+		$lat = $MyRow2['lat'];
+		$lng = $MyRow2['lng'];
+		$suppname = $MyRow2['suppname'];
+		$address1 = $MyRow2['address1'];
+		$address2 = $MyRow2['address2'];
+		$address3 = $MyRow2['address3'];
+		$address4 = $MyRow2['address4'];
+		$map_height = $MyRow['map_height'];
+		$map_width = $MyRow['map_width'];
+		$ExtraHeadContent = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>' . "\n";
+		$ExtraHeadContent .= '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>' . "\n";
+	}
 }
 
 $Title = __('Search Suppliers');
@@ -76,10 +78,22 @@ if (!isset($_POST['PageOffset'])) {
 		$_POST['PageOffset'] = 1;
 	}
 }
+if (isset($_POST['SortBy'])) {
+	$parts = explode('|', $_POST['SortBy']);
+	$_POST['Sort'] = $parts[0];
+	$_POST['Dir'] = $parts[1];
+}
+$allowedSorts = ['supplierid', 'suppname', 'currcode', 'address1'];
+$sort = isset($_POST['Sort']) && in_array($_POST['Sort'], $allowedSorts) ? $_POST['Sort'] : 'suppname';
+$dir = isset($_POST['Dir']) && $_POST['Dir'] === 'DESC' ? 'DESC' : 'ASC';
+$_POST['Sort'] = $sort;
+$_POST['Dir'] = $dir;
+
 if (isset($_POST['Search'])
 	OR isset($_POST['Go'])
 	OR isset($_POST['Next'])
-	OR isset($_POST['Previous'])) {
+	OR isset($_POST['Previous'])
+	OR isset($_POST['SortBy'])) {
 
 	if (mb_strlen($_POST['Keywords']) > 0 AND mb_strlen($_POST['SupplierCode']) > 0) {
 		prnMsg( __('Supplier name keywords have been used in preference to the Supplier code extract entered'), 'info' );
@@ -96,7 +110,7 @@ if (isset($_POST['Search'])
 					email,
 					url
 				FROM suppliers
-				ORDER BY suppname";
+				ORDER BY " . $sort . " " . $dir;
 	} else {
 		if (mb_strlen($_POST['Keywords']) > 0) {
 			$_POST['Keywords'] = mb_strtoupper($_POST['Keywords']);
@@ -114,7 +128,7 @@ if (isset($_POST['Search'])
 							url
 						FROM suppliers
 						WHERE suppname " . LIKE . " '" . $SearchString . "'
-						ORDER BY suppname";
+						ORDER BY " . $sort . " " . $dir;
 		} elseif (mb_strlen($_POST['SupplierCode']) > 0) {
 			$_POST['SupplierCode'] = mb_strtoupper($_POST['SupplierCode']);
 			$SQL = "SELECT supplierid,
@@ -129,7 +143,7 @@ if (isset($_POST['Search'])
 							url
 						FROM suppliers
 						WHERE supplierid " . LIKE . " '%" . $_POST['SupplierCode'] . "%'
-						ORDER BY supplierid";
+						ORDER BY " . $sort . " " . $dir;
 		}
 	} //one of keywords or SupplierCode was more than a zero length string
 	$Result = DB_query($SQL);
@@ -159,53 +173,36 @@ if (isset($_SESSION['SupplierID'])) {
 }
 
 echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post">
-		<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
-		<div class="db-bottom-layout">';
+		<input type="hidden" name="FormID" value="' . (isset($_SESSION['FormID']) ? htmlspecialchars($_SESSION['FormID'], ENT_QUOTES, 'UTF-8') : '') . '" />
+		<input type="hidden" name="Sort" value="' . htmlspecialchars($sort, ENT_QUOTES, 'UTF-8') . '" />
+		<input type="hidden" name="Dir" value="' . htmlspecialchars($dir, ENT_QUOTES, 'UTF-8') . '" />
+		<div>'; // Removed db-bottom-layout, using simple div container
 
-// START SIDEBAR
-echo '<aside class="db-col-aside">';
+$RecordsPerPage = 10;
 
-// CARD 1: ACTIVE SUPPLIER (If selected)
+// ACTIVE SUPPLIER (If selected)
 if (isset($_SESSION['SupplierID'])) {
 	echo '<div class="db-card" style="margin-bottom: 20px; background: var(--primary-soft); border: 1px solid var(--primary-light);">
-			<div class="db-card-body">
-				<div style="font-size: 0.75rem; text-transform: uppercase; color: var(--db-primary); font-weight: 700; margin-bottom: 8px; opacity: 0.7;">' . __('Active Supplier') . '</div>
-				<div class="db-font-bold text-primary" style="font-size: 1.1rem; line-height: 1.2;">' . $SupplierName . '</div>
-				<div style="font-family: monospace; font-size: 0.85rem; margin-top: 5px; color: var(--text-muted);">[' . $_SESSION['SupplierID'] . ']</div>
+			<div class="db-card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+				<div style="display: flex; align-items: center; gap: 16px;">
+					<div style="width: 48px; height: 48px; background: var(--db-primary); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(var(--db-primary-rgb), 0.3);">
+						<i class="fas fa-check"></i>
+					</div>
+					<div>
+						<div style="font-size: 0.75rem; text-transform: uppercase; color: var(--db-primary); font-weight: 700; margin-bottom: 4px; opacity: 0.8;">' . __('Active Supplier') . '</div>
+						<div class="db-font-bold text-primary" style="font-size: 1.2rem; line-height: 1.2;">' . $SupplierName . '</div>
+						<div style="font-family: monospace; font-size: 0.85rem; margin-top: 2px; color: var(--text-muted);">[' . $_SESSION['SupplierID'] . ']</div>
+					</div>
+				</div>
+				<button type="submit" name="Select" value="" class="db-btn db-btn-secondary" style="padding: 8px 16px;"><i class="fas fa-times" style="margin-right: 6px;"></i> ' . __('Clear Selection') . '</button>
 			</div>
 		  </div>';
-}
 
-	echo '<div class="db-card">
-			<div class="db-card-header">
-				<h3 class="db-card-title"><i class="fas fa-search" style="margin-right: 8px;"></i> ' . __('Find Supplier') . '</h3>
-			</div>
-			<div class="db-card-body">
-				<div class="db-form-group">
-					<label class="db-label">' . __('Supplier Name') . '</label>
-					<input type="text" name="Keywords" class="db-input" value="' . (isset($_POST['Keywords']) ? $_POST['Keywords'] : '') . '" placeholder="' . __('Keywords...') . '" />
-				</div>
-				<div class="db-form-group">
-					<label class="db-label">' . __('Supplier Code') . '</label>
-					<input type="text" name="SupplierCode" class="db-input" value="' . (isset($_POST['SupplierCode']) ? $_POST['SupplierCode'] : '') . '" placeholder="' . __('Code...') . '" />
-				</div>
-				<button type="submit" name="Search" class="db-btn db-btn-primary" style="width: 100%; margin-top: 10px;">
-					<i class="fas fa-search" style="margin-right: 8px;"></i> ' . __('Search Now') . '
-				</button>
-			</div>
-		</div>';
-
-echo '</aside>';
-// END SIDEBAR
-
-echo '<main class="db-col-main">';
-
-if (isset($_SESSION['SupplierID'])) {
 	echo '<div class="db-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6); margin-bottom: var(--space-8);">
 			
 			<!-- Inquiries & Reports -->
-			<div class="db-card">
-				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4);">
+			<div class="db-card" style="transition: transform 0.2s, box-shadow 0.2s; cursor: default;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'var(--shadow-md)\';" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--shadow-sm)\';">
+				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4); background: rgba(var(--db-primary-rgb), 0.02);">
 					<h3 class="db-card-title"><i class="fas fa-file-alt" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Inquiries & Reports') . '</h3>
 				</div>
 				<div class="db-card-body" style="padding: var(--space-3);">
@@ -222,8 +219,8 @@ if (isset($_SESSION['SupplierID'])) {
 			</div>
 
 			<!-- Transactions -->
-			<div class="db-card">
-				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4);">
+			<div class="db-card" style="transition: transform 0.2s, box-shadow 0.2s; cursor: default;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'var(--shadow-md)\';" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--shadow-sm)\';">
+				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4); background: rgba(var(--db-primary-rgb), 0.02);">
 					<h3 class="db-card-title"><i class="fas fa-exchange-alt" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Transactions') . '</h3>
 				</div>
 				<div class="db-card-body" style="padding: var(--space-3);">
@@ -238,8 +235,8 @@ if (isset($_SESSION['SupplierID'])) {
 			</div>
 
 			<!-- Maintenance -->
-			<div class="db-card">
-				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4);">
+			<div class="db-card" style="transition: transform 0.2s, box-shadow 0.2s; cursor: default;" onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'var(--shadow-md)\';" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--shadow-sm)\';">
+				<div class="db-card-header" style="border-bottom: 1px solid var(--border-soft); padding: var(--space-4); background: rgba(var(--db-primary-rgb), 0.02);">
 					<h3 class="db-card-title"><i class="fas fa-tools" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Maintenance') . '</h3>
 				</div>
 				<div class="db-card-body" style="padding: var(--space-3);">
@@ -253,30 +250,47 @@ if (isset($_SESSION['SupplierID'])) {
 					</ul>
 				</div>
 			</div>
-
 		</div>';
 }
+
+// TOP SEARCH BAR AND RESULTS COMBINED
+echo '<div class="db-card" style="margin-bottom: var(--space-6);">';
+
+// Search Header Section
+echo '<div style="background: linear-gradient(145deg, var(--surface) 0%, var(--surface-alt) 100%); padding: var(--space-4); border-bottom: 1px solid var(--border-soft); border-radius: var(--radius-md) var(--radius-md) 0 0;">
+		<div style="display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-end;">
+			<div class="db-form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+				<label class="db-label" style="font-weight: 600;"><i class="fas fa-building" style="margin-right: 6px; color: var(--text-muted);"></i>' . __('Supplier Name') . '</label>
+				<input type="text" name="Keywords" class="db-input" value="' . (isset($_POST['Keywords']) ? $_POST['Keywords'] : '') . '" placeholder="' . __('Keywords...') . '" />
+			</div>
+			<div class="db-form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+				<label class="db-label" style="font-weight: 600;"><i class="fas fa-barcode" style="margin-right: 6px; color: var(--text-muted);"></i>' . __('Supplier Code') . '</label>
+				<input type="text" name="SupplierCode" class="db-input" value="' . (isset($_POST['SupplierCode']) ? $_POST['SupplierCode'] : '') . '" placeholder="' . __('Code...') . '" />
+			</div>
+			<div style="flex: 0 0 auto;">
+				<button type="submit" name="Search" class="db-btn db-btn-primary" style="height: 42px; padding: 0 32px; font-weight: 600; font-size: 1rem; box-shadow: 0 4px 12px rgba(var(--db-primary-rgb), 0.2);">
+					<i class="fas fa-search" style="margin-right: 8px;"></i> ' . __('Search Now') . '
+				</button>
+			</div>
+		</div>
+	  </div>';
 
 if (!isset($_SESSION['SupplierID']) && !isset($_POST['Search'])) {
-	// Empty State
-	echo '<div class="db-card" style="height: 100%; min-height: 400px; display: flex; align-items: center; justify-content: center; text-align: center;">
-			<div class="db-card-body">
-				<div style="width: 80px; height: 80px; background: var(--db-bg-alt); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--db-text-muted);">
-					<i class="fas fa-user-friends" style="font-size: 2.5rem; opacity: 0.3;"></i>
+	// Empty State inside the unified card
+	echo '<div class="db-card-body" style="min-height: 400px; display: flex; align-items: center; justify-content: center; text-align: center;">
+			<div>
+				<div style="width: 100px; height: 100px; background: var(--surface-alt); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--db-text-muted); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+					<i class="fas fa-search" style="font-size: 3rem; opacity: 0.3;"></i>
 				</div>
-				<h3 class="db-font-bold" style="color: var(--text-main); margin-bottom: 8px;">' . __('Find a Supplier') . '</h3>
-				<p style="max-width: 300px; margin: 0 auto; color: var(--text-muted);">' . __('Use the search form in the sidebar to find and select a supplier to manage.') . '</p>
+				<h3 class="db-font-bold" style="color: var(--text-main); margin-bottom: 12px; font-size: 1.5rem;">' . __('Find a Supplier') . '</h3>
+				<p style="max-width: 400px; margin: 0 auto; color: var(--text-muted); font-size: 1.1rem; line-height: 1.5;">' . __('Use the search form above to find and select a supplier to manage their account, orders, and transactions.') . '</p>
 			</div>
-		</div>';
+		  </div>';
 }
 
-
-
-
-//if (isset($Result) AND !isset($SingleSupplierReturned)) {
 if (isset($_POST['Search'])) {
 	$ListCount = DB_num_rows($Result);
-	$ListPageMax = ceil($ListCount / $_SESSION['DisplayRecordsMax']);
+	$ListPageMax = ceil($ListCount / $RecordsPerPage);
 	if (isset($_POST['Next'])) {
 		if ($_POST['PageOffset'] < $ListPageMax) {
 			$_POST['PageOffset'] = $_POST['PageOffset'] + 1;
@@ -287,75 +301,258 @@ if (isset($_POST['Search'])) {
 			$_POST['PageOffset'] = $_POST['PageOffset'] - 1;
 		}
 	}
-	if ($ListPageMax > 1) {
-		echo '<div class="db-pagination" style="display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); background: var(--surface-alt); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-soft);">
-				<span style="font-size: 0.85rem; font-weight: 600;">' . $_POST['PageOffset'] . ' ' . __('of') . ' ' . $ListPageMax . ' ' . __('pages') . '</span>
-				<div style="flex: 1;"></div>
-				<label style="display: inline; margin-right: 8px;">' . __('Go to Page') . ':</label>
-				<select name="PageOffset" style="width: auto; padding: 4px 8px;">';
-		$ListPage = 1;
-		while ($ListPage <= $ListPageMax) {
-			$selected = ($ListPage == $_POST['PageOffset']) ? 'selected="selected"' : '';
-			echo '<option value="' . $ListPage . '" ' . $selected . '>' . $ListPage . '</option>';
-			$ListPage++;
-		}
-		echo '</select>
-				<button type="submit" name="Go" class="db-btn db-btn-secondary" style="padding: 4px 12px;">' . __('Go') . '</button>
-				<button type="submit" name="Previous" class="db-btn db-btn-secondary" style="padding: 4px 12px;">' . __('Previous') . '</button>
-				<button type="submit" name="Next" class="db-btn db-btn-secondary" style="padding: 4px 12px;">' . __('Next') . '</button>
-			</div>';
-	}
+	
 	echo '<input type="hidden" name="Search" value="' . __('Search Now') . '" />';
 
-	echo '<div class="db-card">
-			<div class="db-table-wrapper">
-				<table class="db-table">
+	// View Toggle Header inside unified card
+	echo '<div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-soft); background: var(--surface);">
+			<h3 class="db-card-title" style="margin: 0; font-size: 1.25rem;"><i class="fas fa-list" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Search Results') . ' <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal; margin-left: 8px;">(' . $ListCount . ' ' . __('found') . ')</span></h3>
+			<div class="db-btn-group" style="display: flex; background: var(--surface-alt); border-radius: var(--radius-md); padding: 4px; border: 1px solid var(--border-soft);">
+				<button type="button" class="db-btn" id="btn-view-table" style="background: var(--surface); box-shadow: var(--shadow-sm); padding: 6px 16px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.2s; color: var(--text-main); font-weight: 600;">
+					<i class="fas fa-table" style="margin-right: 6px;"></i> ' . __('Table') . '
+				</button>
+				<button type="button" class="db-btn" id="btn-view-cards" style="background: transparent; padding: 6px 16px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.2s; color: var(--text-muted); font-weight: 500;">
+					<i class="fas fa-th-large" style="margin-right: 6px;"></i> ' . __('Cards') . '
+				</button>
+			</div>
+		  </div>';
+
+	// TABLE VIEW CONTAINER inside unified card
+	echo '<style>
+		.saris-table-wrapper {
+			position: relative;
+			overflow-x: auto;
+			background-color: #fcfcfc;
+		}
+		.saris-table {
+			width: 100%;
+			font-size: 0.875rem;
+			text-align: left;
+			color: #4b5563;
+			border-collapse: collapse;
+		}
+		.saris-table thead {
+			background-color: #f3f4f6;
+			border-bottom: 1px solid #d1d5db;
+			color: #374151;
+		}
+		.saris-table th {
+			padding: 12px 24px;
+			font-weight: 500;
+			white-space: nowrap;
+		}
+		.saris-table tbody tr {
+			background-color: #fcfcfc;
+			border-bottom: 1px solid #e5e7eb;
+			transition: background-color 0.15s ease;
+		}
+		.saris-table tbody tr:hover {
+			background-color: #f3f4f6;
+		}
+		.saris-table td {
+			padding: 16px 24px;
+			white-space: nowrap;
+		}
+	</style>';
+	$renderSortHeader = function($label, $column) use ($sort, $dir) {
+		if ($column === null) {
+			return '<th style="padding:12px 24px;font-weight:500;white-space:nowrap;">' . __($label) . '</th>';
+		}
+		$isCurrent = $column === $sort;
+		$nextDir = $isCurrent && $dir === 'ASC' ? 'DESC' : 'ASC';
+		$icon = '';
+		if ($isCurrent) {
+			$icon = $dir === 'ASC' ? ' &uarr;' : ' &darr;';
+		}
+		return '<th style="position:sticky;top:0;background-color:#f3f4f6;z-index:10;box-shadow:0 1px 2px rgba(0,0,0,0.1);padding:0;font-weight:500;white-space:nowrap;">
+					<button type="submit" name="SortBy" value="' . $column . '|' . $nextDir . '" style="background:transparent;border:none;width:100%;height:100%;padding:12px 24px;text-align:left;font-weight:inherit;color:inherit;cursor:pointer;font-family:inherit;font-size:inherit;white-space:nowrap;">' . __($label) . $icon . '</button>
+				</th>';
+	};
+
+	echo '<div id="view-table-container">
+			<div class="saris-table-wrapper" style="width:100%;-webkit-overflow-scrolling:touch;">
+				<table class="saris-table">
 					<thead>
 						<tr>
-							<th>' . __('Select') . '</th>
-							<th>' . __('Code') . '</th>
-							<th>' . __('Supplier Name') . '</th>
-							<th>' . __('Currency') . '</th>
-							<th>' . __('Address') . '</th>
-							<th>' . __('Contact Info') . '</th>
+							' . $renderSortHeader('Select', null) . '
+							' . $renderSortHeader('Code', 'supplierid') . '
+							' . $renderSortHeader('Supplier Name', 'suppname') . '
+							' . $renderSortHeader('Currency', 'currcode') . '
+							' . $renderSortHeader('Address', 'address1') . '
+							' . $renderSortHeader('Contact Info', null) . '
 						</tr>
 					</thead>
 					<tbody>';
 
 	$RowIndex = 0;
 	if (DB_num_rows($Result) <> 0) {
-		DB_data_seek($Result, ($_POST['PageOffset'] - 1) * $_SESSION['DisplayRecordsMax']);
+		DB_data_seek($Result, ($_POST['PageOffset'] - 1) * $RecordsPerPage);
 	}
-	while (($MyRow = DB_fetch_array($Result)) AND ($RowIndex <> $_SESSION['DisplayRecordsMax'])) {
-		echo '<tr class="striped_row">
+	while (($MyRow = DB_fetch_array($Result)) AND ($RowIndex <> $RecordsPerPage)) {
+		echo '<tr>
 				<td style="width: 80px;">
-					<button type="submit" name="Select" value="'.$MyRow['supplierid'].'" class="db-btn db-btn-primary" style="padding: 4px 12px; font-size: 0.75rem;">' . __('Select') . '</button>
+					<button type="submit" name="Select" value="'.$MyRow['supplierid'].'" class="db-btn db-btn-primary" style="padding: 6px 12px; font-size: 0.8rem; border-radius: var(--radius-md);">' . __('Select') . '</button>
 				</td>
-				<td><span class="ref-badge">' . $MyRow['supplierid'] . '</span></td>
-				<td><div class="cust-name">' . $MyRow['suppname'] . '</div></td>
-				<td><span class="tag">' . $MyRow['currcode'] . '</span></td>
+				<td><span class="ref-badge" style="font-size: 0.85rem; padding: 4px 8px;">' . $MyRow['supplierid'] . '</span></td>
+				<td><div class="cust-name" style="font-weight: 600; font-size: 1rem; color: var(--text-main);">' . $MyRow['suppname'] . '</div></td>
+				<td><span class="tag" style="background: var(--surface-alt); border: 1px solid var(--border-soft);">' . $MyRow['currcode'] . '</span></td>
 				<td>
-					<div style="font-size: 0.8rem; line-height: 1.4;">
-						' . $MyRow['address1'] . (empty($MyRow['address2']) ? '' : ', ' . $MyRow['address2']) . '<br>
-						<span style="color: var(--text-muted);">' . $MyRow['address3'] . (empty($MyRow['address4']) ? '' : ' ' . $MyRow['address4']) . '</span>
+					<div style="font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">
+						' . $MyRow['address1'] . (empty($MyRow['address2']) ? '' : ', ' . $MyRow['address2']) . 
+						(empty($MyRow['address3']) ? '' : ' <span style="color: var(--text-muted);"> | ' . $MyRow['address3'] . '</span>') .
+						(empty($MyRow['address4']) ? '' : ' <span style="color: var(--text-muted);">' . $MyRow['address4'] . '</span>') . '
 					</div>
 				</td>
 				<td>
-					<div style="display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem;">
-						' . (empty($MyRow['telephone']) ? '' : '<span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>' . $MyRow['telephone'] . '</span>') . '
-						' . (empty($MyRow['email']) ? '' : '<a href="mailto:'.$MyRow['email'].'" style="color: var(--primary);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>' . $MyRow['email'] . '</a>') . '
-						' . (empty($MyRow['url']) ? '' : '<a href="'.$MyRow['url'].'" target="_blank" style="color: var(--primary);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>' . __('Website') . '</a>') . '
+					<div style="display: flex; flex-direction: row; gap: 12px; font-size: 0.85rem; white-space: nowrap;">
+						' . (empty($MyRow['telephone']) ? '' : '<span style="color: var(--text-main);"><i class="fas fa-phone-alt" style="margin-right: 6px; color: var(--text-muted);"></i>' . $MyRow['telephone'] . '</span>') . '
+						' . (empty($MyRow['email']) ? '' : '<a href="mailto:'.$MyRow['email'].'" style="color: var(--primary); display: inline-flex; align-items: center; transition: color 0.2s;"><i class="fas fa-envelope" style="margin-right: 6px;"></i>' . $MyRow['email'] . '</a>') . '
+						' . (empty($MyRow['url']) ? '' : '<a href="'.$MyRow['url'].'" target="_blank" style="color: var(--primary); display: inline-flex; align-items: center; transition: color 0.2s;"><i class="fas fa-globe" style="margin-right: 6px;"></i>' . __('Website') . '</a>') . '
 					</div>
 				</td>
 			</tr>';
 		$RowIndex = $RowIndex + 1;
 	}
 	echo '</tbody></table></div></div>';
+	
+	// CARDS VIEW CONTAINER
+	echo '<div id="view-cards-container" style="display: none; padding: 20px;">
+			<div class="db-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-6);">';
+			
+	$RowIndex = 0;
+	if (DB_num_rows($Result) <> 0) {
+		DB_data_seek($Result, ($_POST['PageOffset'] - 1) * $RecordsPerPage);
 	}
+	while (($MyRow = DB_fetch_array($Result)) AND ($RowIndex <> $RecordsPerPage)) {
+		echo '<div class="db-card" style="display: flex; flex-direction: column; height: 100%; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid var(--border-soft);" onmouseover="this.style.transform=\'translateY(-4px)\'; this.style.boxShadow=\'var(--shadow-lg)\';" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--shadow-sm)\';">
+				<div class="db-card-body" style="flex: 1; display: flex; flex-direction: column; padding: var(--space-5);">
+					
+					<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+						<div style="flex: 1; padding-right: 12px;">
+							<span class="ref-badge" style="margin-bottom: 8px; display: inline-block; font-size: 0.75rem; padding: 4px 8px; background: rgba(var(--db-primary-rgb), 0.1); color: var(--db-primary); border: none;">' . $MyRow['supplierid'] . '</span>
+							<h4 class="cust-name" style="margin: 0; font-size: 1.15rem; line-height: 1.4; color: var(--text-main); font-weight: 700;">' . $MyRow['suppname'] . '</h4>
+						</div>
+						<span class="tag" style="background: var(--surface-alt); border: 1px solid var(--border-soft); font-weight: 600;">' . $MyRow['currcode'] . '</span>
+					</div>
+					
+					<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; flex: 1; display: flex; flex-direction: column; gap: 8px;">
+						<div style="display: flex; align-items: flex-start;">
+							<i class="fas fa-map-marker-alt" style="width: 20px; margin-top: 4px; color: var(--text-muted); opacity: 0.7;"></i> 
+							<div style="line-height: 1.5;">
+								<span style="color: var(--text-main);">' . $MyRow['address1'] . (empty($MyRow['address2']) ? '' : ', ' . $MyRow['address2']) . '</span><br>
+								<span>' . $MyRow['address3'] . (empty($MyRow['address4']) ? '' : ' ' . $MyRow['address4']) . '</span>
+							</div>
+						</div>
+						' . (empty($MyRow['telephone']) ? '' : '<div style="display: flex; align-items: center;"><i class="fas fa-phone-alt" style="width: 20px; color: var(--text-muted); opacity: 0.7;"></i> <span style="color: var(--text-main);">' . $MyRow['telephone'] . '</span></div>') . '
+						' . (empty($MyRow['email']) ? '' : '<div style="display: flex; align-items: center;"><a href="mailto:'.$MyRow['email'].'" style="color: var(--primary); display: inline-flex; align-items: center; transition: opacity 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"><i class="fas fa-envelope" style="width: 20px;"></i> ' . $MyRow['email'] . '</a></div>') . '
+						' . (empty($MyRow['url']) ? '' : '<div style="display: flex; align-items: center;"><a href="'.$MyRow['url'].'" target="_blank" style="color: var(--primary); display: inline-flex; align-items: center; transition: opacity 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"><i class="fas fa-globe" style="width: 20px;"></i> ' . __('Website') . '</a></div>') . '
+					</div>
+					
+					<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-soft);">
+						<button type="submit" name="Select" value="'.$MyRow['supplierid'].'" class="db-btn db-btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-weight: 600; font-size: 0.95rem; border-radius: var(--radius-md);">
+							' . __('Select Supplier') . ' <i class="fas fa-arrow-right" style="margin-left: 8px; font-size: 0.85rem;"></i>
+						</button>
+					</div>
+				</div>
+			  </div>';
+		$RowIndex++;
+	}
+	
+	echo '</div></div>'; // End grid, End Cards View Container
+
+	// Pagination moved to the bottom of the unified card
+	if ($ListPageMax > 1) {
+		echo '<div class="noPrint" style="padding: 16px 20px; display:flex; justify-content:flex-end; border-top: 1px solid var(--border-soft);">';
+		echo '<div style="display:inline-flex;border-radius:6px;box-shadow:0 1px 2px 0 rgba(0,0,0,0.05);">';
+		echo '<input type="hidden" name="PageOffset" value="' . $_POST['PageOffset'] . '" />';
+
+		if ($_POST['PageOffset'] > 1) {
+			echo '<button type="submit" name="Previous" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-right:none;background:#f9fafb;color:#4b5563;border-radius:6px 0 0 6px;text-decoration:none;cursor:pointer;">
+					<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>
+				  </button>';
+		} else {
+			echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-right:none;background:#f3f4f6;color:#9ca3af;border-radius:6px 0 0 6px;">
+					<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>
+				  </span>';
+		}
+
+		echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border:1px solid #d1d5db;background:#f9fafb;color:#4b5563;font-size:14px;font-weight:500;">' . $_POST['PageOffset'] . ' ' . __('of') . ' ' . $ListPageMax . '</span>';
+
+		if ($_POST['PageOffset'] < $ListPageMax) {
+			echo '<button type="submit" name="Next" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-left:none;background:#f9fafb;color:#4b5563;border-radius:0 6px 6px 0;text-decoration:none;cursor:pointer;">
+					<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
+				  </button>';
+		} else {
+			echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-left:none;background:#f3f4f6;color:#9ca3af;border-radius:0 6px 6px 0;">
+					<svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
+				  </span>';
+		}
+		echo '</div></div>';
+	}
+	
+	// VIEW TOGGLE SCRIPT
+	echo '<script>
+		document.addEventListener("DOMContentLoaded", function() {
+			var btnTable = document.getElementById("btn-view-table");
+			var btnCards = document.getElementById("btn-view-cards");
+			var containerTable = document.getElementById("view-table-container");
+			var containerCards = document.getElementById("view-cards-container");
+			
+			if (btnTable && btnCards && containerTable && containerCards) {
+				// Try to restore previous view preference from localStorage
+				var savedView = localStorage.getItem("supplierViewPref");
+				if (savedView === "cards") {
+					showCards();
+				}
+				
+				btnTable.addEventListener("click", function() {
+					showTable();
+					localStorage.setItem("supplierViewPref", "table");
+				});
+				
+				btnCards.addEventListener("click", function() {
+					showCards();
+					localStorage.setItem("supplierViewPref", "cards");
+				});
+				
+				function showTable() {
+					containerTable.style.display = "block";
+					containerCards.style.display = "none";
+					
+					btnTable.style.background = "var(--surface)";
+					btnTable.style.boxShadow = "var(--shadow-sm)";
+					btnTable.style.color = "var(--text-main)";
+					btnTable.style.fontWeight = "600";
+					
+					btnCards.style.background = "transparent";
+					btnCards.style.boxShadow = "none";
+					btnCards.style.color = "var(--text-muted)";
+					btnCards.style.fontWeight = "500";
+				}
+				
+				function showCards() {
+					containerTable.style.display = "none";
+					containerCards.style.display = "block";
+					
+					btnCards.style.background = "var(--surface)";
+					btnCards.style.boxShadow = "var(--shadow-sm)";
+					btnCards.style.color = "var(--text-main)";
+					btnCards.style.fontWeight = "600";
+					
+					btnTable.style.background = "transparent";
+					btnTable.style.boxShadow = "none";
+					btnTable.style.color = "var(--text-muted)";
+					btnTable.style.fontWeight = "500";
+				}
+			}
+		});
+	</script>';
+}
+echo '</div>'; // End UNIFIED SEARCH CARD
 // Only display the geocode map if the integration is turned on, and there is a latitude/longitude to display
 if (isset($_SESSION['SupplierID']) and $_SESSION['SupplierID'] != '') {
 	if ($_SESSION['geocode_integration'] == 1) {
-		if ($lat == 0) {
+		if (!isset($lat) || $lat == 0) {
 			echo '<div class="db-alert db-alert-info" style="margin-top: var(--space-6);">' . __('Mapping is enabled, but no Mapping data to display for this Supplier.') . '</div>';
 		} else {
 
@@ -364,7 +561,7 @@ if (isset($_SESSION['SupplierID']) and $_SESSION['SupplierID'] != '') {
 						<h3 class="db-card-title"><i class="fas fa-map-marker-alt" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Supplier Location Mapping') . '</h3>
 					</div>
 
-					<div class="db-card-body">
+					<div class="db-card-body" style="padding: 0;">
 						<div class="centre" id="map" style="width: 100%; height: ' . $map_height . 'px; border-radius: 0 0 var(--radius-lg) var(--radius-lg);"></div>
 					</div>
 				</div>';
@@ -379,11 +576,11 @@ if (isset($_SESSION['SupplierID']) and $_SESSION['SupplierID'] != '') {
 			}).addTo(map);
 			
 			var marker = L.marker([' . $lat . ', ' . $lng . ']).addTo(map);
-			marker.bindPopup(\'<b>' . htmlspecialchars($suppname, ENT_QUOTES, 'UTF-8') . '</b><br>' . 
-				htmlspecialchars($address1, ENT_QUOTES, 'UTF-8') . '<br>' . 
-				htmlspecialchars($address2, ENT_QUOTES, 'UTF-8') . '<br>' . 
-				htmlspecialchars($address3, ENT_QUOTES, 'UTF-8') . '<br>' . 
-				htmlspecialchars($address4, ENT_QUOTES, 'UTF-8') . '\').openPopup();
+			marker.bindPopup(\'<div style="font-family: var(--font-family);"><b style="color: var(--text-main); font-size: 1.1rem; display: block; margin-bottom: 8px;">\' + ' . json_encode(htmlspecialchars($suppname, ENT_QUOTES, 'UTF-8')) . ' + \'</b>\' + 
+				' . json_encode(htmlspecialchars($address1, ENT_QUOTES, 'UTF-8')) . ' + \'<br>\' + 
+				' . json_encode(htmlspecialchars($address2, ENT_QUOTES, 'UTF-8')) . ' + \'<br>\' + 
+				' . json_encode(htmlspecialchars($address3, ENT_QUOTES, 'UTF-8')) . ' + \'<br>\' + 
+				' . json_encode(htmlspecialchars($address4, ENT_QUOTES, 'UTF-8')) . ' + \'</div>\').openPopup();
 			</script>';
 		}
 	}
@@ -406,24 +603,24 @@ if (isset($_SESSION['SupplierID']) and $_SESSION['SupplierID'] != '') {
 			$Row = DB_fetch_array($Total1Result);
 
 			echo '<div class="db-card" style="margin-top: var(--space-6);">
-					<div class="db-card-header">
-						<h3 class="db-card-title"><i class="fas fa-info-circle" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Supplier Extended Insights') . '</h3>
+					<div class="db-card-header" style="background: linear-gradient(90deg, rgba(var(--db-primary-rgb), 0.05) 0%, transparent 100%); border-bottom: 1px solid var(--border-soft);">
+						<h3 class="db-card-title"><i class="fas fa-chart-line" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Supplier Extended Insights') . '</h3>
 					</div>
 
 					<div class="db-table-wrapper">
 						<table class="db-table">
 							<tbody>
 								<tr>
-									<td class="val-bold" style="width: 250px;">' . __('Supplier Since') . '</td>
-									<td>' . ConvertSQLDate($MyRow['suppliersince']) . '</td>
+									<td class="val-bold" style="width: 250px;; color: var(--text-muted);"><i class="fas fa-calendar-alt" style="margin-right: 8px; opacity: 0.7;"></i> ' . __('Supplier Since') . '</td>
+									<td style="font-weight: 500;">' . ConvertSQLDate($MyRow['suppliersince']) . '</td>
 								</tr>
 								<tr>
-									<td class="val-bold">' . __('Last Payment Activity') . '</td>
-									<td>' . ($MyRow['lastpaiddate'] == 0 ? __('No payments recorded') : '<strong>' . locale_number_format($MyRow['lastpaid'], $MyRow['currdecimalplaces']) . '</strong> ' . __('on') . ' ' . ConvertSQLDate($MyRow['lastpaiddate'])) . '</td>
+									<td class="val-bold" style="color: var(--text-muted);"><i class="fas fa-history" style="margin-right: 8px; opacity: 0.7;"></i> ' . __('Last Payment Activity') . '</td>
+									<td>' . ($MyRow['lastpaiddate'] == 0 ? '<span style="color: var(--text-muted); font-style: italic;">' . __('No payments recorded') . '</span>' : '<strong style="color: var(--text-main); font-size: 1.1rem;">' . locale_number_format($MyRow['lastpaid'], $MyRow['currdecimalplaces']) . '</strong> ' . __('on') . ' ' . ConvertSQLDate($MyRow['lastpaiddate'])) . '</td>
 								</tr>
 								<tr>
-									<td class="val-bold">' . __('Total Cumulative Spend') . '</td>
-									<td style="color: var(--primary); font-weight: 800; font-size: 1.1rem;">' . locale_number_format($Row['total'], $MyRow['currdecimalplaces']) . '</td>
+									<td class="val-bold" style="color: var(--text-muted);"><i class="fas fa-coins" style="margin-right: 8px; opacity: 0.7;"></i> ' . __('Total Cumulative Spend') . '</td>
+									<td style="color: var(--primary); font-weight: 800; font-size: 1.25rem;">' . locale_number_format($Row['total'], $MyRow['currdecimalplaces']) . '</td>
 								</tr>
 							</tbody>
 						</table>
@@ -432,9 +629,8 @@ if (isset($_SESSION['SupplierID']) and $_SESSION['SupplierID'] != '') {
 		}
 	}
 }
-echo '	</main>
-	</div>
-</form>'; // End db-bottom-layout
+echo '	</div>
+</form>'; // End div container
 echo '</div>'; // End db-page
 
 

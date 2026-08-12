@@ -307,14 +307,6 @@ if (isset($_POST['Search'])) {
 	// View Toggle Header inside unified card
 	echo '<div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-soft); background: var(--surface);">
 			<h3 class="db-card-title" style="margin: 0; font-size: 1.25rem;"><i class="fas fa-list" style="margin-right: 8px; color: var(--db-primary);"></i> ' . __('Search Results') . ' <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal; margin-left: 8px;">(' . $ListCount . ' ' . __('found') . ')</span></h3>
-			<div class="db-btn-group" style="display: flex; background: var(--surface-alt); border-radius: var(--radius-md); padding: 4px; border: 1px solid var(--border-soft);">
-				<button type="button" class="db-btn" id="btn-view-table" style="background: var(--surface); box-shadow: var(--shadow-sm); padding: 6px 16px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.2s; color: var(--text-main); font-weight: 600;">
-					<i class="fas fa-table" style="margin-right: 6px;"></i> ' . __('Table') . '
-				</button>
-				<button type="button" class="db-btn" id="btn-view-cards" style="background: transparent; padding: 6px 16px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.2s; color: var(--text-muted); font-weight: 500;">
-					<i class="fas fa-th-large" style="margin-right: 6px;"></i> ' . __('Cards') . '
-				</button>
-			</div>
 		  </div>';
 
 	// TABLE VIEW CONTAINER inside unified card
@@ -415,50 +407,6 @@ if (isset($_POST['Search'])) {
 	}
 	echo '</tbody></table></div></div>';
 	
-	// CARDS VIEW CONTAINER
-	echo '<div id="view-cards-container" style="display: none; padding: 20px;">
-			<div class="db-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-6);">';
-			
-	$RowIndex = 0;
-	if (DB_num_rows($Result) <> 0) {
-		DB_data_seek($Result, ($_POST['PageOffset'] - 1) * $RecordsPerPage);
-	}
-	while (($MyRow = DB_fetch_array($Result)) AND ($RowIndex <> $RecordsPerPage)) {
-		echo '<div class="db-card" style="display: flex; flex-direction: column; height: 100%; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid var(--border-soft);" onmouseover="this.style.transform=\'translateY(-4px)\'; this.style.boxShadow=\'var(--shadow-lg)\';" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'var(--shadow-sm)\';">
-				<div class="db-card-body" style="flex: 1; display: flex; flex-direction: column; padding: var(--space-5);">
-					
-					<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-						<div style="flex: 1; padding-right: 12px;">
-							<span class="ref-badge" style="margin-bottom: 8px; display: inline-block; font-size: 0.75rem; padding: 4px 8px; background: rgba(var(--db-primary-rgb), 0.1); color: var(--db-primary); border: none;">' . $MyRow['supplierid'] . '</span>
-							<h4 class="cust-name" style="margin: 0; font-size: 1.15rem; line-height: 1.4; color: var(--text-main); font-weight: 700;">' . $MyRow['suppname'] . '</h4>
-						</div>
-						<span class="tag" style="background: var(--surface-alt); border: 1px solid var(--border-soft); font-weight: 600;">' . $MyRow['currcode'] . '</span>
-					</div>
-					
-					<div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px; flex: 1; display: flex; flex-direction: column; gap: 8px;">
-						<div style="display: flex; align-items: flex-start;">
-							<i class="fas fa-map-marker-alt" style="width: 20px; margin-top: 4px; color: var(--text-muted); opacity: 0.7;"></i> 
-							<div style="line-height: 1.5;">
-								<span style="color: var(--text-main);">' . $MyRow['address1'] . (empty($MyRow['address2']) ? '' : ', ' . $MyRow['address2']) . '</span><br>
-								<span>' . $MyRow['address3'] . (empty($MyRow['address4']) ? '' : ' ' . $MyRow['address4']) . '</span>
-							</div>
-						</div>
-						' . (empty($MyRow['telephone']) ? '' : '<div style="display: flex; align-items: center;"><i class="fas fa-phone-alt" style="width: 20px; color: var(--text-muted); opacity: 0.7;"></i> <span style="color: var(--text-main);">' . $MyRow['telephone'] . '</span></div>') . '
-						' . (empty($MyRow['email']) ? '' : '<div style="display: flex; align-items: center;"><a href="mailto:'.$MyRow['email'].'" style="color: var(--primary); display: inline-flex; align-items: center; transition: opacity 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"><i class="fas fa-envelope" style="width: 20px;"></i> ' . $MyRow['email'] . '</a></div>') . '
-						' . (empty($MyRow['url']) ? '' : '<div style="display: flex; align-items: center;"><a href="'.$MyRow['url'].'" target="_blank" style="color: var(--primary); display: inline-flex; align-items: center; transition: opacity 0.2s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"><i class="fas fa-globe" style="width: 20px;"></i> ' . __('Website') . '</a></div>') . '
-					</div>
-					
-					<div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-soft);">
-						<button type="submit" name="Select" value="'.$MyRow['supplierid'].'" class="db-btn db-btn-primary" style="width: 100%; justify-content: center; padding: 10px; font-weight: 600; font-size: 0.95rem; border-radius: var(--radius-md);">
-							' . __('Select Supplier') . ' <i class="fas fa-arrow-right" style="margin-left: 8px; font-size: 0.85rem;"></i>
-						</button>
-					</div>
-				</div>
-			  </div>';
-		$RowIndex++;
-	}
-	
-	echo '</div></div>'; // End grid, End Cards View Container
 
 	// Pagination moved to the bottom of the unified card
 	if ($ListPageMax > 1) {
@@ -489,64 +437,7 @@ if (isset($_POST['Search'])) {
 		}
 		echo '</div></div>';
 	}
-	
-	// VIEW TOGGLE SCRIPT
-	echo '<script>
-		document.addEventListener("DOMContentLoaded", function() {
-			var btnTable = document.getElementById("btn-view-table");
-			var btnCards = document.getElementById("btn-view-cards");
-			var containerTable = document.getElementById("view-table-container");
-			var containerCards = document.getElementById("view-cards-container");
-			
-			if (btnTable && btnCards && containerTable && containerCards) {
-				// Try to restore previous view preference from localStorage
-				var savedView = localStorage.getItem("supplierViewPref");
-				if (savedView === "cards") {
-					showCards();
-				}
-				
-				btnTable.addEventListener("click", function() {
-					showTable();
-					localStorage.setItem("supplierViewPref", "table");
-				});
-				
-				btnCards.addEventListener("click", function() {
-					showCards();
-					localStorage.setItem("supplierViewPref", "cards");
-				});
-				
-				function showTable() {
-					containerTable.style.display = "block";
-					containerCards.style.display = "none";
-					
-					btnTable.style.background = "var(--surface)";
-					btnTable.style.boxShadow = "var(--shadow-sm)";
-					btnTable.style.color = "var(--text-main)";
-					btnTable.style.fontWeight = "600";
-					
-					btnCards.style.background = "transparent";
-					btnCards.style.boxShadow = "none";
-					btnCards.style.color = "var(--text-muted)";
-					btnCards.style.fontWeight = "500";
-				}
-				
-				function showCards() {
-					containerTable.style.display = "none";
-					containerCards.style.display = "block";
-					
-					btnCards.style.background = "var(--surface)";
-					btnCards.style.boxShadow = "var(--shadow-sm)";
-					btnCards.style.color = "var(--text-main)";
-					btnCards.style.fontWeight = "600";
-					
-					btnTable.style.background = "transparent";
-					btnTable.style.boxShadow = "none";
-					btnTable.style.color = "var(--text-muted)";
-					btnTable.style.fontWeight = "500";
-				}
-			}
-		});
-	</script>';
+
 }
 echo '</div>'; // End UNIFIED SEARCH CARD
 // Only display the geocode map if the integration is turned on, and there is a latitude/longitude to display

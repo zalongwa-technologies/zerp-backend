@@ -171,7 +171,7 @@ while ($row = DB_fetch_assoc($resInvoices)) {
                         ?>
                         <tr>
                             <td style="font-weight: 700; color: var(--primary);">#<?= $inv['transno'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($inv['name']) ?></td>
+                            <td style="font-weight: 600;"><?= htmlspecialchars($inv['suppname'] ?? '') ?></td>
                             <td>TZS <?= number_format($inv['ovamount'], 2) ?></td>
                             <td style="font-weight: 700; color: <?= $isOverdue ? 'var(--danger)' : 'var(--text-main)' ?>;">
                                 TZS <?= number_format($inv['balance'], 2) ?>

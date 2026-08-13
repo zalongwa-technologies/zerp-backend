@@ -119,9 +119,6 @@ function Is_date($DateEntry) {
 * Returns: String containing formatted month and year
 **************************************************************************************************************/
 function MonthAndYearFromSQLDate($DateEntry, $UseShortMonthAndYear = false) {
-	if (empty($DateEntry)) {
-		return '';
-	}
 
 	if (mb_strpos($DateEntry, '/')) {
 		$DateArray = explode('/', $DateEntry);
@@ -159,9 +156,6 @@ function MonthAndYearFromSQLDate($DateEntry, $UseShortMonthAndYear = false) {
 * Returns: String containing formatted year and month
 **************************************************************************************************************/
 function YearAndMonthFromSQLDate($DateEntry, $UseShortYearAndMonth = false) {
-	if (empty($DateEntry)) {
-		return '';
-	}
 
 	if (mb_strpos($DateEntry, '/')) {
 		$DateArray = explode('/', $DateEntry);
@@ -209,7 +203,7 @@ function EndDateSQLFromPeriodNo($PeriodNo) {
 	$SQL = "SELECT lastdate_in_period FROM periods WHERE periodno='" . $PeriodNo . "'";
 	$Result = DB_query($SQL);
 	$MyRow = DB_fetch_array($Result);
-	return $MyRow ? $MyRow['lastdate_in_period'] : '';
+	return $MyRow['lastdate_in_period'];
 }
 
 /**************************************************************************************************************
@@ -364,9 +358,6 @@ function YearEndDate($MonthNo, $YearIncrement) {
 * Returns: String containing formatted date according to DefaultDateFormat
 **************************************************************************************************************/
 function ConvertSQLDate($DateEntry) {
-	if (empty($DateEntry)) {
-		return '';
-	}
 
 	/* takes a date in a the format yyyy-mm-dd and converts to a format specified in $_SESSION['DefaultDateFormat']*/
 	$ErrorInFormat = false;

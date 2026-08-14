@@ -192,6 +192,41 @@ if (isset($_POST['submit'])) {
 
 	if ($InputError != 1) {
 
+		// Process logo upload if present
+		if (isset($_FILES['CompanyLogo']) && $_FILES['CompanyLogo']['name'] != '') {
+			$UploadTheFile = 'Yes';
+			$CompanyDir = __DIR__ . '/companies/' . $_SESSION['DatabaseName'];
+
+			if (!file_exists($CompanyDir)) {
+				mkdir($CompanyDir);
+			}
+
+			$AllowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+			if (!in_array($_FILES['CompanyLogo']['type'], $AllowedTypes)) {
+				prnMsg(__('The logo file must be a JPG, PNG or GIF image'), 'error');
+				$UploadTheFile = 'No';
+			}
+
+			if ($UploadTheFile == 'Yes') {
+				// Find extension
+				$ext = pathinfo($_FILES['CompanyLogo']['name'], PATHINFO_EXTENSION);
+				$Dest = $CompanyDir . '/logo.' . strtolower($ext);
+				
+				// Remove existing logo variants
+				foreach (['png', 'jpeg', 'jpg', 'gif'] as $LogoExt) {
+					if (file_exists($CompanyDir . '/logo.' . $LogoExt)) {
+						unlink($CompanyDir . '/logo.' . $LogoExt);
+					}
+				}
+
+				if (!move_uploaded_file($_FILES['CompanyLogo']['tmp_name'], $Dest)) {
+					prnMsg(__('Error moving the uploaded logo file'), 'error');
+				} else {
+					prnMsg(__('Company logo successfully uploaded'), 'success');
+				}
+			}
+		}
+
 		// Sanitize all string inputs before writing to DB or files
 		$safe = [];
 		$string_keys = ['CoyName','CompanyNumber','GSTNo','RegOffice1','RegOffice2','RegOffice3',
@@ -340,7 +375,7 @@ echo '<div class="db-page">
 			</div>
 		</div>';
 
-echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '">
+echo '<form id="main-form" enctype="multipart/form-data" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '">
         <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
         
         <div class="db-bottom-layout">
@@ -354,6 +389,11 @@ echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['
                                 <label class="db-form-label">' . __('Full Business Name') . '</label>
                                 <input type="text" name="CoyName" required="required" maxlength="50" value="' . htmlspecialchars($_POST['CoyName'], ENT_QUOTES, 'UTF-8') . '" class="db-input" />
                                 <span class="field-help">' . __('Enter the name as it should appear on invoices and reports.') . '</span>
+                            </div>
+                            <div>
+                                <label class="db-form-label">' . __('Company Logo') . '</label>
+                                <input type="file" name="CompanyLogo" class="db-input" accept="image/png, image/jpeg, image/gif" style="padding: 10px;" />
+                                <span class="field-help">' . __('Upload a PNG, JPG, or GIF image for invoices and the login screen.') . '</span>
                             </div>
                             <div>
                                 <label class="db-form-label">' . __('Official Business Number') . '</label>

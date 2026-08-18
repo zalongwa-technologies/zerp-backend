@@ -82,6 +82,7 @@ $ExtraHeadContent = '
 include(__DIR__ . '/includes/header.php');
 
 include(__DIR__ . '/includes/SQL_CommonFunctions.php');
+include_once(__DIR__ . '/includes/UIComponents.php');
 
 echo '<div class="db-page">
 		<div class="premium-header">
@@ -392,43 +393,36 @@ if (isset($SearchResult)) {
 				</div>';
 		}
 
-		echo '<div class="architect-grid architect-grid-3" style="margin-top: var(--space-4);">';
+		$columns = [__('Customer'), __('Code'), __('Phone'), __('Branch'), __('Type'), __('Action')];
+		$dataRows = [];
 		DB_data_seek($SearchResult, ($_POST['PageOffset'] - 1) * $_SESSION['DisplayRecordsMax']);
 		$RowIndex = 0;
 		while (($MyRow = DB_fetch_array($SearchResult)) and ($RowIndex <> $_SESSION['DisplayRecordsMax'])) {
-			echo '<div class="card-v2" style="display: flex; flex-direction: column;">
-					<div style="flex: 1; padding: var(--space-4); border-bottom: 1px solid var(--border-soft);">
-						<div style="display: flex; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-4);">
-							<div style="width: 40px; height: 40px; border-radius: 8px; background: var(--surface-alt); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">
-								' . mb_substr($MyRow['name'] ?? 'C', 0, 1) . '
-							</div>
-							<div style="overflow: hidden;">
-								<div style="font-weight: 700; color: var(--text-main); line-height: 1.2; margin-bottom: 2px;">' . htmlspecialchars($MyRow['name'], ENT_QUOTES, 'UTF-8') . '</div>
-								<div class="db-ref" style="font-size: 0.75rem;">#' . $MyRow['debtorno'] . '</div>
-							</div>
-						</div>
-						<div class="db-info-list" style="font-size: 0.85rem;">
-							<div class="db-info-item"><span class="db-muted" style="width: 20px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span> ' . $MyRow['phoneno'] . '</div>
-							<div class="db-info-item"><span class="db-muted" style="width: 20px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></span> ' . htmlspecialchars($MyRow['brname'], ENT_QUOTES, 'UTF-8') . '</div>
-							<div class="db-info-item" style="margin-top: var(--space-2);"><span class="db-badge db-badge-info">' . $MyRow['typename'] . '</span></div>
-						</div>
-					</div>
-					<div style="padding: var(--space-4); background: var(--surface-alt); border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2);">
-						<button type="submit" name="SubmitCustomerSelection[' . htmlspecialchars($MyRow['debtorno'], ENT_QUOTES, 'UTF-8') . ']" value="' . htmlspecialchars($MyRow['branchcode'], ENT_QUOTES, 'UTF-8') . '" class="db-btn db-btn-primary" style="width: 100%; justify-content: center;">
-							<i class="fas fa-check-circle" style="margin-right: 8px;"></i>' . __('Select Account') . '
-						</button>
-						<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);">
-							<a href="SelectOrderItems.php?NewOrder=Yes&SelectedCustomer=' . urlencode($MyRow['debtorno']) . '" class="db-btn db-btn-secondary" style="font-size: 0.75rem; justify-content: center; padding: 8px 4px;">
-								<i class="fas fa-shopping-cart" style="margin-right: 4px;"></i>' . __('New Order') . '
-							</a>
-							<a href="CustomerInquiry.php?CustomerID=' . urlencode($MyRow['debtorno']) . '" class="db-btn db-btn-secondary" style="font-size: 0.75rem; justify-content: center; padding: 8px 4px;">
-								<i class="fas fa-search-dollar" style="margin-right: 4px;"></i>' . __('Inquiry') . '
-							</a>
-						</div>
-					</div>
+			$actionHtml = '
+				<div style="display: flex; gap: 8px;">
+					<button type="submit" name="SubmitCustomerSelection[' . htmlspecialchars($MyRow['debtorno'], ENT_QUOTES, 'UTF-8') . ']" value="' . htmlspecialchars($MyRow['branchcode'], ENT_QUOTES, 'UTF-8') . '" class="db-btn db-btn-primary db-btn-small">
+						' . __('Select') . '
+					</button>
+					<a href="SelectOrderItems.php?NewOrder=Yes&SelectedCustomer=' . urlencode($MyRow['debtorno']) . '" class="db-btn db-btn-outline db-btn-small">
+						' . __('Order') . '
+					</a>
+					<a href="CustomerInquiry.php?CustomerID=' . urlencode($MyRow['debtorno']) . '" class="db-btn db-btn-outline db-btn-small">
+						' . __('Inquiry') . '
+					</a>
 				</div>';
+
+			$dataRows[] = [
+				'<span style="font-weight: 700;">' . htmlspecialchars($MyRow['name'], ENT_QUOTES, 'UTF-8') . '</span>',
+				'<span class="db-ref">#' . $MyRow['debtorno'] . '</span>',
+				$MyRow['phoneno'],
+				htmlspecialchars($MyRow['brname'], ENT_QUOTES, 'UTF-8'),
+				'<span class="db-badge db-badge-info">' . $MyRow['typename'] . '</span>',
+				$actionHtml
+			];
 			$RowIndex++;
 		}
+		echo '<div style="margin-top: var(--space-4);">';
+		render_modern_table($columns, $dataRows);
 		echo '</div>
 				<input type="hidden" name="JustSelectedACustomer" value="Yes" />
 			  </form>';
@@ -507,11 +501,16 @@ if (isset($_SESSION['CustomerID']) and $_SESSION['CustomerID'] != '' && $_SESSIO
 			</div>
 			<div class="db-card-body">';
 	if (DB_num_rows($ConRes) > 0) {
-		echo '<div class="db-table-wrapper"><table class="db-table"><thead><tr><th>' . __('Name') . '</th><th>' . __('Role') . '</th><th>' . __('Email') . '</th></tr></thead><tbody>';
+		$columns = [__('Name'), __('Role'), __('Email')];
+		$dataRows = [];
 		while ($CR = DB_fetch_array($ConRes)) {
-			echo '<tr><td>' . $CR[2] . '</td><td>' . $CR[3] . '</td><td><a href="mailto:' . $CR[6] . '" class="db-link">' . $CR[6] . '</a></td></tr>';
+			$dataRows[] = [
+				htmlspecialchars($CR[2], ENT_QUOTES, 'UTF-8'),
+				htmlspecialchars($CR[3], ENT_QUOTES, 'UTF-8'),
+				'<a href="mailto:' . htmlspecialchars($CR[6], ENT_QUOTES, 'UTF-8') . '" class="db-link">' . htmlspecialchars($CR[6], ENT_QUOTES, 'UTF-8') . '</a>'
+			];
 		}
-		echo '</tbody></table></div>';
+		render_modern_table($columns, $dataRows);
 	} else {
 		echo '<p class="db-muted" style="text-align:center;">' . __('No contacts listed') . '</p>';
 	}
@@ -527,11 +526,16 @@ if (isset($_SESSION['CustomerID']) and $_SESSION['CustomerID'] != '' && $_SESSIO
 			</div>
 			<div class="db-card-body">';
 	if (DB_num_rows($NoteRes) > 0) {
-		echo '<div class="db-table-wrapper"><table class="db-table"><thead><tr><th>' . __('Date') . '</th><th>' . __('Priority') . '</th><th>' . __('Note') . '</th></tr></thead><tbody>';
+		$columns = [__('Date'), __('Priority'), __('Note')];
+		$dataRows = [];
 		while ($NR = DB_fetch_array($NoteRes)) {
-			echo '<tr><td>' . ConvertSQLDate($NR['date']) . '</td><td>' . $NR['priority'] . '</td><td>' . $NR['note'] . '</td></tr>';
+			$dataRows[] = [
+				ConvertSQLDate($NR['date']),
+				htmlspecialchars($NR['priority'], ENT_QUOTES, 'UTF-8'),
+				htmlspecialchars($NR['note'], ENT_QUOTES, 'UTF-8')
+			];
 		}
-		echo '</tbody></table></div>';
+		render_modern_table($columns, $dataRows);
 	} else {
 		echo '<p class="db-muted" style="text-align:center;">' . __('No recent notes') . '</p>';
 	}

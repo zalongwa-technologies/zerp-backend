@@ -1133,6 +1133,7 @@ function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	$tabs = [
 		'Settings'          => '/SARIS_Settings.php',
 		'API Configuration' => '/SARIS_APIConfig.php',
+		'Bank Mappings'     => '/SarisBankAccountMappings.php',
 		'Students'          => '/SARIS_Students.php',
 		'Invoices'          => '/SARIS_Invoices.php',
 		'Payments'          => '/SARIS_Payments.php',

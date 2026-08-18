@@ -4,12 +4,10 @@
  * Allows dynamic mapping of SARIS payment sources or fee types to specific ZERP Bank Accounts.
  */
 
-include('includes/session.php');
-$Title = _('SARIS Bank Account Mappings');
-$ViewTopic = 'SARIS';
-$BookMark = 'SarisBankMappings';
-
-include('includes/header.php');
+$PageSecurity = 15;
+require(__DIR__ . '/includes/session.php');
+$Title = _('SARIS Integration - Bank Mappings');
+include(__DIR__ . '/includes/SARISIntegration.php');
 
 // Create the mapping table if it doesn't exist
 $sql = "CREATE TABLE IF NOT EXISTS saris_bank_mappings (
@@ -21,8 +19,6 @@ $sql = "CREATE TABLE IF NOT EXISTS saris_bank_mappings (
     UNIQUE KEY match_keyword (match_keyword)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 DB_query($sql, $db);
-
-echo '<p class="page_title_text"><img src="' . $RootPath . '/css/' . $Theme . '/images/bank.png" title="' . _('SARIS Bank Mappings') . '" alt="" />' . ' ' . $Title . '</p>';
 
 // Handle form submission for adding/updating
 if (isset($_POST['submit'])) {
@@ -72,52 +68,16 @@ if (isset($_POST['submit'])) {
     prnMsg(_('The SARIS bank mapping has been deleted.'), 'success');
 }
 
-// Display existing mappings
-$sql = "SELECT m.id, m.match_keyword, m.bank_account_code, m.description, b.bankaccountname 
-        FROM saris_bank_mappings m
-        LEFT JOIN bankaccounts b ON m.bank_account_code = b.accountcode
-        ORDER BY m.match_keyword";
-$result = DB_query($sql, $db);
+include(__DIR__ . '/includes/header.php');
 
-echo '<table class="selection">';
-echo '<tr>
-        <th>' . _('Match Keyword') . '</th>
-        <th>' . _('Bank Account') . '</th>
-        <th>' . _('Description') . '</th>
-        <th colspan="2"></th>
-    </tr>';
+echo '<div class="db-page-header">';
+echo '<h1 class="db-page-title">' . _('SARIS Bank Account Mappings') . '</h1>';
+echo '<p class="db-page-subtitle">' . _('Map SARIS payment sources or fee types to specific ZERP Bank Accounts.') . '</p>';
+echo '</div>';
 
-$k = 0; //row colour counter
-while ($myrow = DB_fetch_array($result)) {
-    if ($k == 1) {
-        echo '<tr class="EvenTableRows">';
-        $k = 0;
-    } else {
-        echo '<tr class="OddTableRows">';
-        $k = 1;
-    }
-    
-    printf('<td>%s</td>
-            <td>%s - %s</td>
-            <td>%s</td>
-            <td><a href="%s&amp;SelectedMappingID=%s">' . _('Edit') . '</a></td>
-            <td><a href="%s&amp;delete=%s" onclick="return confirm(\'' . _('Are you sure you wish to delete this mapping?') . '\');">' . _('Delete') . '</a></td>
-            </tr>',
-            $myrow['match_keyword'],
-            $myrow['bank_account_code'],
-            $myrow['bankaccountname'],
-            $myrow['description'],
-            htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?',
-            $myrow['id'],
-            htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?',
-            $myrow['id']);
-}
-echo '</table><br />';
+saris_render_tabs('Bank Mappings', 'SARIS Bank Mappings', '');
 
-// Fetch bank accounts for the dropdown
-$bankSql = "SELECT accountcode, bankaccountname FROM bankaccounts ORDER BY bankaccountname";
-$bankResult = DB_query($bankSql, $db);
-
+// Form logic
 $SelectedMappingID = '';
 $MatchKeyword = '';
 $BankAccountCode = '';
@@ -137,39 +97,94 @@ if (isset($_GET['SelectedMappingID'])) {
     $Description = $_POST['Description'];
 }
 
+$bankSql = "SELECT accountcode, bankaccountname FROM bankaccounts ORDER BY bankaccountname";
+$bankResult = DB_query($bankSql, $db);
+
+echo '<div style="display:grid;grid-template-columns:1fr 3fr;gap:24px;margin-bottom:24px;">';
+
+// Form Card
+echo '<div class="db-card" style="align-self: start;">';
+echo '<h2 style="font-size:16px;font-weight:600;margin-bottom:16px;color:#374151;">' . (!empty($SelectedMappingID) ? _('Edit Mapping') : _('Add New Mapping')) . '</h2>';
 echo '<form method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '">';
-echo '<div>';
 echo '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 
 if (!empty($SelectedMappingID)) {
     echo '<input type="hidden" name="SelectedMappingID" value="' . $SelectedMappingID . '" />';
 }
 
-echo '<table class="selection">';
-echo '<tr><th colspan="2">' . _('Mapping Details') . '</th></tr>';
+echo '<div class="db-form-group">';
+echo '<label class="db-label">' . _('Match Keyword (e.g. GePG, CRDB, Tuition)') . '</label>';
+echo '<input type="text" class="db-input" required="required" autofocus="autofocus" name="MatchKeyword" maxlength="100" value="' . htmlspecialchars($MatchKeyword, ENT_QUOTES, 'UTF-8') . '" />';
+echo '</div>';
 
-echo '<tr><td>' . _('Match Keyword (e.g. GePG, CRDB, Tuition)') . ':</td>
-        <td><input type="text" required="required" autofocus="autofocus" name="MatchKeyword" size="30" maxlength="100" value="' . $MatchKeyword . '" /></td></tr>';
-
-echo '<tr><td>' . _('Target Bank Account') . ':</td>
-        <td><select required="required" name="BankAccountCode">';
-        
+echo '<div class="db-form-group">';
+echo '<label class="db-label">' . _('Target Bank Account') . '</label>';
+echo '<select required="required" class="db-input" name="BankAccountCode">';
 while ($bankRow = DB_fetch_array($bankResult)) {
-    if ($BankAccountCode == $bankRow['accountcode']) {
-        echo '<option selected="selected" value="' . $bankRow['accountcode'] . '">' . $bankRow['accountcode'] . ' - ' . $bankRow['bankaccountname'] . '</option>';
-    } else {
-        echo '<option value="' . $bankRow['accountcode'] . '">' . $bankRow['accountcode'] . ' - ' . $bankRow['bankaccountname'] . '</option>';
+    $selected = ($BankAccountCode == $bankRow['accountcode']) ? 'selected="selected"' : '';
+    echo '<option value="' . htmlspecialchars($bankRow['accountcode'], ENT_QUOTES, 'UTF-8') . '" ' . $selected . '>' . htmlspecialchars($bankRow['accountcode'] . ' - ' . $bankRow['bankaccountname'], ENT_QUOTES, 'UTF-8') . '</option>';
+}
+echo '</select>';
+echo '</div>';
+
+echo '<div class="db-form-group">';
+echo '<label class="db-label">' . _('Description/Notes') . '</label>';
+echo '<input type="text" class="db-input" name="Description" maxlength="255" value="' . htmlspecialchars($Description, ENT_QUOTES, 'UTF-8') . '" />';
+echo '</div>';
+
+echo '<div style="margin-top:24px;">';
+echo '<button type="submit" name="submit" class="db-btn db-btn-primary" style="width:100%;">' . _('Save Mapping') . '</button>';
+if (!empty($SelectedMappingID)) {
+    echo '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" class="db-btn db-btn-secondary" style="width:100%;margin-top:8px;text-align:center;">' . _('Cancel') . '</a>';
+}
+echo '</div>';
+
+echo '</form>';
+echo '</div>';
+
+// Table Card
+echo '<div class="db-card">';
+echo '<div class="saris-table-wrapper">';
+echo '<table class="saris-table">';
+echo '<thead>
+        <tr>
+            <th>' . _('Match Keyword') . '</th>
+            <th>' . _('Bank Account') . '</th>
+            <th>' . _('Description') . '</th>
+            <th style="width:100px;">' . _('Actions') . '</th>
+        </tr>
+      </thead>
+      <tbody>';
+
+$sql = "SELECT m.id, m.match_keyword, m.bank_account_code, m.description, b.bankaccountname 
+        FROM saris_bank_mappings m
+        LEFT JOIN bankaccounts b ON m.bank_account_code = b.accountcode
+        ORDER BY m.match_keyword";
+$result = DB_query($sql, $db);
+
+if (DB_num_rows($result) == 0) {
+    echo '<tr><td colspan="4" style="text-align:center;padding:40px;color:#6b7280;">' . _('No bank mappings found.') . '</td></tr>';
+} else {
+    while ($myrow = DB_fetch_array($result)) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($myrow['match_keyword'], ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>' . htmlspecialchars($myrow['bank_account_code'] . ' - ' . $myrow['bankaccountname'], ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>' . htmlspecialchars($myrow['description'], ENT_QUOTES, 'UTF-8') . '</td>';
+        echo '<td>
+                <div style="display:flex;gap:8px;">
+                    <a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?SelectedMappingID=' . $myrow['id'] . '" class="db-btn db-btn-secondary" style="padding:4px 8px;font-size:12px;">' . _('Edit') . '</a>
+                    <a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?delete=' . $myrow['id'] . '" class="db-btn db-btn-secondary" style="padding:4px 8px;font-size:12px;color:#dc2626;border-color:#fca5a5;" onclick="return confirm(\'' . _('Are you sure you wish to delete this mapping?') . '\');">' . _('Delete') . '</a>
+                </div>
+              </td>';
+        echo '</tr>';
     }
 }
-echo '</select></td></tr>';
 
-echo '<tr><td>' . _('Description/Notes') . ':</td>
-        <td><input type="text" name="Description" size="50" maxlength="255" value="' . $Description . '" /></td></tr>';
+echo '</tbody></table>';
+echo '</div>'; // end saris-table-wrapper
+echo '</div>'; // end table db-card
 
-echo '</table>';
-echo '<br /><div class="centre"><input type="submit" name="submit" value="' . _('Enter Information') . '" /></div>';
-echo '</div>';
-echo '</form>';
+echo '</div>'; // end grid
 
 include('includes/footer.php');
 ?>

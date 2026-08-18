@@ -7,7 +7,85 @@ require(__DIR__ . '/includes/session.php');
 $Title = __('Customer Inquiry');// Screen identification.
 $ViewTopic = 'ARInquiries';// Filename's id in ManualContents.php's TOC.
 $BookMark = 'CustomerInquiry';// Anchor's id in the manual's html document.
+
+$ExtraHeadContent = '
+<style>
+	.card-v2 { background: var(--surface); border-radius: 24px; border: 1px solid var(--border-soft); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; margin-bottom: 24px; transition: transform 0.2s, box-shadow 0.2s; }
+	.card-v2:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
+	.card-header-v2 { background: #f9fafb; border-bottom: 1px solid var(--surface-alt); padding: 20px 30px; display: flex; justify-content: space-between; align-items: center; }
+	.card-header-v2 h3 { font-size: 1rem; font-weight: 850; color: #064e3b; margin: 0; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; }
+	
+	/* Architect Layout Engine */
+	.architect-grid { display: grid !important; gap: 24px !important; }
+	.architect-grid-6 { grid-template-columns: repeat(6, 1fr) !important; }
+	.architect-grid-4 { grid-template-columns: repeat(4, 1fr) !important; }
+	.architect-grid-3 { grid-template-columns: repeat(3, 1fr) !important; }
+	.architect-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+	
+	/* Action Tiles */
+	.db-action-tile { 
+		display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+		padding: 24px 16px; border-radius: 20px; background: var(--surface); border: 1.5px solid var(--surface-alt);
+		text-decoration: none; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+	}
+	.db-action-tile:hover { background: #f0fdf4; border-color: #059669; transform: scale(1.05); }
+	
+	.db-action-icon { 
+		width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; 
+		background: var(--surface-alt); color: var(--text-body); transition: all 0.2s;
+	}
+	.db-action-tile:hover .db-action-icon { transform: rotate(-5deg); }
+	
+	.db-icon-blue { background: #eff6ff; color: #3b82f6; }
+	.db-icon-green { background: #f0fdf4; color: #059669; }
+	.db-icon-red { background: #fef2f2; color: #dc2626; }
+	.db-icon-neutral { background: var(--surface-alt); color: var(--text-muted); }
+	
+	.db-action-text { font-size: 0.8rem; font-weight: 700; color: #1e293b; text-align: center; }
+	
+	/* Badges & UI Elements */
+	.db-badge { padding: 5px 12px; border-radius: 9999px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+	.db-badge-success { background: #dcfce7; color: #166534; }
+	.db-badge-info { background: var(--info-bg); color: #075985; }
+	
+	.db-btn { 
+		display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+		padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 0.85rem;
+		border: none; cursor: pointer; transition: all 0.2s;
+	}
+	.db-btn-primary { background: #059669; color: var(--surface); }
+	.db-btn-primary:hover { background: #065f46; transform: translateY(-1px); }
+	.db-btn-outline { background: transparent; border: 1.5px solid #e2e8f0; color: var(--text-body); }
+	.db-btn-outline:hover { background: var(--surface-alt); border-color: var(--border); }
+	.db-btn-small { padding: 6px 12px; font-size: 0.75rem; }
+
+	.db-ref { font-family: "JetBrains Mono", monospace; font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 6px; border-radius: 4px; border: 1px solid #d1fae5; }
+	.db-info-list { display: flex; flex-direction: column; gap: 8px; }
+	.db-info-item { display: flex; align-items: center; gap: 10px; color: var(--text-body); }
+	.db-muted { color: #94a3b8; }
+	.db-link { color: #059669; text-decoration: none; font-weight: 600; }
+	.db-link:hover { text-decoration: underline; }
+
+	.db-table-wrapper { position: relative; overflow-x: auto; background-color: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-radius: 8px; border: 1px solid var(--border-soft); margin-bottom: 1rem; max-width: 100%; }
+        .db-table { width: 100%; font-size: 0.875rem; text-align: left; color: var(--text-body); border-collapse: collapse; white-space: nowrap; }
+        .db-table thead { background-color: var(--surface-alt); border-bottom: 1px solid var(--border); color: var(--text-main); }
+        .db-table th { padding: 12px 24px; font-weight: 500; white-space: nowrap; }
+        .db-table tbody tr { background-color: var(--surface); border-bottom: 1px solid var(--border-soft); transition: background-color 0.15s ease; }
+        .db-table tbody tr:hover { background-color: var(--surface-alt); }
+        .db-table td { padding: 16px 24px; white-space: nowrap; font-weight: 500; color: var(--text-main); }
+        .db-table th.number, .db-table td.number { text-align: right; }
+	
+	/* Responsive Adjustments */
+	@media (max-width: 1200px) { .db-grid-6 { grid-template-columns: repeat(3, 1fr); } }
+	@media (max-width: 768px) { 
+		.db-grid-6 { grid-template-columns: repeat(2, 1fr); } 
+		.db-grid-4, .db-grid-3 { grid-template-columns: repeat(2, 1fr); }
+		.premium-header { padding: 30px; flex-direction: column; align-items: flex-start; gap: 20px; }
+	}
+</style>';
+
 include(__DIR__ . '/includes/header.php');
+include_once(__DIR__ . '/includes/UIComponents.php');
 
 echo '<div class="db-page">';
 
@@ -186,91 +264,91 @@ if ($NIL_BALANCE == true) {
 			</div>
 		</div>';
 
-	echo '<div class="card-v2">
-			<div class="card-header-v2">
-				<h3>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:8px; color:var(--primary);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-					' . $CustomerRecord['name'] . ' (' . stripslashes($CustomerID) . ')
-				</h3>
-				<div class="db-header-actions">';
+	echo '<div style="background-color:var(--surface); border:1px solid var(--border-soft); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); margin-bottom:24px; overflow:hidden;">
+			<div style="background-color:var(--surface-alt); border-bottom:1px solid var(--border-soft); padding:20px 24px; display:flex; justify-content:space-between; align-items:center;">
+				<div style="display:flex; align-items:center; gap:16px;">
+					<div style="width:48px; height:48px; border-radius:12px; background-color:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+					</div>
+					<div>
+						<h3 style="margin:0; font-size:1.25rem; font-weight:600; color:var(--text-main);">' . $CustomerRecord['name'] . '</h3>
+						<div style="margin-top:4px; font-size:0.875rem; color:var(--text-muted); display:flex; gap:12px; align-items:center;">
+							<span>' . __('Account') . ': <strong style="color:var(--text-main);">#' . stripslashes($CustomerID) . '</strong></span>
+						</div>
+					</div>
+				</div>
+				<div style="display:flex; gap:8px;">';
 	if ($CustomerRecord['dissallowinvoices'] != 0) {
-		echo '		<span class="db-badge db-badge-danger">' . __('ACCOUNT ON HOLD') . '</span>';
+		echo '		<span style="display:inline-flex; align-items:center; padding:4px 12px; border-radius:9999px; font-size:0.75rem; font-weight:600; background-color:var(--danger-bg); color:var(--danger); border:1px solid var(--border);">' . __('ACCOUNT ON HOLD') . '</span>';
 	}
-	echo '			<span class="db-badge db-badge-info">' . $CustomerRecord['currency'] . '</span>
+	echo '			<span style="display:inline-flex; align-items:center; padding:4px 12px; border-radius:9999px; font-size:0.75rem; font-weight:600; background-color:var(--info-bg); color:var(--info); border:1px solid var(--info-bg);">' . $CustomerRecord['currency'] . '</span>
 				</div>
 			</div>
-			<div class="db-card-body">
-				<div class="db-grid db-grid-4">
-					<div class="db-field">
-						<label class="db-label">' . __('Payment Terms') . '</label>
-						<div class="db-field-value">' . $CustomerRecord['terms'] . '</div>
+			<div style="padding:24px;">
+				<div class="db-grid db-grid-4" style="margin-bottom:24px;">
+					<div style="display:flex; flex-direction:column; gap:4px;">
+						<label style="font-size:0.875rem; font-weight:500; color:var(--text-muted);">' . __('Payment Terms') . '</label>
+						<div style="font-size:1rem; color:var(--text-main); font-weight:500;">' . $CustomerRecord['terms'] . '</div>
 					</div>
-					<div class="db-field">
-						<label class="db-label">' . __('Credit Limit') . '</label>
-						<div class="db-field-value">' . locale_number_format($CustomerRecord['creditlimit'], 0) . '</div>
+					<div style="display:flex; flex-direction:column; gap:4px;">
+						<label style="font-size:0.875rem; font-weight:500; color:var(--text-muted);">' . __('Credit Limit') . '</label>
+						<div style="font-size:1rem; color:var(--text-main); font-weight:500;">' . locale_number_format($CustomerRecord['creditlimit'], 0) . '</div>
 					</div>
-					<div class="db-field">
-						<label class="db-label">' . __('Credit Status') . '</label>
-						<div class="db-field-value">' . $CustomerRecord['reasondescription'] . '</div>
+					<div style="display:flex; flex-direction:column; gap:4px;">
+						<label style="font-size:0.875rem; font-weight:500; color:var(--text-muted);">' . __('Credit Status') . '</label>
+						<div style="font-size:1rem; color:var(--text-main); font-weight:500;">' . $CustomerRecord['reasondescription'] . '</div>
 					</div>
-					<div class="db-field">
-						<label class="db-label">' . __('Total Balance') . '</label>
-						<div class="db-field-value" style="font-weight: 700; color: var(--primary);">' . locale_number_format($CustomerRecord['balance'], $CustomerRecord['decimalplaces']) . '</div>
+					<div style="display:flex; flex-direction:column; gap:4px;">
+						<label style="font-size:0.875rem; font-weight:500; color:var(--text-muted);">' . __('Total Balance') . '</label>
+						<div style="font-size:1.125rem; font-weight:700; color:var(--primary);">' . locale_number_format($CustomerRecord['balance'], $CustomerRecord['decimalplaces']) . '</div>
 					</div>
-				</div>
+				</div>';
 
-				<div class="db-table-wrapper" style="margin-top: var(--space-4);">
-					<table class="db-table">
-						<thead>
-							<tr>
-								<th>' . __('Total Invoices') . '</th>
-								<th>' . __('Total Receipts') . '</th>
-								<th>' . __('Current') . '</th>
-								<th>' . __('Now Due') . '</th>
-								<th>' . $_SESSION['PastDueDays1'] . '-' . $_SESSION['PastDueDays2'] . ' Days</th>
-								<th> > ' . $_SESSION['PastDueDays2'] . ' Days</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr>
-								<td>' . locale_number_format($CustomerRecord['total_invoices'] ?? 0, $CustomerRecord['decimalplaces']) . '</td>
-								<td>' . locale_number_format(abs($CustomerRecord['total_receipts'] ?? 0), $CustomerRecord['decimalplaces']) . '</td>
-								<td>' . locale_number_format(($CustomerRecord['balance'] - $CustomerRecord['due']), $CustomerRecord['decimalplaces']) . '</td>
-								<td>' . locale_number_format(($CustomerRecord['due'] - $CustomerRecord['overdue1']), $CustomerRecord['decimalplaces']) . '</td>
-								<td>' . locale_number_format(($CustomerRecord['overdue1'] - $CustomerRecord['overdue2']), $CustomerRecord['decimalplaces']) . '</td>
-								<td class="text-danger">' . locale_number_format($CustomerRecord['overdue2'], $CustomerRecord['decimalplaces']) . '</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
+	$balCols = [
+		__('Total Invoices'), __('Total Receipts'), __('Current'), __('Now Due'),
+		$_SESSION['PastDueDays1'] . '-' . $_SESSION['PastDueDays2'] . ' Days',
+		'> ' . $_SESSION['PastDueDays2'] . ' Days'
+	];
+	$balRows = [
+		[
+			locale_number_format($CustomerRecord['total_invoices'] ?? 0, $CustomerRecord['decimalplaces']),
+			locale_number_format(abs($CustomerRecord['total_receipts'] ?? 0), $CustomerRecord['decimalplaces']),
+			locale_number_format(($CustomerRecord['balance'] - $CustomerRecord['due']), $CustomerRecord['decimalplaces']),
+			locale_number_format(($CustomerRecord['due'] - $CustomerRecord['overdue1']), $CustomerRecord['decimalplaces']),
+			locale_number_format(($CustomerRecord['overdue1'] - $CustomerRecord['overdue2']), $CustomerRecord['decimalplaces']),
+			'<span style="color:var(--danger);font-weight:600;">' . locale_number_format($CustomerRecord['overdue2'], $CustomerRecord['decimalplaces']) . '</span>'
+		]
+	];
+	render_modern_table($balCols, $balRows, false);
+
+	echo '		</div>
 		</div>';
 
-	echo '<div class="card-v2" style="margin-top: var(--space-6);">
-			<div class="card-header-v2">
-				<h3>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:8px; color:var(--primary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+	echo '<div style="background-color:var(--surface); border:1px solid var(--border-soft); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); margin-bottom:24px; overflow:hidden;">
+			<div style="background-color:var(--surface-alt); border-bottom:1px solid var(--border-soft); padding:16px 24px;">
+				<h3 style="margin:0; font-size:1.1rem; font-weight:600; color:var(--text-main); display:flex; align-items:center;">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px; color:var(--primary);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 					' . __('Inquiry Filters') . '
 				</h3>
 			</div>
-			<div class="db-card-body">
+			<div style="padding:24px;">
 				<form onSubmit="return VerifyForm(this);" action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post" class="noPrint">
 					<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
-					<div class="db-field-group">
-						<div class="db-field">
-							<label class="db-label">' . __('Transactions After') . '</label>
-							<input required="required" type="date" name="TransAfterDate" value="' . FormatDateForSQL($_POST['TransAfterDate']) . '" />
+					<div style="display:flex; gap:16px; align-items:flex-end;">
+						<div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+							<label style="font-size:0.875rem; font-weight:500; color:var(--text-main);">' . __('Transactions After') . '</label>
+							<input required="required" type="date" name="TransAfterDate" value="' . FormatDateForSQL($_POST['TransAfterDate']) . '" style="padding:10px 12px; border:1px solid var(--border); border-radius:6px; outline:none;" onfocus="this.style.borderColor=\'var(--primary)\';" onblur="this.style.borderColor=\'var(--border)\';" />
 						</div>
-						<div class="db-field">
-							<label class="db-label">' . __('Balance Status') . '</label>
-							<select name="Status">
+						<div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+							<label style="font-size:0.875rem; font-weight:500; color:var(--text-main);">' . __('Balance Status') . '</label>
+							<select name="Status" style="padding:10px 12px; border:1px solid var(--border); border-radius:6px; outline:none; background-color:var(--surface);" onfocus="this.style.borderColor=\'var(--primary)\';" onblur="this.style.borderColor=\'var(--border)\';">
 								<option ' . ($_POST['Status'] == '' ? 'selected="selected"' : '') . ' value="">' . __('All') . '</option>
 								<option ' . ($_POST['Status'] == '1' ? 'selected="selected"' : '') . ' value="1">' . __('Invoices not fully allocated') . '</option>
 								<option ' . ($_POST['Status'] == '0' ? 'selected="selected"' : '') . ' value="0">' . __('Invoices fully allocated') . '</option>
 							</select>
 						</div>
-						<div class="db-field" style="display: flex; align-items: flex-end;">
-							<button type="submit" name="Refresh Inquiry" class="db-btn db-btn-primary" style="width: 100%;">' . __('Refresh Inquiry') . '</button>
+						<div style="flex:1; display:flex; align-items:flex-end;">
+							<button type="submit" name="Refresh Inquiry" class="db-btn db-btn-primary" style="height:44px; width:100%; border-radius:6px; font-size:1rem;">' . __('Refresh Inquiry') . '</button>
 						</div>
 					</div>
 				</form>
@@ -333,46 +411,46 @@ $TransResult = DB_query($SQL, $ErrMsg);
 
 /* Show a table of the invoices returned by the SQL. */
 
-	echo '<div class="card-v2" style="margin-top: var(--space-6);">
-			<div class="card-header-v2">
-				<h3>
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:8px; color:var(--primary);"><path d="M2 17V3a2 2 0 0 1 2-2h13.2a2 2 0 0 1 2 2v14m-12 4h12l1-4H3l1 4Z"></path></svg>
+	echo '<div style="background-color:var(--surface); border:1px solid var(--border-soft); border-radius:12px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); margin-bottom:24px; overflow:hidden;">
+			<div style="background-color:var(--surface-alt); border-bottom:1px solid var(--border-soft); padding:16px 24px;">
+				<h3 style="margin:0; font-size:1.1rem; font-weight:600; color:var(--text-main); display:flex; align-items:center;">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:8px; color:var(--primary);"><path d="M2 17V3a2 2 0 0 1 2-2h13.2a2 2 0 0 1 2 2v14m-12 4h12l1-4H3l1 4Z"></path></svg>
 					' . __('Transaction History') . '
 				</h3>
 			</div>
-			<div class="db-card-body">
-				<div class="db-table-wrapper">
-					<table class="db-table">
+			<div style="padding:0;">
+				<div style="width:100%; overflow-x:auto;">
+					<table style="width:100%; border-collapse:collapse; text-align:left; white-space:nowrap;">
 						<thead>
-							<tr>
-								<th>' . __('Type') . '</th>
-								<th>' . __('No') . '</th>
-								<th>' . __('Date') . '</th>
-								<th>' . __('Branch') . '</th>
-								<th>' . __('Reference') . '</th>
-								<th>' . __('Comments') . '</th>
-								<th class="number">' . __('Charges') . '</th>
-								<th class="number">' . __('Credits') . '</th>
-								<th class="number">' . __('Allocated') . '</th>
-								<th class="number">' . __('Outstanding') . '</th>
-								<th class="number">' . __('Running Balance') . '</th>
-								<th class="number noPrint">' . __('Actions') . '</th>
+							<tr style="background-color:var(--surface-alt); border-bottom:1px solid var(--border-soft);">
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('Type') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('No') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('Date') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('Branch') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('Reference') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">' . __('Comments') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Charges') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Credits') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Allocated') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Outstanding') . '</th>
+								<th style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Running Balance') . '</th>
+								<th class="noPrint" style="padding:12px 24px; font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; text-align:right;">' . __('Actions') . '</th>
 							</tr>
 						</thead>
 						<tbody>';
 	
 	if (DB_num_rows($TransResult) == 0) {
-		echo '<tr><td colspan="12" style="padding: var(--space-12); text-align: center; color: var(--text-muted); font-size: 0.875rem;">' . __('No transactions found for the selected period.') . '</td></tr>';
+		echo '<tr><td colspan="12" style="padding:24px; text-align:center; color:var(--text-muted); font-size:0.875rem;">' . __('No transactions found for the selected period.') . '</td></tr>';
 	} else {
 
-		echo '<tr style="background: var(--surface-alt); font-weight: 600;">
-				<td colspan="6">' . __('Opening Balance') . '</td>
-				<td>&nbsp;</td>
-				<td>&nbsp;</td>
-				<td>&nbsp;</td>
-				<td>&nbsp;</td>
-				<td class="number">' . locale_number_format($RunningBalance, $CustomerRecord['decimalplaces']) . '</td>
-				<td class="noPrint">&nbsp;</td>
+		echo '<tr style="background-color:var(--surface-alt); border-bottom:1px solid var(--border-soft); font-weight:600; font-size:0.875rem; color:var(--text-main);">
+				<td colspan="6" style="padding:12px 24px;">' . __('Opening Balance') . '</td>
+				<td style="padding:12px 24px;">&nbsp;</td>
+				<td style="padding:12px 24px;">&nbsp;</td>
+				<td style="padding:12px 24px;">&nbsp;</td>
+				<td style="padding:12px 24px;">&nbsp;</td>
+				<td style="padding:12px 24px; text-align:right; font-weight:700; color:var(--text-main);">' . locale_number_format($RunningBalance, $CustomerRecord['decimalplaces']) . '</td>
+				<td class="noPrint" style="padding:12px 24px;">&nbsp;</td>
 			</tr>';
 
 	while ($MyRow = DB_fetch_array($TransResult)) {
@@ -447,20 +525,20 @@ $TransResult = DB_query($SQL, $ErrMsg);
 		
 		$RunningBalance += $MyRow['totalamount'];
 
-		echo '<tr>
-				<td><span class="db-badge ' . $BadgeClass . '">' . __($MyRow['typename']) . '</span></td>
-				<td><a href="' . $RootPath . '/CustWhereAlloc.php?TransType=' . $MyRow['type'] . '&TransNo=' . $MyRow['transno'] . '" target="_blank">' . $MyRow['transno'] . '</a></td>
-				<td>' . ConvertSQLDate($MyRow['trandate']) . '</td>
-				<td>' . $MyRow['branchcode'] . '</td>
-				<td>' . $MyRow['reference'] . '</td>
-				<td style="width:200px">' . $MyRow['invtext'] . '</td>
-				<td class="number">' . ($MyRow['totalamount'] > 0 ? locale_number_format($MyRow['totalamount'], $CustomerRecord['decimalplaces']) : '&nbsp;') . '</td>
-				<td class="number">' . ($MyRow['totalamount'] < 0 ? locale_number_format(abs($MyRow['totalamount']), $CustomerRecord['decimalplaces']) : '&nbsp;') . '</td>
-				<td class="number">' . locale_number_format($MyRow['allocated'], $CustomerRecord['decimalplaces']) . '</td>
-				<td class="number">' . locale_number_format($MyRow['totalamount'] - $MyRow['allocated'], $CustomerRecord['decimalplaces']) . '</td>
-				<td class="number" style="font-weight: 700; color: var(--primary);">' . locale_number_format($RunningBalance, $CustomerRecord['decimalplaces']) . '</td>
-				<td class="number noPrint">
-					<div class="db-action-group" style="justify-content: flex-end;">
+		echo '<tr style="border-bottom:1px solid var(--border-soft); transition:background-color 0.2s; cursor:default;" onmouseover="this.style.backgroundColor=\'var(--surface-alt)\'" onmouseout="this.style.backgroundColor=\'transparent\'">
+				<td style="padding:16px 24px;"><span class="db-badge ' . $BadgeClass . '">' . __($MyRow['typename']) . '</span></td>
+				<td style="padding:16px 24px; font-weight:500;"><a href="' . $RootPath . '/CustWhereAlloc.php?TransType=' . $MyRow['type'] . '&TransNo=' . $MyRow['transno'] . '" target="_blank" style="color:var(--primary); text-decoration:none;">' . $MyRow['transno'] . '</a></td>
+				<td style="padding:16px 24px;">' . ConvertSQLDate($MyRow['trandate']) . '</td>
+				<td style="padding:16px 24px;">' . $MyRow['branchcode'] . '</td>
+				<td style="padding:16px 24px;">' . $MyRow['reference'] . '</td>
+				<td style="padding:16px 24px; min-width:200px; white-space:nowrap;">' . $MyRow['invtext'] . '</td>
+				<td style="padding:16px 24px; text-align:right;">' . ($MyRow['totalamount'] > 0 ? locale_number_format($MyRow['totalamount'], $CustomerRecord['decimalplaces']) : '&nbsp;') . '</td>
+				<td style="padding:16px 24px; text-align:right;">' . ($MyRow['totalamount'] < 0 ? locale_number_format(abs($MyRow['totalamount']), $CustomerRecord['decimalplaces']) : '&nbsp;') . '</td>
+				<td style="padding:16px 24px; text-align:right;">' . locale_number_format($MyRow['allocated'], $CustomerRecord['decimalplaces']) . '</td>
+				<td style="padding:16px 24px; text-align:right;">' . locale_number_format($MyRow['totalamount'] - $MyRow['allocated'], $CustomerRecord['decimalplaces']) . '</td>
+				<td style="padding:16px 24px; text-align:right; font-weight:600; color:var(--text-main);">' . locale_number_format($RunningBalance, $CustomerRecord['decimalplaces']) . '</td>
+				<td class="noPrint" style="padding:16px 24px;">
+					<div style="display:flex; gap:8px; justify-content:flex-end;">
 						' . $Actions . '
 					</div>
 				</td>
@@ -469,5 +547,5 @@ $TransResult = DB_query($SQL, $ErrMsg);
 	} //end of while loop
 } // end of else
 
-	echo '</tbody></table></div></div></div></div>'; // Close db-table, db-table-wrapper, db-card-body, card-v2, db-page
+	echo '</tbody></table></div></div></div></div>'; // Close table, table-wrapper, card-body, card, db-page
 	include(__DIR__ . '/includes/footer.php');

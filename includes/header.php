@@ -55,7 +55,6 @@ echo '<html lang="' , str_replace('_', '-', substr($Language ?? 'en_GB', 0, 5)) 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 	<link href="', $RootPath, '/css/', $_SESSION['Theme'], '/styles.css?version=1.7" rel="stylesheet" type="text/css" media="screen" />
 	<link href="', $RootPath, '/css/print.css?version=1.3" rel="stylesheet" type="text/css" media="print" />
 	<meta name="viewport" content="width=device-width, initial-scale=1">';
@@ -128,22 +127,6 @@ echo '<div class="help-bubble" id="help-bubble">
 		</div>
 		<div class="help-content" id="help-content"></div>
 	</div>';
-	
-echo '
-	<div id="mask">
-		<div id="dialog"></div>
-	</div>
-	<dialog id="logoutDialog" style="margin: auto; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;">
-		<div id="DialogContainer">
-			<h3 id="LogoutDialogHeader">', __('Confirm Logout'), '</h3>
-			<p id="LogoutDialogText">', __('Are you sure you wish to logout?'), '</p>
-			<div id="DialogButtonContainer">
-				<button id="cancelLogout">', __('Cancel'), '</button>
-				<button id="confirmLogout">', __('Logout'), '</button>
-			</div>
-		</div>
-	</dialog>
-';
 
 if (!isset($NoMenu) || $NoMenu != 1) {
 	echo '<div class="dashboard-container">
@@ -244,520 +227,38 @@ if (!isset($NoMenu) || $NoMenu != 1) {
 echo '<section class="MainBody">';
 
 if (!isset($NoMenu) || $NoMenu != 1) {
-	echo '<div class="ScriptTitle">';
-	
-	// Start with Home
-	echo '<a href="' . $RootPath . '/index.php"><i class="fa-solid fa-house" style="font-size: 0.8rem;"></i> ' . __('Home') . '</a>';
-	
 	if ($ScriptName != 'index.php' && $ScriptName != 'Dashboard.php') {
-		// Module Name
 		if (isset($_SESSION['Module'])) {
 			$SQL = "SELECT modulename FROM modules WHERE modulelink='" . $_SESSION['Module'] . "'";
 			$Result = DB_query($SQL);
 			if (DB_num_rows($Result) > 0) {
 				$MyRow = DB_fetch_array($Result);
-				$ModuleName = __($MyRow['modulename']);
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/index.php?Application=' . $_SESSION['Module'] . '">' . $ModuleName . '</a>';
-			}
-		}
-		
-		// Further Navigation Flow mapping
-		// Parse identifier
-		$id_val = '';
-		if (isset($_GET['identifier'])) {
-			$id_val = $_GET['identifier'];
-		} elseif (isset($_POST['identifier'])) {
-			$id_val = $_POST['identifier'];
-		}
-		
-		$customerName = '';
-		$customerNo = '';
-		if (!empty($id_val) && isset($_SESSION['Items' . $id_val])) {
-			$cart_obj = $_SESSION['Items' . $id_val];
-			if (is_object($cart_obj) && get_class($cart_obj) !== '__PHP_Incomplete_Class') {
-				$customerName = $cart_obj->CustomerName ?? '';
-				$customerNo = $cart_obj->DebtorNo ?? '';
-			}
-		}
-		
-		// If we are in the Sales flow:
-		if (isset($_SESSION['Module']) && $_SESSION['Module'] == 'Sales') {
-			if ($ScriptName == 'SelectCustomer.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select Customer') . '</span>';
-			} elseif ($ScriptName == 'SelectOrderItems.php') {
-				if (!empty($customerNo)) {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/SelectCustomer.php?identifier=' . urlencode($id_val) . '">' . __('Select Customer') . '</a>';
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					$cust_disp = !empty($customerName) ? htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8') : $customerNo;
-					echo '<span class="active-page">' . __('Order Lines') . ' (' . $cust_disp . ')</span>';
-				} else {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<span class="active-page">' . __('Select Customer') . '</span>';
-				}
-			} elseif ($ScriptName == 'DeliveryDetails.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectOrderItems.php?identifier=' . urlencode($id_val) . '">' . __('Order Lines') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Delivery Details') . '</span>';
-			} elseif ($ScriptName == 'ConfirmDispatch_Invoice.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectOrderItems.php?identifier=' . urlencode($id_val) . '">' . __('Order Lines') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/DeliveryDetails.php?identifier=' . urlencode($id_val) . '">' . __('Delivery Details') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Confirm Dispatch') . '</span>';
+				echo '<div class="ScriptTitle"><a href="index.php?Application=' . $_SESSION['Module'] . '">', $MyRow['modulename'] . '</a> -> '. $Title, '</div>';
 			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
+				echo '<div class="ScriptTitle">', $Title, '</div>';
 			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'AR') {
-			// Receivables Module Flow
-			if ($ScriptName == 'SelectCustomer.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select Customer') . '</span>';
-			} elseif ($ScriptName == 'Customers.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Customer Maintenance') . '</span>';
-			} elseif ($ScriptName == 'CustomerInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Customer Transactions') . '</span>';
-			} elseif ($ScriptName == 'CustomerAccount.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Customer Statement') . '</span>';
-			} elseif ($ScriptName == 'AddCustomerContacts.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Customer Contacts') . '</span>';
-			} elseif ($ScriptName == 'AddCustomerNotes.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Customer Notes') . '</span>';
-			} elseif ($ScriptName == 'SelectCreditItems.php') {
-				$creditName = '';
-				$creditNo = '';
-				if (!empty($id_val) && isset($_SESSION['CreditItems' . $id_val])) {
-					$cart_obj = $_SESSION['CreditItems' . $id_val];
-					if (is_object($cart_obj) && get_class($cart_obj) !== '__PHP_Incomplete_Class') {
-						$creditName = $cart_obj->CustomerName ?? '';
-						$creditNo = $cart_obj->DebtorNo ?? '';
-					}
-				}
-				if (!empty($creditNo)) {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/SelectCustomer.php?identifier=' . urlencode($id_val) . '">' . __('Select Customer') . '</a>';
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					$cust_disp = !empty($creditName) ? htmlspecialchars($creditName, ENT_QUOTES, 'UTF-8') : $creditNo;
-					echo '<span class="active-page">' . __('Credit Items') . ' (' . $cust_disp . ')</span>';
-				} else {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<span class="active-page">' . __('Select Customer') . '</span>';
-				}
-			} elseif ($ScriptName == 'CreditItemsControlled.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php?identifier=' . urlencode($id_val) . '">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCreditItems.php?identifier=' . urlencode($id_val) . '">' . __('Credit Items') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Controlled Items') . '</span>';
-			} elseif ($ScriptName == 'CustomerReceipt.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php?identifier=' . urlencode($id_val) . '">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Enter Receipts') . '</span>';
-			} elseif ($ScriptName == 'CustomerAllocations.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectCustomer.php?identifier=' . urlencode($id_val) . '">' . __('Select Customer') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Allocate Receipts') . '</span>';
-			} elseif ($ScriptName == 'SelectSalesOrder.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select Order to Invoice') . '</span>';
-			} elseif ($ScriptName == 'ConfirmDispatch_Invoice.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSalesOrder.php?identifier=' . urlencode($id_val) . '">' . __('Select Order to Invoice') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Confirm Invoicing') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'PO') {
-			// Purchases Module Flow
-			if ($ScriptName == 'PO_Header.php') {
-				$suppName = '';
-				$suppNo = '';
-				if (!empty($id_val) && isset($_SESSION['PO' . $id_val])) {
-					$po_obj = $_SESSION['PO' . $id_val];
-					if (is_object($po_obj) && get_class($po_obj) !== '__PHP_Incomplete_Class') {
-						$suppName = $po_obj->SupplierName ?? '';
-						$suppNo = $po_obj->SupplierID ?? '';
-					}
-				}
-				
-				if (!empty($_SESSION['ExistingOrder'])) {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/PO_SelectOSPurchOrder.php">' . __('Purchase Orders') . '</a>';
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<span class="active-page">' . __('Edit Purchase Order') . ' (' . $_SESSION['ExistingOrder'] . ')</span>';
-				} else {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					$active_text = __('New Purchase Order');
-					if (!empty($suppNo)) {
-						$supp_disp = !empty($suppName) ? htmlspecialchars($suppName, ENT_QUOTES, 'UTF-8') : $suppNo;
-						$active_text .= ' (' . $supp_disp . ')';
-					}
-					echo '<span class="active-page">' . $active_text . '</span>';
-				}
-			} elseif ($ScriptName == 'PO_Items.php') {
-				$suppName = '';
-				$suppNo = '';
-				if (!empty($id_val) && isset($_SESSION['PO' . $id_val])) {
-					$po_obj = $_SESSION['PO' . $id_val];
-					if (is_object($po_obj) && get_class($po_obj) !== '__PHP_Incomplete_Class') {
-						$suppName = $po_obj->SupplierName ?? '';
-						$suppNo = $po_obj->SupplierID ?? '';
-					}
-				}
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				if (!empty($_SESSION['ExistingOrder'])) {
-					echo '<a href="' . $RootPath . '/PO_SelectOSPurchOrder.php">' . __('Purchase Orders') . '</a>';
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/PO_Header.php?identifier=' . urlencode($id_val) . '">' . __('Edit Purchase Order') . '</a>';
-				} else {
-					echo '<a href="' . $RootPath . '/PO_Header.php?identifier=' . urlencode($id_val) . '">' . __('New Purchase Order') . '</a>';
-				}
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				$active_text = __('PO Items');
-				if (!empty($suppNo)) {
-					$supp_disp = !empty($suppName) ? htmlspecialchars($suppName, ENT_QUOTES, 'UTF-8') : $suppNo;
-					$active_text .= ' (' . $supp_disp . ')';
-				}
-				echo '<span class="active-page">' . $active_text . '</span>';
-			} elseif ($ScriptName == 'PO_SelectOSPurchOrder.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Orders') . '</span>';
-			} elseif ($ScriptName == 'PO_SelectPurchOrder.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Order Inquiry') . '</span>';
-			} elseif ($ScriptName == 'PO_OrderDetails.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/PO_SelectPurchOrder.php">' . __('Purchase Order Inquiry') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Order Details') . '</span>';
-			} elseif ($ScriptName == 'PO_AuthoriseMyOrders.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Orders to Authorise') . '</span>';
-			} elseif ($ScriptName == 'OffersReceived.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SupplierTenderCreate.php">' . __('Tenders') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Process Tenders and Offers') . '</span>';
-			} elseif ($ScriptName == 'SupplierTenders.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SupplierTenderCreate.php">' . __('Tenders') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Tender Offers') . '</span>';
-			} elseif ($ScriptName == 'SupplierTenderCreate.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Tenders') . '</span>';
-			} elseif ($ScriptName == 'PurchaseByPrefSupplier.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Order Grid Entry') . '</span>';
-			} elseif ($ScriptName == 'SupplierPriceList.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Maintain Supplier Price Lists') . '</span>';
-			} elseif ($ScriptName == 'POReport.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Order Detail Or Summary Inquiries') . '</span>';
-			} elseif ($ScriptName == 'POFinancialPlanning.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchase Orders Financial Planning') . '</span>';
-			} elseif ($ScriptName == 'PurchasesReport.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Purchases from Suppliers') . '</span>';
-			} elseif ($ScriptName == 'SuppPriceList.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Price List') . '</span>';
-			} elseif ($ScriptName == 'Shipt_Select.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select A Shipment') . '</span>';
-			} elseif ($ScriptName == 'SelectSupplier.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Shipment Entry') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'AP') {
-			
-			if ($ScriptName == 'SelectSupplier.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select Supplier') . '</span>';
-			} elseif ($ScriptName == 'Suppliers.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Add Supplier') . '</span>';
-			} elseif ($ScriptName == 'Factors.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Maintain Factor Companies') . '</span>';
-			} elseif ($ScriptName == 'SupplierContacts.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Contacts') . '</span>';
-			} elseif ($ScriptName == 'SupplierCredit.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Credit Note') . '</span>';
-			} elseif ($ScriptName == 'SupplierInvoice.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Enter Supplier Invoice') . '</span>';
-			} elseif ($ScriptName == 'Payments.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Enter Payments') . '</span>';
-			} elseif ($ScriptName == 'PaymentAllocations.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Allocate Payments') . '</span>';
-			} elseif ($ScriptName == 'SupplierAllocations.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Allocations') . '</span>';
-			} elseif ($ScriptName == 'AgedSuppliers.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Aged Supplier Report') . '</span>';
-			} elseif ($ScriptName == 'PDFSuppTransListing.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('List Daily Transactions') . '</span>';
-			} elseif ($ScriptName == 'OutstandingGRNs.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Outstanding GRNs Report') . '</span>';
-			} elseif ($ScriptName == 'SuppPaymentRun.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Payment Run Report') . '</span>';
-			} elseif ($ScriptName == 'PDFRemittanceAdvice.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Remittance Advices') . '</span>';
-			} elseif ($ScriptName == 'SupplierBalsAtPeriodEnd.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Balances At A Prior Month End') . '</span>';
-			} elseif ($ScriptName == 'SupplierTransInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Transaction Inquiries') . '</span>';
-			} elseif ($ScriptName == 'SuppWhereAlloc.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Where Allocated Inquiry') . '</span>';
-			} elseif ($ScriptName == 'SupplierInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectSupplier.php">' . __('Select Supplier') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Supplier Inquiry') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'stock') {
-			
-			if ($ScriptName == 'SelectProduct.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select An Item') . '</span>';
-			} elseif ($ScriptName == 'Stocks.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				if (isset($_GET['StockID']) || isset($_POST['StockID'])) {
-					echo '<a href="' . $RootPath . '/SelectProduct.php">' . __('Select An Item') . '</a>';
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				}
-				echo '<span class="active-page">' . __('Item Maintenance') . '</span>';
-			} elseif ($ScriptName == 'StockStatus.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectProduct.php">' . __('Select An Item') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Inventory Item Status') . '</span>';
-			} elseif ($ScriptName == 'StockMovements.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectProduct.php">' . __('Select An Item') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Inventory Item Movements') . '</span>';
-			} elseif ($ScriptName == 'StockUsage.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectProduct.php">' . __('Select An Item') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Inventory Item Usage') . '</span>';
-			} elseif ($ScriptName == 'StockCostUpdate.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectProduct.php">' . __('Select An Item') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Update Item Cost') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'manuf') {
-			if ($ScriptName == 'SelectWorkOrder.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select A Work Order') . '</span>';
-			} elseif ($ScriptName == 'WorkOrderStatus.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Work Order Status') . '</span>';
-			} elseif ($ScriptName == 'WorkOrderIssue.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Issue Materials') . '</span>';
-			} elseif ($ScriptName == 'WorkOrderReceive.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Receive Work Order') . '</span>';
-			} elseif ($ScriptName == 'WorkOrderCosting.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Work Order Costing') . '</span>';
-			} elseif ($ScriptName == 'WOSerialNos.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Work Order Serial Numbers') . '</span>';
-			} elseif ($ScriptName == 'WorkOrderEntry.php') {
-				if (isset($_REQUEST['WO'])) {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/SelectWorkOrder.php">' . __('Select A Work Order') . '</a>';
-				}
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Work Order Entry') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'GL') {
-			if ($ScriptName == 'SelectGLAccount.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Account Inquiry') . '</span>';
-			} elseif ($ScriptName == 'GLAccountInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectGLAccount.php">' . __('Account Inquiry') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Account Transactions') . '</span>';
-			} elseif ($ScriptName == 'GLTransInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('GL Transaction Inquiry') . '</span>';
-			} elseif ($ScriptName == 'GLJournalInquiry.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('General Ledger Journal Inquiry') . '</span>';
-			} elseif ($ScriptName == 'BankReconciliation.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Bank Account Reconciliation') . '</span>';
-			} elseif ($ScriptName == 'GLProfit_Loss.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Profit and Loss Statement') . '</span>';
-			} elseif ($ScriptName == 'GLBalanceSheet.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Balance Sheet') . '</span>';
-			} elseif ($ScriptName == 'GLTrialBalance.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Trial Balance') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'FA') {
-			if ($ScriptName == 'SelectAsset.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Select an Asset') . '</span>';
-			} elseif ($ScriptName == 'FixedAssetItems.php') {
-				if (isset($_REQUEST['AssetID']) || isset($_GET['AssetID']) || isset($_POST['AssetID'])) {
-					echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-					echo '<a href="' . $RootPath . '/SelectAsset.php">' . __('Select an Asset') . '</a>';
-				}
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Asset Maintenance') . '</span>';
-			} elseif ($ScriptName == 'FixedAssetTransfer.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<a href="' . $RootPath . '/SelectAsset.php">' . __('Select an Asset') . '</a>';
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Change Asset Location') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'system') {
-			if ($ScriptName == 'WWW_Users.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('User Maintenance') . '</span>';
-			} elseif ($ScriptName == 'CompanyPreferences.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Company Preferences') . '</span>';
-			} elseif ($ScriptName == 'SystemParameters.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('System Parameters') . '</span>';
-			} elseif ($ScriptName == 'Currencies.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('Currency Maintenance') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'PC') {
-			echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-			echo '<span class="active-page">' . $Title . '</span>';
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'SARIS') {
-			if ($ScriptName == 'SARIS_Settings.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('SARIS Settings') . '</span>';
-			} elseif ($ScriptName == 'SARIS_Invoices.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('SARIS Invoices') . '</span>';
-			} elseif ($ScriptName == 'SARIS_Payments.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('SARIS Payments') . '</span>';
-			} elseif ($ScriptName == 'SARIS_Students.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('SARIS Students') . '</span>';
-			} elseif ($ScriptName == 'SARIS_SyncHistory.php') {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . __('SARIS Sync History') . '</span>';
-			} else {
-				echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-				echo '<span class="active-page">' . $Title . '</span>';
-			}
-		} elseif (isset($_SESSION['Module']) && $_SESSION['Module'] == 'Utilities') {
-			echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-			echo '<span class="active-page">' . $Title . '</span>';
 		} else {
-			// Fallback for other modules
-			echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-			echo '<span class="active-page">' . $Title . '</span>';
+			echo '<div class="ScriptTitle">', $Title, '</div>';
 		}
-		
 	} elseif ($ScriptName == 'Dashboard.php') {
-		echo '<span class="separator"><i class="fa-solid fa-chevron-right"></i></span>';
-		echo '<span class="active-page">' . __('Dashboard') . '</span>';
+		echo '<div class="ScriptTitle">', __('Dashboard'), '</div>';
 	}
-	
-	echo '</div>';
 }
 
 echo '<div id="MessageContainerHead"></div>';
 
-?>
+echo '<div id="mask"></div>
+	<dialog id="logoutDialog">
+		<div id="DialogContainer">
+			<h3 id="LogoutDialogHeader">', __('Confirm Logout'), '</h3>
+			<p id="LogoutDialogText">', __('Are you sure you wish to logout?'), '</p>
+			<div id="DialogButtonContainer">
+				<button id="cancelLogout">', __('Cancel'), '</button>
+				<button id="confirmLogout">', __('Logout'), '</button>
+			</div>
+		</div>
+	</dialog>
+	<script async src="', $RootPath, '/javascripts/dialogs.js?version=1.0"></script>
 	<script>
 		const sidebarToggle = document.getElementById("SidebarToggle");
 		const sidebarMask = document.getElementById("SidebarMask");
@@ -774,5 +275,4 @@ echo '<div id="MessageContainerHead"></div>';
 		sidebarMask.onclick = function() {
 			document.body.classList.remove("sidebar-active");
 		};
-	</script>
-<?php?>
+	</script>';

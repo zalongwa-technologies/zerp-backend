@@ -222,32 +222,16 @@ class ZERPXMLRPCClient {
 
 	// The phpxmlrpc library's own fault string for transport-level failures (e.g.
 	// "Invalid response payload... empty document") hides the actual HTTP status
-	// and body that would explain why — surface both. Note: httpResponse()['raw_data']
-	// is captured before the library strips headers, so it's headers+body glued
-	// together — split on the blank-line boundary ourselves to get to the body.
+	// and body that would explain why — surface a snippet of both.
 	private function httpDetail($response) {
 		$http = $response->httpResponse();
 		$detail = '';
 		if (isset($http['status_code']) && $http['status_code'] !== null) {
 			$detail .= ' (HTTP ' . $http['status_code'] . ')';
 		}
-
-		$raw = (string)($http['raw_data'] ?? '');
-		$boundary = strpos($raw, "\r\n\r\n");
-		$boundaryLen = 4;
-		if ($boundary === false) {
-			$boundary = strpos($raw, "\n\n");
-			$boundaryLen = 2;
-		}
-		$headerBlock = $boundary !== false ? substr($raw, 0, $boundary) : $raw;
-		$body = $boundary !== false ? substr($raw, $boundary + $boundaryLen) : '';
-
-		if (preg_match('/^content-length:\s*(\d+)/mi', $headerBlock, $m)) {
-			$detail .= ' Content-Length: ' . $m[1];
-		}
-		$detail .= ' Body length: ' . strlen($body) . ' byte(s)';
-		if ($body !== '') {
-			$detail .= ' Body: ' . trim(preg_replace('/\s+/', ' ', substr($body, 0, 300)));
+		$snippet = trim(preg_replace('/\s+/', ' ', substr((string)($http['raw_data'] ?? ''), 0, 240)));
+		if ($snippet !== '') {
+			$detail .= ' Body: ' . $snippet;
 		}
 		return $detail;
 	}

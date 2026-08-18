@@ -90,7 +90,7 @@ $ExtraHeadContent = '
     
     .db-form-container {
         width: 100%;
-        max-width: 1000px;
+        max-width: 900px;
         margin: 0 auto;
     }
 
@@ -204,7 +204,17 @@ if (isset($_POST['submit'])) {
 			$safe[$k] = DB_escape_string(isset($_POST[$k]) ? (string)$_POST[$k] : '');
 		}
 
+		$CompanyFileHandler = fopen($PathPrefix . 'companies/' . $_SESSION['DatabaseName'] . '/Companies.php', 'w');
+		$Contents = "<?php\n\n";
+		$Contents.= "\$CompanyName['" . $_SESSION['DatabaseName'] . "'] = '" . addslashes($_POST['CoyName']) . "';\n";
+		$Contents.= "?>";
 
+		if (!fwrite($CompanyFileHandler, $Contents)) {
+			fclose($CompanyFileHandler);
+			echo '<div class="error">' . __('Cannot write to the Companies.php file') . '</div>';
+		}
+		//close file
+		fclose($CompanyFileHandler);
 
 		$SQL = "UPDATE companies SET coyname='" . $safe['CoyName'] . "',
 									companynumber = '" . $safe['CompanyNumber'] . "',
@@ -249,13 +259,9 @@ if (isset($_POST['submit'])) {
 			$NewCurrencyRate=$MyRow[0];
 
 			/* Set new rates */
-			if (is_numeric($NewCurrencyRate) && floatval($NewCurrencyRate) > 0) {
-				$SQL="UPDATE currencies SET rate=rate/" . floatval($NewCurrencyRate);
-				$ErrMsg =  __('Could not update the currency rates');
-				$Result = DB_query($SQL, $ErrMsg);
-			} else {
-				prnMsg(__('Could not update currency rates because the default currency rate is invalid.'), 'warn');
-			}
+			$SQL="UPDATE currencies SET rate=rate/" . $NewCurrencyRate;
+			$ErrMsg =  __('Could not update the currency rates');
+			$Result = DB_query($SQL, $ErrMsg);
 
 			/* End of update currencies */
 

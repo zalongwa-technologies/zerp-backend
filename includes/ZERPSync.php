@@ -9,6 +9,7 @@ class ZERPSync {
 	private $runId;
 	private $stats;
 	private $currentMethod = '';
+	private $bankMappings = null;
 
 	public function __construct(PDO $pdo, ZERPXMLRPCClient $client, array $config) {
 		$this->pdo = $pdo;
@@ -362,6 +363,30 @@ class ZERPSync {
 		];
 	}
 
+	private function getBankAccountForPayment(array $payment) {
+		if ($this->bankMappings === null) {
+			try {
+				$stmt = $this->pdo->query("SELECT match_keyword, bank_account_code FROM saris_bank_mappings");
+				$this->bankMappings = $stmt ? ($stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: []) : [];
+			} catch (Throwable $e) {
+				// Table might not exist yet, fallback to empty mappings
+				$this->bankMappings = [];
+			}
+		}
+
+		$source = trim((string)($payment['payment_source'] ?? ''));
+		if ($source !== '' && isset($this->bankMappings[$source])) {
+			return $this->bankMappings[$source];
+		}
+
+		$amountType = trim((string)($payment['payment_amount_type'] ?? ''));
+		if ($amountType !== '' && isset($this->bankMappings[$amountType])) {
+			return $this->bankMappings[$amountType];
+		}
+
+		return (string)$this->config['bank_account'];
+	}
+
 	private function receiptPayload(array $payment, array $student) {
 		$reference = $payment['payment_receipt_number']
 			?: ($payment['payment_transaction_ref'] ?: ('SARIS-PAY-' . $payment['id']));
@@ -371,7 +396,7 @@ class ZERPSync {
 			'trandate' => $this->dateOnly($payment['payment_date']),
 			'amountfx' => (float)$payment['payment_amount'],
 			'paymentmethod' => (string)$this->config['payment_method'],
-			'bankaccount' => (string)$this->config['bank_account'],
+			'bankaccount' => $this->getBankAccountForPayment($payment),
 			'reference' => self::remoteReference($reference),
 			'discountfx' => 0,
 		];

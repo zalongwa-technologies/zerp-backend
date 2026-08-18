@@ -406,7 +406,7 @@ if (in_array(1, $_SESSION['AllowedPageSecurityTokens']) and count($_SESSION['All
 }
 
 if ($FirstLogin) {
-	if (!$SupplierLogin and !$CustomerLogin) {
+	if (!$SupplierLogin and !$CustomerLogin and $_SESSION['ShowDashboard'] == 1) {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/Dashboard.php');
 	} else {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/index.php');
@@ -419,7 +419,7 @@ if ($FirstLogin) {
 ///       the form. Or just also do the check on Login...
 if (!isset($_POST['CompanyNameField']) and sizeof($_POST) > 0 and !isset($AllowAnyone)) {
 	/* Security check to ensure that the form submitted is originally sourced from webERP with the FormID = $_SESSION['FormID'] - which is set before the first login */
-	if (!isset($_POST['FormID']) or ($_POST['FormID'] != ($_SESSION['FormID'] ?? ''))) {
+	if (!isset($_POST['FormID']) or ($_POST['FormID'] != $_SESSION['FormID'])) {
 		$Title = __('Error in form verification');
 		include('includes/header.php');
 		prnMsg(__('This form was not submitted with a correct ID'), 'error');

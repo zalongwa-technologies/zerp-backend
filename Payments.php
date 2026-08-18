@@ -507,38 +507,24 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
         toast.style.cssText = 'background: #ffffff; color: var(--text-main); padding: 16px 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 12px; min-width: 300px; max-width: 450px; pointer-events: auto; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.3s ease 4.7s forwards; font-family: inherit; font-size: 0.9rem; font-weight: 600; line-height: 1.4;';
         
         var iconHtml = '<i class="fas fa-info-circle" style="color: var(--primary); font-size: 1.25rem;"></i>';
-        var lifespan = 5000;
         if (type === 'error') {
             toast.style.borderLeftColor = 'var(--danger)';
             iconHtml = '<i class="fas fa-exclamation-circle" style="color: var(--danger); font-size: 1.25rem;"></i>';
-            lifespan = 9000;
         } else if (type === 'warning') {
             toast.style.borderLeftColor = '#f59e0b';
             iconHtml = '<i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 1.25rem;"></i>';
-            lifespan = 9000;
         } else if (type === 'success') {
             toast.style.borderLeftColor = 'var(--success)';
             iconHtml = '<i class="fas fa-check-circle" style="color: var(--success); font-size: 1.25rem;"></i>';
         }
-        if (lifespan !== 5000) {
-            toast.style.animation = 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.3s ease ' + ((lifespan - 300) / 1000) + 's forwards';
-        }
-
+        
         toast.innerHTML = iconHtml + '<div style="flex: 1;">' + message + '</div>';
         container.appendChild(toast);
-
+        
         setTimeout(function() {
             toast.remove();
-        }, lifespan);
+        }, 5000);
     };
-
-    // ---- surface otherwise-silent JS errors so a broken click never just looks like nothing happened ----
-    window.addEventListener('error', function(e) {
-        showToast('JavaScript Error: ' + e.message, 'error');
-    });
-    window.addEventListener('unhandledrejection', function(e) {
-        showToast('JavaScript Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason), 'error');
-    });
 
     // ---- accordion toggle ----
     window.payToggleStep = function(stepId) {
@@ -689,24 +675,8 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
         }, 350);
     };
 
-    // ---- highlight + scroll to a field that failed validation, expanding its section if collapsed ----
-    function flagField(el) {
-        if (!el) return;
-        var section = el.closest('.pay-section');
-        if (section && !section.classList.contains('active')) section.classList.add('active');
-        el.style.outline = '2px solid var(--danger, #dc2626)';
-        el.style.outlineOffset = '2px';
-        el.scrollIntoView({behavior: 'smooth', block: 'center'});
-        setTimeout(function() { el.focus(); }, 300);
-        setTimeout(function() { el.style.outline = ''; el.style.outlineOffset = ''; }, 4000);
-    }
-
     // ---- verify and submit ----
-    // NB: intentionally not named "payVerify" - MiscFunctions.js (loaded async, sitewide)
-    // declares a global function payVerify(b,a) for an unrelated legacy form. Since it's
-    // an async script, it can execute after this one and silently clobber window.payVerify,
-    // making this button call the wrong function ("s.getAttribute" on a null #update element).
-    window.payConfirmAndPost = function() {
+    window.payVerify = function() {
         try {
             autoFillReview();
             var amtEl = document.getElementById('Amount');
@@ -717,13 +687,11 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             });
             if (amt === 0 && ttl === 0) {
                 showToast(PAY_MSG_EMPTY, 'warning');
-                flagField(amtEl);
                 return false;
             }
             var bankSel = document.getElementById('BankAccount');
             if (bankSel && bankSel.value === '') {
                 showToast(PAY_MSG_NOBANK, 'warning');
-                flagField(bankSel);
                 return false;
             }
             if (amt === 0 && ttl > 0 && amtEl) { amtEl.value = ttl.toFixed(2); amt = ttl; }
@@ -770,18 +738,6 @@ echo "<script>var PAY_MSG_EMPTY='{$jsNoPaymentMsg}';var PAY_MSG_MISMATCH='{$jsMi
             return false;
         }
     };
-
-    // ---- reset Confirm & Post button if page is restored from bfcache (e.g. Back/Forward) ----
-    // Without this, a click that left the button disabled + "Processing..." before navigating
-    // away can be restored verbatim by the browser, making the button look permanently inactive.
-    window.addEventListener('pageshow', function(event) {
-        if (!event.persisted) return;
-        var btn = document.querySelector('button[name=CommitBatch]');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-double" style="margin-right: 12px;"></i> ' + '<?php echo addslashes(__('Confirm & Post Payment')); ?>';
-        }
-    });
 
     // ---- boot on page load ----
     window.addEventListener('load', function() {
@@ -1588,7 +1544,7 @@ echo '<!-- SECTION 3: REVIEW & FINALIZE -->
 						<i class="fas fa-info-circle" style="margin-right: 6px;"></i> ' . __('Please verify all allocations before finalizing.') . '<br>
 						' . __('Once posted, these ledger entries cannot be edited directly.') . '
 					</div>
-					<button type="button" name="CommitBatch" onclick="payConfirmAndPost()" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
+					<button type="button" name="CommitBatch" onclick="payVerify()" class="db-btn db-btn-primary" style="height: 56px; padding: 0 40px; font-size: 1.15rem; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);">
 						<i class="fas fa-check-double" style="margin-right: 12px;"></i>
 						' . __('Confirm & Post Payment') . '
 					</button>

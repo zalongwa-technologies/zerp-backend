@@ -46,7 +46,7 @@ $ExtraHeadContent = '
 	
 	/* Layout & Cards */
 	.db-main-layout { display: grid; gap: 24px; box-sizing: border-box !important; min-width: 0 !important; }
-	.db-card { background: #ffffff; box-shadow: var(--db-shadow-sm); border: 1px solid var(--db-border); overflow: hidden; width: 100% !important; box-sizing: border-box !important; margin-bottom: 24px; min-width: 0 !important; }
+	.db-card { background: #ffffff; border-radius: 12px; box-shadow: var(--db-shadow-sm); border: 1px solid var(--db-border); overflow: hidden; width: 100% !important; box-sizing: border-box !important; margin-bottom: 24px; min-width: 0 !important; }
 	.db-card-header { padding: 20px 24px; border-bottom: 1px solid var(--db-border); display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
 	.db-card-title { font-size: 1.15rem; font-weight: 600; color: var(--db-text-main); margin: 0; }
 	.db-card-body { padding: 24px; }
@@ -77,6 +77,7 @@ $ExtraHeadContent = '
 		max-height: 78vh !important; 
 		-webkit-overflow-scrolling: touch; 
 		box-sizing: border-box !important; 
+		border-radius: 8px; 
 		border: 1px solid var(--db-border); 
 		background: #fff; 
 		margin-top: 15px; 
@@ -85,9 +86,9 @@ $ExtraHeadContent = '
 	.monochromatic-table th, .monochromatic-table thead td { 
 		background: #f9fafb !important; 
 		color: #4b5563 !important; 
-		padding: 10px 12px !important; 
+		padding: 16px 24px !important; 
 		font-weight: 600 !important; 
-		font-size: 0.825rem !important; 
+		font-size: 0.85rem !important; 
 		text-transform: uppercase !important; 
 		letter-spacing: 0.05em !important; 
 		border-bottom: 2px solid var(--db-border) !important; 
@@ -95,13 +96,10 @@ $ExtraHeadContent = '
 		top: 0 !important; 
 		z-index: 10 !important; 
 	}
-	.monochromatic-table td { padding: 8px 12px !important; border-bottom: 1px solid var(--db-border) !important; font-size: 0.825rem !important; color: #111827 !important; vertical-align: middle; }
+	.monochromatic-table td { padding: 16px 24px !important; border-bottom: 1px solid var(--db-border) !important; font-size: 0.9rem !important; color: #111827 !important; vertical-align: middle; }
 	.monochromatic-table tr:last-child td { border-bottom: none !important; }
 	.monochromatic-table tr:nth-child(even) { background-color: #f9fafb !important; }
 	.monochromatic-table .number { text-align: right !important; }
-	.section-header { font-weight: 700 !important; font-size: 0.95rem !important; padding: 10px 12px !important; text-transform: uppercase !important; background-color: #d1fae5 !important; color: #065f46 !important; border-bottom: 2px solid #10b981 !important; margin-top: 15px !important; }
-	.total_row td { font-weight: 700 !important; border-top: 1.5px solid #cbd5e1 !important; border-bottom: 1px solid #cbd5e1 !important; color: #111827 !important; background-color: transparent !important; font-size: 0.875rem !important; padding: 10px 12px !important; }
-	.check_totals_row td { font-weight: 800 !important; background-color: #d1fae5 !important; color: #064e3b !important; font-size: 0.95rem !important; border-top: 2px double #10b981 !important; border-bottom: 2px double #10b981 !important; padding: 12px 12px !important; }
 	
 	/* Responsiveness */
 	@media (max-width: 1024px) {
@@ -177,18 +175,17 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			.monochromatic-table th { 
 				background-color: #059669; 
 				color: #ffffff; 
-				padding: 10px 12px; 
+				padding: 6px 8px; 
 				font-weight: bold; 
-				font-size: 11px; 
+				font-size: 10px; 
 				text-transform: uppercase;
 				border: none;
 			}
-			.monochromatic-table td { padding: 8px 12px; border-bottom: 1px solid #cbd5e1; font-size: 11px; color: #334155; vertical-align: middle; }
+			.monochromatic-table td { padding: 4px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #334155; vertical-align: middle; }
 			.monochromatic-table tr:nth-child(even) td { background-color: #f8fafc; }
 			.monochromatic-table .number { text-align: right; }
-			.section-header { font-weight: 700; font-size: 11px; padding: 10px 12px; text-transform: uppercase; background-color: #d1fae5 !important; color: #065f46; border-bottom: 2px solid #10b981; margin-top: 15px; }
-			.total_row td { font-weight: bold; border-top: 1.5px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; color: #0f172a; background-color: transparent !important; font-size: 11px; padding: 10px 12px; }
-			.check_totals_row td { background-color: #d1fae5 !important; color: #064e3b; font-size: 12px; border-top: 2px double #10b981; border-bottom: 2px double #10b981; padding: 12px 12px; }
+			.total_row td { font-weight: bold; border-top: 2px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; color: #0f172a; background-color: #f1f5f9 !important; font-size: 11px; }
+			.check_totals_row td { background-color: #ecfdf5 !important; color: #064e3b; font-size: 12px; border-top: 2px solid #10b981; border-bottom: 3px double #10b981; }
 		</style>';
 		$HTML .= '</head><body>';
 		
@@ -331,7 +328,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 					WHEN accountgroups.groupname = 'Equity' THEN 3
 					WHEN accountgroups.groupname IN ('Non-current Liabilities', 'Non-current liabilities') THEN 4
 					WHEN accountgroups.groupname = 'Current Liabilities' THEN 5
-					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange', 'Revenue from Non - Exchange Transactions') THEN 6
+					WHEN accountgroups.groupname IN ('Revenue from non exchange transactions', 'Revenue from Non - Exchange') THEN 6
 					WHEN accountgroups.groupname IN ('Revenue from exchange transactions', 'Revenue from Exchange', 'Revenue') THEN 7
 					WHEN accountgroups.groupname IN ('Operating and administrative expenses', 'Operating and Administrative E') THEN 8
 					WHEN accountgroups.groupname IN ('Wages salaries and employee benefits') THEN 9
@@ -350,8 +347,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 	$HTML .= '<tr>
 				<td></td>
 			</tr>';
-	$HTML .= '<tr>
-				<td colspan="4" class="section-header">' . $AccountListRow['group_'] . '</td>
+	$HTML .= '<tr class="total_row">
+				<td>' . $AccountListRow['group_'] . '</td>
+				<td colspan="3"></td>
 			</tr>';
 
 	$LastGroup = $AccountListRow['group_'];
@@ -433,8 +431,9 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 			$HTML .= '<tr>
 						<td></td>
 					</tr>';
-			$HTML .= '<tr>
-						<td colspan="4" class="section-header">' . $AccountListRow['group_'] . '</td>
+			$HTML .= '<tr class="total_row">
+						<td>' . $AccountListRow['group_'] . '</td>
+						<td colspan="3"></td>
 					</tr>';
 
 			$LastGroup = $AccountListRow['group_'];
@@ -611,7 +610,7 @@ if (isset($_POST['PrintPDF']) or isset($_POST['View']) or isset($_POST['Spreadsh
 				</div>
 				<div class="db-main-layout">';
 
-	echo '<form method="post" action="', htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8'), '">';
+	echo '<form method="post" action="', htmlspecialchars(basename(__FILE__), ENT_QUOTES, 'UTF-8'), '" target="_blank">';
 	echo '<input type="hidden" name="FormID" value="', $_SESSION['FormID'], '" />';
 
 	if (date('m') > $_SESSION['YearEnd']) {

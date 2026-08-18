@@ -1080,6 +1080,56 @@ function saris_list_sync_history($limit, $offset, $searchTerm = '', $sort = 'cre
 
 function saris_render_tabs($active, $searchContext = null, $searchTerm = '') {
 	global $RootPath;
+	echo '<style>
+		.saris-table-wrapper {
+			position: relative;
+			overflow-x: auto;
+			background-color: #fcfcfc;
+			box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+			border-radius: 8px;
+			border: 1px solid #e5e7eb;
+			margin-bottom: 1rem;
+		}
+		.saris-table {
+			width: 100%;
+			font-size: 0.875rem;
+			text-align: left;
+			color: #4b5563;
+			border-collapse: collapse;
+		}
+		.saris-table thead {
+			background-color: #f3f4f6;
+			border-bottom: 1px solid #d1d5db;
+			color: #374151;
+		}
+		.saris-table th {
+			padding: 12px 24px;
+			font-weight: 500;
+			white-space: nowrap;
+		}
+		.saris-table tbody tr {
+			background-color: #fcfcfc;
+			border-bottom: 1px solid #e5e7eb;
+			transition: background-color 0.15s ease;
+		}
+		.saris-table tbody tr:hover {
+			background-color: #f3f4f6;
+		}
+		.saris-table td {
+			padding: 16px 24px;
+			white-space: nowrap;
+		}
+		.saris-checkbox-cell {
+			padding: 16px !important;
+			width: 16px;
+			text-align: center;
+		}
+		.saris-checkbox-cell input[type="checkbox"] {
+			width: 16px;
+			height: 16px;
+			cursor: pointer;
+		}
+	</style>';
 	$tabs = [
 		'Settings'          => '/SARIS_Settings.php',
 		'API Configuration' => '/SARIS_APIConfig.php',
@@ -1112,7 +1162,9 @@ function saris_render_pagination($totalRows, $page, $perPage, $baseUrl, $extraPa
 		echo '<div id="saris-pagination-container"></div>';
 		return;
 	}
-	echo '<div id="saris-pagination-container" class="noPrint" style="display:flex;gap:4px;align-items:center;justify-content:flex-end;margin-top:16px;">';
+	
+	echo '<div id="saris-pagination-container" class="noPrint" style="display:flex;justify-content:flex-end;margin-top:16px;">';
+	echo '<div style="display:inline-flex;border-radius:6px;box-shadow:0 1px 2px 0 rgba(0,0,0,0.05);">';
 	
 	$page = (int)$page;
 	
@@ -1120,50 +1172,24 @@ function saris_render_pagination($totalRows, $page, $perPage, $baseUrl, $extraPa
 	if ($page > 1) {
 		$prevUrl = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . ($page - 1);
 		if ($extraParams !== '') $prevUrl .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
-		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $prevUrl . '" data-page="' . ($page - 1) . '" style="padding: 6px 12px;">&laquo; ' . __('Prev') . '</a>';
+		echo '<a class="saris-page-link" href="' . $prevUrl . '" data-page="' . ($page - 1) . '" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-right:none;background:#f9fafb;color:#4b5563;border-radius:6px 0 0 6px;text-decoration:none;"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg></a>';
+	} else {
+		echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-right:none;background:#f3f4f6;color:#9ca3af;border-radius:6px 0 0 6px;"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg></span>';
 	}
-
-	$startPage = max(1, $page - 2);
-	$endPage = min($totalPages, $page + 2);
-
-	// First page and ellipsis
-	if ($startPage > 1) {
-		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=1';
-		if ($extraParams !== '') $url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
-		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $url . '" data-page="1" style="padding: 6px 12px;">1</a>';
-		if ($startPage > 2) {
-			echo '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
-		}
-	}
-
-	// Window of pages
-	for ($i = $startPage; $i <= $endPage; $i++) {
-		$class = $i === $page ? 'db-btn db-btn-primary' : 'db-btn db-btn-secondary';
-		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $i;
-		if ($extraParams !== '') {
-			$url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
-		}
-		echo '<a class="' . $class . ' saris-page-link" href="' . $url . '" data-page="' . $i . '" style="padding: 6px 12px;">' . $i . '</a>';
-	}
-
-	// Last page and ellipsis
-	if ($endPage < $totalPages) {
-		if ($endPage < $totalPages - 1) {
-			echo '<span style="color:var(--text-muted);padding:0 4px;">...</span>';
-		}
-		$url = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . $totalPages;
-		if ($extraParams !== '') $url .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
-		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $url . '" data-page="' . $totalPages . '" style="padding: 6px 12px;">' . $totalPages . '</a>';
-	}
-
+	
+	// Page Info
+	echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border:1px solid #d1d5db;background:#f9fafb;color:#4b5563;font-size:14px;font-weight:500;">' . $page . ' ' . __('of') . ' ' . $totalPages . '</span>';
+	
 	// Next Button
 	if ($page < $totalPages) {
 		$nextUrl = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8') . '?Page=' . ($page + 1);
 		if ($extraParams !== '') $nextUrl .= '&amp;' . htmlspecialchars($extraParams, ENT_QUOTES, 'UTF-8');
-		echo '<a class="db-btn db-btn-secondary saris-page-link" href="' . $nextUrl . '" data-page="' . ($page + 1) . '" style="padding: 6px 12px;">' . __('Next') . ' &raquo;</a>';
+		echo '<a class="saris-page-link" href="' . $nextUrl . '" data-page="' . ($page + 1) . '" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-left:none;background:#f9fafb;color:#4b5563;border-radius:0 6px 6px 0;text-decoration:none;"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg></a>';
+	} else {
+		echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid #d1d5db;border-left:none;background:#f3f4f6;color:#9ca3af;border-radius:0 6px 6px 0;"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg></span>';
 	}
-
-	echo '</div>';
+	
+	echo '</div></div>';
 }
 
 function saris_render_sort_header($label, $column, $currentSort, $currentDir) {
@@ -1182,7 +1208,7 @@ function saris_render_scripts($baseUrl) {
 		var searchInput = document.getElementById("saris-search-input");
 		var searchForm = document.getElementById("saris-search-form");
 		var clearBtn = document.getElementById("saris-clear-btn");
-		var tableBody = document.querySelector(".db-table tbody");
+		var tableBody = document.querySelector(".saris-table tbody");
 		
 		var currentSort = new URLSearchParams(window.location.search).get("Sort") || "";
 		var currentDir = new URLSearchParams(window.location.search).get("Dir") || "";

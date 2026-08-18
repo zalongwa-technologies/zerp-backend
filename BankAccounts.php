@@ -155,6 +155,9 @@ echo '<div class="db-form-group"><label class="db-label">Import Format</label><s
     <option value="MT940-SCB" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='MT940-SCB')?'selected':'').'>MT940 - Siam Comercial (TH)</option>
     <option value="MT940-ING" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='MT940-ING')?'selected':'').'>MT940 - ING Bank (NL)</option>
     <option value="GIFTS" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='GIFTS')?'selected':'').'>GIFTS - BNZ (NZ)</option>
+    <option value="CSV-CRDB" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='CSV-CRDB')?'selected':'').'>CSV - CRDB Bank (TZ)</option>
+    <option value="CSV-NMB" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='CSV-NMB')?'selected':'').'>CSV - NMB Bank (TZ)</option>
+    <option value="CSV-PBZ" '.((isset($_POST['ImportFormat']) && $_POST['ImportFormat']=='CSV-PBZ')?'selected':'').'>CSV - PBZ Bank (TZ)</option>
 </select></div>';
 
 echo '<div class="db-form-group"><label class="db-label">Currency</label><select name="CurrCode" class="db-select">';

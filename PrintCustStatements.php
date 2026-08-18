@@ -98,8 +98,8 @@ if (isset($_POST['PrintPDF']) and isset($_POST['FromCust']) and $_POST['FromCust
 	$HTML .= '<link href="css/reports.css" rel="stylesheet" type="text/css" />';
 	$HTML .= '<style>
 		body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 11px; color: #334155; }
-		.header { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #059669; text-transform: uppercase; letter-spacing: 1px; }
-		.company { font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+		.header { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #059669; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+		.company { font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 5px; text-align: center; }
 		.small { font-size: 11px; color: #475569; line-height: 1.5; }
 		table { border-collapse: collapse; width: 100%; margin-bottom: 25px; }
 		th { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 8px; vertical-align: middle; text-align: left; font-weight: bold; font-size: 11px; text-transform: uppercase; }
@@ -144,10 +144,10 @@ if (isset($_POST['PrintPDF']) and isset($_POST['FromCust']) and $_POST['FromCust
 		if (($_POST['EmailOrPrint'] == 'print' and (count($RecipientArray) == 0 or $_POST['FromCust'] == $_POST['ToCust'])) or ($_POST['EmailOrPrint'] == 'email' and count($RecipientArray) > 0)) {
 
 			// Header
-			if (isset($_SESSION['LogoFile']) and $_SESSION['LogoFile'] != '') {
-				$HTML .= '<div class="company"><img class="logo" src="' . $_SESSION['LogoFile'] . '" /></div>';
-			}
 			$HTML .= '<div class="company">' . $_SESSION['CompanyRecord']['coyname'] . '</div>';
+			if (isset($_SESSION['LogoFile']) and $_SESSION['LogoFile'] != '') {
+				$HTML .= '<div class="company"><img class="logo" src="' . $_SESSION['LogoFile'] . '" style="max-height: 80px; margin-top: 8px; margin-bottom: 12px;" /></div>';
+			}
 			$HTML .= '<div class="header">' . __('Customer Statement') . '</div>';
 			$HTML .= '<div class="small">' . __('For customer') . ': ' . $StmtHeader['name'] . ' (' . $StmtHeader['debtorno'] . ')</div>';
 			$HTML .= '<div class="small">' . implode(', ', array_filter([$StmtHeader['address1'], $StmtHeader['address2'], $StmtHeader['address3'], $StmtHeader['address4'], $StmtHeader['address5'], $StmtHeader['address6']])) . '</div>';

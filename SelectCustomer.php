@@ -378,19 +378,7 @@ if (isset($SearchResult)) {
 				<input type="hidden" name="PageOffset" value="' . $_POST['PageOffset'] . '" />';
 
 		if ($ListPageMax > 1) {
-			echo '<div class="db-pagination" style="margin-top: var(--space-6); margin-bottom: var(--space-4);">
-					<span class="db-pagination-info">' . __('Page') . ' ' . $_POST['PageOffset'] . ' ' . __('of') . ' ' . $ListPageMax . '</span>
-					<div class="db-pagination-controls">
-						<select name="PageOffset1" style="width: auto;">';
-			for ($i = 1; $i <= $ListPageMax; $i++) {
-				echo '<option value="' . $i . '" ' . ($i == $_POST['PageOffset'] ? 'selected' : '') . '>' . $i . '</option>';
-			}
-			echo '</select>
-						<button type="submit" name="Go1" class="db-btn db-btn-secondary">' . __('Go') . '</button>
-						<button type="submit" name="Previous" class="db-btn db-btn-secondary" ' . ($_POST['PageOffset'] == 1 ? 'disabled' : '') . '>' . __('Previous') . '</button>
-						<button type="submit" name="Next" class="db-btn db-btn-secondary" ' . ($_POST['PageOffset'] == $ListPageMax ? 'disabled' : '') . '>' . __('Next') . '</button>
-					</div>
-				</div>';
+			render_modern_pagination_form($ListCount, $_POST['PageOffset'], $_SESSION['DisplayRecordsMax']);
 		}
 
 		$columns = [__('Customer'), __('Code'), __('Phone'), __('Branch'), __('Type'), __('Action')];

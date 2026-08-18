@@ -164,4 +164,51 @@ function render_modern_pagination($totalRows, $page, $perPage, $baseUrl, $extraP
     echo '</div>';
     echo '</nav>';
 }
-?>
+
+/**
+ * Renders a modern form-based pagination control.
+ * Uses <button type="submit"> instead of <a> tags to preserve POST state.
+ */
+function render_modern_pagination_form($totalRows, $page, $perPage) {
+    $totalPages = max(1, ceil($totalRows / $perPage));
+    
+    // Don't render if there's only 1 page
+    if ($totalPages <= 1) {
+        return;
+    }
+
+    echo '<nav aria-label="Page navigation" class="mt-4 flex justify-end">';
+    echo '<div class="inline-flex rounded-base shadow-xs -space-x-px" role="group">';
+    
+    // Previous Button
+    if ($page > 1) {
+        echo '<button type="submit" name="Previous" data-tooltip-target="tooltip-previous" class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-s-base box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-3 focus:ring-neutral-tertiary leading-5 w-9 h-9 focus:outline-none">';
+        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>';
+        echo '</button>';
+    } else {
+        // Disabled state
+        echo '<button type="button" disabled class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-s-base box-border border border-default-medium opacity-50 cursor-not-allowed leading-5 w-9 h-9">';
+        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>';
+        echo '</button>';
+    }
+    
+    // Page Info (e.g. 1 of 99)
+    echo '<span class="inline-flex shrink-0 text-sm items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium leading-5 px-3 h-9 focus:outline-none">';
+    echo $page . ' ' . __('of') . ' ' . $totalPages;
+    echo '</span>';
+    
+    // Next Button
+    if ($page < $totalPages) {
+        echo '<button type="submit" name="Next" data-tooltip-target="tooltip-next" class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-e-base box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-3 focus:ring-neutral-tertiary leading-5 w-9 h-9 focus:outline-none">';
+        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>';
+        echo '</button>';
+    } else {
+        // Disabled state
+        echo '<button type="button" disabled class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-e-base box-border border border-default-medium opacity-50 cursor-not-allowed leading-5 w-9 h-9">';
+        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>';
+        echo '</button>';
+    }
+
+    echo '</div>';
+    echo '</nav>';
+}

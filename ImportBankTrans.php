@@ -168,6 +168,9 @@ if (!isset($_FILES['ImportFile']) AND !isset($_SESSION['Statement'])) {
                 case 'MT940-SCB': include(__DIR__ . '/includes/ImportBankTrans_MT940_SCB.php'); break;
                 case 'MT940-ING': include(__DIR__ . '/includes/ImportBankTrans_MT940_ING.php'); break;
                 case 'GIFTS': include(__DIR__ . '/includes/ImportBankTrans_GIFTS.php'); break;
+                case 'CSV-CRDB': include(__DIR__ . '/includes/ImportBankTrans_CSV_CRDB.php'); break;
+                case 'CSV-NMB': include(__DIR__ . '/includes/ImportBankTrans_CSV_NMB.php'); break;
+                case 'CSV-PBZ': include(__DIR__ . '/includes/ImportBankTrans_CSV_PBZ.php'); break;
             }
         }
         if (!isset($_SESSION['Statement']->CurrCode)) $_SESSION['Statement']->CurrCode = $_SESSION['CompanyRecord']['currencydefault'];

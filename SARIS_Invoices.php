@@ -7,7 +7,7 @@ include(__DIR__ . '/includes/SARISIntegration.php');
 
 $searchTerm = isset($_GET['Search']) ? trim($_GET['Search']) : '';
 $page = isset($_GET['Page']) ? max(1, (int)$_GET['Page']) : 1;
-$perPage = 25;
+$perPage = 10;
 $offset = ($page - 1) * $perPage;
 $sort = isset($_GET['Sort']) ? $_GET['Sort'] : 'invoice_date';
 $dir = isset($_GET['Dir']) && strtoupper($_GET['Dir']) === 'ASC' ? 'ASC' : 'DESC';
@@ -25,12 +25,13 @@ if ($extraParams !== '') {
 if (isset($_GET['ajax']) && $_GET['ajax'] == 1) {
 	ob_start();
 	if (count($result) === 0) {
-		echo '<tr><td colspan="12" style="text-align:center;padding:60px;color:#6b7280;">';
+		echo '<tr><td colspan="13" style="text-align:center;padding:60px;color:#6b7280;">';
 		echo '<svg style="width:64px;height:64px;margin:0 auto 16px;color:#d1d5db;display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
 		echo '<div style="font-size:16px;">' . __('No records found matching your search criteria.') . '</div></td></tr>';
 	} else {
 		foreach ($result as $row) {
 			echo '<tr>';
+			echo '<td class="saris-checkbox-cell"><input type="checkbox" name="selected_ids[]" value="' . (int)$row['id'] . '"></td>';
 			foreach (['id', 'student_name', 'invoice_reference_number', 'student_regnumber', 'invoice_amount', 'invoice_amount_type', 'invoice_desciption', 'invoice_date', 'sync_status', 'zerp_invoice_no', 'sync_error', 'created_at'] as $key) {
 				echo '<td>' . htmlspecialchars((string)$row[$key], ENT_QUOTES, 'UTF-8') . '</td>';
 			}
@@ -54,7 +55,7 @@ echo '<div class="db-page-header"><h1 class="db-page-title">' . __('SARIS Invoic
 saris_render_tabs('Invoices', 'Invoices', $searchTerm);
 
 
-echo '<div class="db-card"><div class="db-table-wrapper" style="overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;max-height:70vh;"><table class="db-table"><thead><tr>';
+echo '<div class="db-card"><div class="saris-table-wrapper" style="overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;"><table class="saris-table"><thead><tr>';
 $columns = [
 	'ID' => 'id',
 	'Student Name' => 'student_name',
@@ -69,6 +70,7 @@ $columns = [
 	'Sync Error' => null,
 	'Created At' => 'created_at'
 ];
+echo '<th class="saris-checkbox-cell"><input type="checkbox" onclick="var checkboxes = document.querySelectorAll(\'.saris-table tbody input[type=checkbox]\'); for(var i=0; i<checkboxes.length; i++) checkboxes[i].checked = this.checked;"></th>';
 foreach ($columns as $label => $col) {
 	if ($col === null) {
 		echo '<th>' . __($label) . '</th>';
@@ -78,12 +80,13 @@ foreach ($columns as $label => $col) {
 }
 echo '</tr></thead><tbody>';
 if (count($result) === 0) {
-	echo '<tr><td colspan="12" style="text-align:center;padding:60px;color:#6b7280;">';
+	echo '<tr><td colspan="13" style="text-align:center;padding:60px;color:#6b7280;">';
 	echo '<svg style="width:64px;height:64px;margin:0 auto 16px;color:#d1d5db;display:block;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
 	echo '<div style="font-size:16px;">' . __('No records found matching your search criteria.') . '</div></td></tr>';
 } else {
 	foreach ($result as $row) {
 		echo '<tr>';
+		echo '<td class="saris-checkbox-cell"><input type="checkbox" name="selected_ids[]" value="' . (int)$row['id'] . '"></td>';
 		foreach (['id', 'student_name', 'invoice_reference_number', 'student_regnumber', 'invoice_amount', 'invoice_amount_type', 'invoice_desciption', 'invoice_date', 'sync_status', 'zerp_invoice_no', 'sync_error', 'created_at'] as $key) {
 			echo '<td>' . htmlspecialchars((string)$row[$key], ENT_QUOTES, 'UTF-8') . '</td>';
 		}

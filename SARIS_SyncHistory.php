@@ -32,7 +32,7 @@ function saris_history_error_text($row) {
 
 function saris_render_history_rows($history) {
 	if (count($history) === 0) {
-		echo '<tr><td colspan="12" style="text-align:center;padding:60px;color:#6b7280;">'
+		echo '<tr><td colspan="13" style="text-align:center;padding:60px;color:#6b7280;">'
 			. __('No synchronization history was found.') . '</td></tr>';
 		return;
 	}
@@ -54,33 +54,34 @@ function saris_render_history_rows($history) {
 			: number_format((float)$row['duration_seconds'], 3) . 's';
 
 		echo '<tr>';
+		echo '<td class="saris-checkbox-cell"><input type="checkbox" name="selected_ids[]" value="' . (int)$row['id'] . '"></td>';
 		echo '<td>' . (int)$row['id'] . '</td>';
 		echo '<td style="white-space:nowrap;">' . saris_history_escape($row['created_at']) . '</td>';
-		echo '<td><div>' . saris_history_escape($row['trigger_type']) . '</div>'
-			. '<small title="' . saris_history_escape($row['run_id']) . '">'
-			. saris_history_escape(substr((string)$row['run_id'], 0, 8)) . '</small></td>';
+		echo '<td><span>' . saris_history_escape($row['trigger_type']) . '</span> '
+			. '<small title="' . saris_history_escape($row['run_id']) . '">('
+			. saris_history_escape(substr((string)$row['run_id'], 0, 8)) . ')</small></td>';
 		echo '<td><span style="display:inline-block;padding:4px 9px;border-radius:999px;font-weight:700;'
 			. $statusStyle . '">' . saris_history_escape(ucfirst($status)) . '</span></td>';
 		echo '<td style="white-space:nowrap;">' . saris_history_escape($dateRange)
-			. '<br><small>' . (int)$row['iterations'] . ' ' . __('iteration(s)') . '</small></td>';
+			. ' <small>(' . (int)$row['iterations'] . ' ' . __('iteration(s)') . ')</small></td>';
 		echo '<td><strong>I:</strong> ' . (int)$row['saris_invoices']
-			. '<br><strong>S:</strong> ' . (int)$row['saris_students']
-			. '<br><strong>P:</strong> ' . (int)$row['saris_payments'] . '</td>';
+			. ' | <strong>S:</strong> ' . (int)$row['saris_students']
+			. ' | <strong>P:</strong> ' . (int)$row['saris_payments'] . '</td>';
 		echo '<td><strong>S:</strong> ' . (int)$row['zerp_students']
-			. '<br><strong>I:</strong> ' . (int)$row['zerp_invoices']
-			. '<br><strong>P:</strong> ' . (int)$row['zerp_payments'] . '</td>';
+			. ' | <strong>I:</strong> ' . (int)$row['zerp_invoices']
+			. ' | <strong>P:</strong> ' . (int)$row['zerp_payments'] . '</td>';
 		echo '<td>' . (int)$row['zerp_partial'] . '</td>';
 		echo '<td>' . (int)$row['zerp_failed'] . '</td>';
 		echo '<td>' . (int)$row['zerp_skipped'] . '</td>';
 		echo '<td style="white-space:nowrap;">' . saris_history_escape($duration) . '</td>';
-		echo '<td style="min-width:320px;white-space:normal;">' . saris_history_escape($message ?: '—') . '</td>';
+		echo '<td style="min-width:320px;white-space:nowrap;">' . saris_history_escape($message ?: '—') . '</td>';
 		echo '</tr>';
 	}
 }
 
 $searchTerm = isset($_GET['Search']) ? trim($_GET['Search']) : '';
 $page = isset($_GET['Page']) ? max(1, (int)$_GET['Page']) : 1;
-$perPage = 25;
+$perPage = 10;
 $offset = ($page - 1) * $perPage;
 $sort = isset($_GET['Sort']) ? $_GET['Sort'] : 'created_at';
 $dir = isset($_GET['Dir']) && strtoupper($_GET['Dir']) === 'ASC' ? 'ASC' : 'DESC';
@@ -112,8 +113,8 @@ echo '<div class="db-page-header"><h1 class="db-page-title">' . __('Synchronizat
 	. '<p class="db-page-subtitle">' . __('Permanent statistics for manual and automatic SARIS-to-ZERP runs') . '</p></div>';
 saris_render_tabs('Sync History', 'History', $searchTerm);
 
-echo '<div class="db-card"><div class="db-table-wrapper" style="overflow-x:auto;width:100%;'
-	. '-webkit-overflow-scrolling:touch;max-height:70vh;"><table class="db-table"><thead><tr>';
+echo '<div class="db-card"><div class="saris-table-wrapper" style="overflow-x:auto;width:100%;'
+	. '-webkit-overflow-scrolling:touch;"><table class="saris-table"><thead><tr>';
 $columns = [
 	'ID' => 'id',
 	'Recorded At' => 'created_at',
@@ -128,6 +129,7 @@ $columns = [
 	'Duration' => 'duration_seconds',
 	'Message / Errors' => null,
 ];
+echo '<th class="saris-checkbox-cell"><input type="checkbox" onclick="var checkboxes = document.querySelectorAll(\'.saris-table tbody input[type=checkbox]\'); for(var i=0; i<checkboxes.length; i++) checkboxes[i].checked = this.checked;"></th>';
 foreach ($columns as $label => $column) {
 	if ($column === null) {
 		echo '<th>' . __($label) . '</th>';

@@ -177,36 +177,33 @@ $area .= '500,140';
     <!-- Recent Transactions -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Sales Transactions') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Order ID') ?></th>
-                        <th><?= __('Customer') ?></th>
-                        <th><?= __('Amount') ?></th>
-                        <th><?= __('Status') ?></th>
-                        <th><?= __('Date') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentSales)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent transactions found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentSales as $sale): 
-                            $isPaid = ($sale['alloc'] >= $sale['ovamount']);
-                        ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);">#<?= $sale['transno'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($sale['name']) ?></td>
-                            <td style="font-weight: 700;">TZS <?= number_format($sale['ovamount'], 2) ?></td>
-                            <td><span class="db-badge <?= $isPaid ? 'db-badge-success' : 'db-badge-warn' ?>"><?= $isPaid ? __('Paid') : __('Pending') ?></span></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($sale['trandate'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        
+        $columns = [__('Order ID'), __('Customer'), __('Amount'), __('Status'), __('Date')];
+        $dataRows = [];
+        
+        if (!empty($recentSales)) {
+            foreach ($recentSales as $sale) {
+                $isPaid = ($sale['alloc'] >= $sale['ovamount']);
+                $badgeClass = $isPaid ? 'db-badge-success' : 'db-badge-warn';
+                $badgeText = $isPaid ? __('Paid') : __('Pending');
+                
+                $dataRows[] = [
+                    '<span style="color: var(--primary); font-weight: 700;">#' . htmlspecialchars($sale['transno'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($sale['name'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 700;">TZS ' . number_format($sale['ovamount'], 2) . '</span>',
+                    '<span class="db-badge ' . $badgeClass . '">' . $badgeText . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($sale['trandate'])) . '</span>'
+                ];
+            }
+        }
+        
+        render_modern_table($columns, $dataRows, [
+            'emptyMessage' => __('No recent transactions found'),
+            'hasCheckboxes' => false
+        ]);
+        ?>
     </div>
 
     <!-- Legacy Module Menu (Collapsible) -->

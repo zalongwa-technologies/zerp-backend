@@ -465,32 +465,22 @@ if ($isDashboard) {
 					<a href="<?= $RootPath ?>/SalesInquiry.php" class="db-link"><?= __('View all') ?> →</a>
 				</div>
 				<div class="db-card db-card-full">
-					<div class="db-table-wrap">
-						<table class="db-table">
-							<thead>
-								<tr>
-									<th><?= __('Order') ?></th>
-									<th><?= __('Customer') ?></th>
-									<th><?= __('Date') ?></th>
-									<th class="db-col-right"><?= __('Total') ?></th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php if (empty($recentOrders)): ?>
-									<tr><td colspan="4" class="db-empty"><?= __('No orders found.') ?></td></tr>
-								<?php else: ?>
-									<?php foreach ($recentOrders as $order): ?>
-									<tr>
-										<td><span class="db-ref">#<?= $order['orderno'] ?></span></td>
-										<td><?= htmlspecialchars($order['name']) ?></td>
-										<td class="db-muted"><?= date('d M Y', strtotime($order['orddate'])) ?></td>
-										<td class="db-col-right db-fw">TZS <?= number_format($order['ordervalue'], 2) ?></td>
-									</tr>
-									<?php endforeach; ?>
-								<?php endif; ?>
-							</tbody>
-						</table>
-					</div>
+					<?php
+					include_once(__DIR__ . '/includes/UIComponents.php');
+					$columns = [__('Order'), __('Customer'), __('Date'), __('Total')];
+					$dataRows = [];
+					if (!empty($recentOrders)) {
+						foreach ($recentOrders as $order) {
+							$dataRows[] = [
+								'<span style="font-weight: 700; color: var(--primary);">#' . htmlspecialchars($order['orderno'] ?? '', ENT_QUOTES, 'UTF-8') . '</span>',
+								'<span style="font-weight: 600;">' . htmlspecialchars($order['name'] ?? '', ENT_QUOTES, 'UTF-8') . '</span>',
+								'<span style="color: var(--text-muted);">' . date('d M Y', strtotime($order['orddate'])) . '</span>',
+								'<span style="font-weight: 700; text-align: right;">TZS ' . number_format($order['ordervalue'] ?? 0, 2) . '</span>'
+							];
+						}
+					}
+					render_modern_table($columns, $dataRows, ['emptyMessage' => __('No orders found.')]);
+					?>
 				</div>
 			</div>
 		</div>
@@ -562,6 +552,7 @@ if (isset($_GET['Application']) && $_GET['Application'] != 'Dashboard' && $_GET[
 
 	echo '</section></div>'; // Close legacy menu and MainBody replacement
 }
+
 
 include(__DIR__ . '/includes/footer.php');
 

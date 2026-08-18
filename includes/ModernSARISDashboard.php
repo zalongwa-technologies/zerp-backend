@@ -164,32 +164,22 @@ if (DB_num_rows($chk) > 0) {
         <!-- Recent Payments Table -->
         <div class="db-card">
             <h3 class="db-card-title"><?= __('Recent Sync Payments') ?></h3>
-            <div class="db-table-wrapper" style="margin-top: 16px;">
-                <table class="db-table">
-                    <thead>
-                        <tr>
-                            <th><?= __('Receipt') ?></th>
-                            <th><?= __('Student') ?></th>
-                            <th><?= __('Amount') ?></th>
-                            <th><?= __('Date') ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($recentPayments)): ?>
-                            <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent payments found') ?></td></tr>
-                        <?php else: ?>
-                            <?php foreach ($recentPayments as $payment): ?>
-                            <tr>
-                                <td style="font-weight: 700; color: var(--primary);"><?= htmlspecialchars($payment['payment_receipt_number']) ?></td>
-                                <td style="font-weight: 600;"><?= htmlspecialchars($payment['student_name']) ?></td>
-                                <td style="font-weight: 700;">TZS <?= number_format($payment['payment_amount'], 2) ?></td>
-                                <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($payment['payment_date'])) ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+            <?php
+            include_once(__DIR__ . '/UIComponents.php');
+            $columns = [__('Receipt'), __('Student'), __('Amount'), __('Date')];
+            $dataRows = [];
+            if (!empty($recentPayments)) {
+                foreach ($recentPayments as $payment) {
+                    $dataRows[] = [
+                        '<span style="font-weight: 700; color: var(--primary);">' . htmlspecialchars($payment['payment_receipt_number'], ENT_QUOTES, 'UTF-8') . '</span>',
+                        '<span style="font-weight: 600;">' . htmlspecialchars($payment['student_name'], ENT_QUOTES, 'UTF-8') . '</span>',
+                        '<span style="font-weight: 700;">TZS ' . number_format($payment['payment_amount'], 2) . '</span>',
+                        '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($payment['payment_date'])) . '</span>'
+                    ];
+                }
+            }
+            render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent payments found')]);
+            ?>
             <div style="margin-top: 16px; text-align: center;">
                 <a href="<?= $RootPath ?>/SARIS_Payments.php" class="db-link"><?= __('View all payments') ?> →</a>
             </div>

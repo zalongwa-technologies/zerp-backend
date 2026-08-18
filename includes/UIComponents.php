@@ -13,75 +13,59 @@
  * @param array $dataRows A 2D array of row data
  * @param array $options Configuration options for features like checkboxes
  */
-function render_modern_table($columns, $dataRows, $options = []) {
-    // Extract options with defaults
+function render_modern_table($columns, $dataRows, $hasCheckboxes = false, $options = []) {
     $emptyMessage = $options['emptyMessage'] ?? "No records found.";
-    $hasCheckboxes = $options['hasCheckboxes'] ?? false;
     $checkboxName = $options['checkboxName'] ?? "selected_ids[]";
     
     // Wrapper
-    echo '<div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">';
-    echo '<table class="w-full text-sm text-left rtl:text-right text-body">';
+    echo '<div style="position:relative;overflow-x:auto;background-color:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,0.05);border-radius:8px;border:1px solid var(--border-soft);margin-bottom:1rem;max-width:100%;">';
+    echo '<table style="width:100%;font-size:0.875rem;text-align:left;color:var(--text-body);border-collapse:collapse;white-space:nowrap;">';
     
     // Headers
-    echo '<thead class="text-sm text-body bg-neutral-secondary-medium border-b border-default-medium">';
+    echo '<thead style="background-color:var(--surface-alt);border-bottom:1px solid var(--border);color:var(--text-main);">';
     echo '<tr>';
-    
+
     // Master Checkbox Header
     if ($hasCheckboxes) {
-        echo '<th scope="col" class="p-4">';
-        echo '<div class="flex items-center">';
-        echo '<input id="master-checkbox" type="checkbox" onclick="var checkboxes = document.querySelectorAll(\'.row-checkbox\'); for(var i=0; i<checkboxes.length; i++) checkboxes[i].checked = this.checked;" class="w-4 h-4 border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft">';
-        echo '<label for="master-checkbox" class="sr-only">Select all</label>';
-        echo '</div>';
+        echo '<th scope="col" style="padding:12px 24px;font-weight:500;white-space:nowrap;width:16px;text-align:center;">';
+        echo '<input id="master-checkbox" type="checkbox" onclick="var checkboxes = document.querySelectorAll(\'.row-checkbox\'); for(var i=0; i<checkboxes.length; i++) checkboxes[i].checked = this.checked;" style="width:16px;height:16px;cursor:pointer;">';
         echo '</th>';
     }
-    
+
     foreach ($columns as $header) {
-        // Assume the last column might be "Action"
-        $headerClass = (strtolower($header) === 'action') ? 'px-6 py-3 font-medium whitespace-nowrap' : 'px-6 py-3 font-medium whitespace-nowrap';
-        echo '<th scope="col" class="' . $headerClass . '">' . htmlspecialchars($header, ENT_QUOTES, 'UTF-8') . '</th>';
+        echo '<th scope="col" style="padding:12px 24px;font-weight:500;white-space:nowrap;">' . htmlspecialchars($header, ENT_QUOTES, 'UTF-8') . '</th>';
     }
     echo '</tr>';
     echo '</thead>';
-    
+
     // Body
     echo '<tbody>';
     if (empty($dataRows)) {
         $colSpan = count($columns) + ($hasCheckboxes ? 1 : 0);
-        echo '<tr><td colspan="' . $colSpan . '" class="px-6 py-4 text-center text-body">' . htmlspecialchars($emptyMessage, ENT_QUOTES, 'UTF-8') . '</td></tr>';
+        echo '<tr><td colspan="' . $colSpan . '" style="padding:16px 24px;white-space:nowrap;text-align:center;">' . htmlspecialchars($emptyMessage, ENT_QUOTES, 'UTF-8') . '</td></tr>';
     } else {
         foreach ($dataRows as $index => $row) {
-            echo '<tr class="bg-neutral-primary-soft border-b border-default hover:bg-neutral-secondary-medium">';
-            
+            // Hover effect via inline events to mimic CSS hover
+            echo '<tr style="background-color:var(--surface);border-bottom:1px solid var(--border-soft);transition:background-color 0.15s ease;" onmouseover="this.style.backgroundColor=\'var(--surface-alt)\';" onmouseout="this.style.backgroundColor=\'var(--surface)\';">';
+
             // Row Checkbox
             if ($hasCheckboxes) {
                 // If the first element in the row is the ID, use it for the checkbox value
                 $rowId = isset($row['id']) ? $row['id'] : $index;
-                echo '<td class="w-4 p-4">';
-                echo '<div class="flex items-center">';
-                echo '<input id="checkbox-' . $rowId . '" type="checkbox" name="' . htmlspecialchars($checkboxName, ENT_QUOTES, 'UTF-8') . '" value="' . htmlspecialchars($rowId, ENT_QUOTES, 'UTF-8') . '" class="row-checkbox w-4 h-4 border border-default-medium rounded-xs bg-neutral-secondary-medium focus:ring-2 focus:ring-brand-soft">';
-                echo '<label for="checkbox-' . $rowId . '" class="sr-only">Select row</label>';
-                echo '</div>';
+                echo '<td style="padding:16px 24px;white-space:nowrap;width:16px;text-align:center;">';
+                echo '<input id="checkbox-' . $rowId . '" type="checkbox" name="' . htmlspecialchars($checkboxName, ENT_QUOTES, 'UTF-8') . '" value="' . htmlspecialchars($rowId, ENT_QUOTES, 'UTF-8') . '" class="row-checkbox" style="width:16px;height:16px;cursor:pointer;">';
                 echo '</td>';
             }
-            
+
             $colIndex = 0;
             foreach ($row as $key => $cellValue) {
                 // Skip the ID if it was just passed for the checkbox
                 if ($hasCheckboxes && $key === 'id') continue;
 
                 if ($colIndex === 0) {
-                    // First data column gets the th scope="row" styling for emphasis
-                    echo '<th scope="row" class="px-6 py-4 font-medium text-heading whitespace-nowrap">' . $cellValue . '</th>';
+                    echo '<th scope="row" style="padding:16px 24px;white-space:nowrap;font-weight:500;color:#111827;">' . $cellValue . '</th>';
                 } else {
-                    // Check if this is the last column (Action column usually)
-                    // If the cell contains HTML links, we might want to wrap it in the flex container
-                    if (strpos($cellValue, '<a ') !== false) {
-                        echo '<td class="flex items-center px-6 py-4 whitespace-nowrap">' . $cellValue . '</td>';
-                    } else {
-                        echo '<td class="px-6 py-4 whitespace-nowrap">' . $cellValue . '</td>';
-                    }
+                    echo '<td style="padding:16px 24px;white-space:nowrap;">' . $cellValue . '</td>';
                 }
                 $colIndex++;
             }
@@ -89,7 +73,7 @@ function render_modern_table($columns, $dataRows, $options = []) {
         }
     }
     echo '</tbody>';
-    
+
     echo '</table>';
     echo '</div>';
 }
@@ -171,44 +155,40 @@ function render_modern_pagination($totalRows, $page, $perPage, $baseUrl, $extraP
  */
 function render_modern_pagination_form($totalRows, $page, $perPage) {
     $totalPages = max(1, ceil($totalRows / $perPage));
-    
-    // Don't render if there's only 1 page
+
     if ($totalPages <= 1) {
         return;
     }
 
-    echo '<nav aria-label="Page navigation" class="mt-4 flex justify-end">';
-    echo '<div class="inline-flex rounded-base shadow-xs -space-x-px" role="group">';
-    
+    echo '<div class="noPrint" style="display:flex;justify-content:flex-end;margin-top:16px;margin-bottom:16px;">';
+    echo '<div style="display:inline-flex;border-radius:6px;box-shadow:0 1px 2px 0 rgba(0,0,0,0.05);">';
+
+    $page = (int)$page;
+
     // Previous Button
     if ($page > 1) {
-        echo '<button type="submit" name="Previous" data-tooltip-target="tooltip-previous" class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-s-base box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-3 focus:ring-neutral-tertiary leading-5 w-9 h-9 focus:outline-none">';
-        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>';
-        echo '</button>';
+        echo '<button type="submit" name="Previous" value="Previous" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--border);border-right:none;background:#f9fafb;color:var(--text-body);border-radius:6px 0 0 6px;cursor:pointer;outline:none;">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>
+        </button>';
     } else {
-        // Disabled state
-        echo '<button type="button" disabled class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-s-base box-border border border-default-medium opacity-50 cursor-not-allowed leading-5 w-9 h-9">';
-        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>';
-        echo '</button>';
-    }
-    
-    // Page Info (e.g. 1 of 99)
-    echo '<span class="inline-flex shrink-0 text-sm items-center justify-center text-body bg-neutral-secondary-medium box-border border border-default-medium leading-5 px-3 h-9 focus:outline-none">';
-    echo $page . ' ' . __('of') . ' ' . $totalPages;
-    echo '</span>';
-    
-    // Next Button
-    if ($page < $totalPages) {
-        echo '<button type="submit" name="Next" data-tooltip-target="tooltip-next" class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-e-base box-border border border-default-medium hover:bg-neutral-tertiary-medium hover:text-heading focus:ring-3 focus:ring-neutral-tertiary leading-5 w-9 h-9 focus:outline-none">';
-        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>';
-        echo '</button>';
-    } else {
-        // Disabled state
-        echo '<button type="button" disabled class="inline-flex items-center justify-center text-body bg-neutral-secondary-medium rounded-e-base box-border border border-default-medium opacity-50 cursor-not-allowed leading-5 w-9 h-9">';
-        echo '<svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>';
-        echo '</button>';
+        echo '<button type="button" disabled style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--border);border-right:none;background:var(--surface-alt);color:#9ca3af;border-radius:6px 0 0 6px;cursor:not-allowed;outline:none;">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 19-7-7 7-7"/></svg>
+        </button>';
     }
 
-    echo '</div>';
-    echo '</nav>';
+    // Page Info
+    echo '<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border:1px solid var(--border);background:#f9fafb;color:var(--text-body);font-size:14px;font-weight:500;">' . $page . ' ' . __('of') . ' ' . $totalPages . '</span>';
+
+    // Next Button
+    if ($page < $totalPages) {
+        echo '<button type="submit" name="Next" value="Next" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--border);border-left:none;background:#f9fafb;color:var(--text-body);border-radius:0 6px 6px 0;cursor:pointer;outline:none;">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
+        </button>';
+    } else {
+        echo '<button type="button" disabled style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border:1px solid var(--border);border-left:none;background:var(--surface-alt);color:#9ca3af;border-radius:0 6px 6px 0;cursor:not-allowed;outline:none;">
+            <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/></svg>
+        </button>';
+    }
+
+    echo '</div></div>';
 }

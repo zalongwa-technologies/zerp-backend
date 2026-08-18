@@ -151,38 +151,24 @@ while ($row = DB_fetch_assoc($resInvoices)) {
     <!-- Recent Invoices -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Supplier Invoices') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Invoice #') ?></th>
-                        <th><?= __('Supplier') ?></th>
-                        <th><?= __('Amount') ?></th>
-                        <th><?= __('Balance') ?></th>
-                        <th><?= __('Date') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentInvoices)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent invoices found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentInvoices as $inv): 
-                            $isOverdue = (strtotime($inv['trandate']) < strtotime('-30 days'));
-                        ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);">#<?= $inv['transno'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($inv['name']) ?></td>
-                            <td>TZS <?= number_format($inv['ovamount'], 2) ?></td>
-                            <td style="font-weight: 700; color: <?= $isOverdue ? 'var(--danger)' : 'var(--text-main)' ?>;">
-                                TZS <?= number_format($inv['balance'], 2) ?>
-                            </td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($inv['trandate'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Invoice #'), __('Supplier'), __('Amount'), __('Balance'), __('Date')];
+        $dataRows = [];
+        if (!empty($recentInvoices)) {
+            foreach ($recentInvoices as $inv) {
+                $isOverdue = (strtotime($inv['trandate']) < strtotime('-30 days'));
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">#' . htmlspecialchars($inv['transno'] ?? '', ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($inv['suppname'] ?? '', ENT_QUOTES, 'UTF-8') . '</span>',
+                    'TZS ' . number_format($inv['ovamount'] ?? 0, 2),
+                    '<span style="font-weight: 700; color: ' . ($isOverdue ? 'var(--danger)' : 'var(--text-main)') . ';">TZS ' . number_format($inv['balance'], 2) . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($inv['trandate'])) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent invoices found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

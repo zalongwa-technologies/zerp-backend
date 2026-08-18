@@ -108,37 +108,24 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent GL Transactions -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Ledger Postings') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Date') ?></th>
-                        <th><?= __('Account') ?></th>
-                        <th><?= __('Narrative') ?></th>
-                        <th style="text-align: right;"><?= __('Amount') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentGL)): ?>
-                        <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent GL transactions found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentGL as $gl): ?>
-                        <tr>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($gl['trandate'])) ?></td>
-                            <td>
-                                <div style="font-weight: 600;"><?= $gl['account'] ?></div>
-                                <div style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($gl['accountname']) ?></div>
-                            </td>
-                            <td style="font-size: 0.85rem; max-width: 300px;"><?= htmlspecialchars($gl['narrative']) ?></td>
-                            <td style="font-weight: 700; text-align: right; color: <?= $gl['amount'] > 0 ? 'var(--danger)' : 'var(--success)' ?>;">
-                                <?= number_format(abs($gl['amount']), 2) ?> <?= $gl['amount'] > 0 ? '(Dr)' : '(Cr)' ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Date'), __('Account'), __('Narrative'), __('Amount')];
+        $dataRows = [];
+        if (!empty($recentGL)) {
+            foreach ($recentGL as $gl) {
+                $amountText = number_format(abs($gl['amount']), 2) . ' ' . ($gl['amount'] > 0 ? '(Dr)' : '(Cr)');
+                $amountClass = $gl['amount'] > 0 ? 'var(--danger)' : 'var(--success)';
+                $dataRows[] = [
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($gl['trandate'])) . '</span>',
+                    '<div style="font-weight: 600;">' . htmlspecialchars($gl['account'], ENT_QUOTES, 'UTF-8') . '</div><div style="font-size: 0.75rem; color: var(--text-muted);">' . htmlspecialchars($gl['accountname'], ENT_QUOTES, 'UTF-8') . '</div>',
+                    '<span style="font-size: 0.85rem; max-width: 300px;">' . htmlspecialchars($gl['narrative'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 700; text-align: right; color: ' . $amountClass . ';">' . $amountText . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent GL transactions found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

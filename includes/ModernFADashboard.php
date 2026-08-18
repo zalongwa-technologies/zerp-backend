@@ -105,34 +105,22 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent Assets -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recently Added Assets') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Asset ID') ?></th>
-                        <th><?= __('Description') ?></th>
-                        <th><?= __('Purchased') ?></th>
-                        <th style="text-align: right;"><?= __('Cost') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentAssets)): ?>
-                        <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No assets found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentAssets as $asset): ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);">#<?= $asset['assetid'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($asset['description']) ?></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($asset['datepurchased'])) ?></td>
-                            <td style="font-weight: 700; text-align: right;">
-                                TZS <?= number_format($asset['cost'], 2) ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Asset ID'), __('Description'), __('Purchased'), __('Cost')];
+        $dataRows = [];
+        if (!empty($recentAssets)) {
+            foreach ($recentAssets as $asset) {
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">#' . htmlspecialchars($asset['assetid'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($asset['description'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($asset['datepurchased'])) . '</span>',
+                    '<span style="font-weight: 700; text-align: right;">TZS ' . number_format($asset['cost'], 2) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No assets found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

@@ -153,36 +153,25 @@ while ($row = DB_fetch_assoc($resMoves)) {
     <!-- Recent Movements -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Stock Movements') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Item ID') ?></th>
-                        <th><?= __('Description') ?></th>
-                        <th><?= __('Location') ?></th>
-                        <th><?= __('Quantity') ?></th>
-                        <th><?= __('Date') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentMoves)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent movements found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentMoves as $move): ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);"><?= $move['stockid'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($move['description']) ?></td>
-                            <td><span class="db-badge db-badge-info"><?= $move['loccode'] ?></span></td>
-                            <td style="font-weight: 700; color: <?= $move['qty'] > 0 ? 'var(--success)' : 'var(--danger)' ?>;">
-                                <?= $move['qty'] > 0 ? '+' : '' ?><?= number_format($move['qty'], 0) ?>
-                            </td>
-                            <td style="color: var(--text-muted); text-align: right;"><?= date('d M H:i', strtotime($move['trandate'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Item ID'), __('Description'), __('Location'), __('Quantity'), __('Date')];
+        $dataRows = [];
+        if (!empty($recentMoves)) {
+            foreach ($recentMoves as $move) {
+                $qtyText = ($move['qty'] > 0 ? '+' : '') . number_format($move['qty'], 0);
+                $qtyClass = $move['qty'] > 0 ? 'var(--success)' : 'var(--danger)';
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">' . htmlspecialchars($move['stockid'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($move['description'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span class="db-badge db-badge-info">' . htmlspecialchars($move['loccode'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 700; color: ' . $qtyClass . ';">' . $qtyText . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M H:i', strtotime($move['trandate'])) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent movements found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

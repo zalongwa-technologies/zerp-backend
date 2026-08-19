@@ -136,15 +136,11 @@ echo '<div class="db-page">
 				</div>
 				<div class="db-header-actions">';
 
-if (isset($SelectedUser)) {
-    echo '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" class="architect-btn">
-            <i class="fas fa-users"></i> ' . __('Review Existing Users') . '
-          </a>';
-} else {
-    echo '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?NewUser=Yes" class="architect-btn">
-            <i class="fas fa-plus"></i> ' . __('Create New User') . '
-          </a>';
-}
+	if (!isset($SelectedUser) && !isset($_GET['NewUser'])) {
+		echo '<a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?NewUser=Yes" class="architect-btn">
+				<i class="fas fa-plus"></i> ' . __('Create New User') . '
+			  </a>';
+	}
 
 echo '				</div>
 			</div>
@@ -503,25 +499,7 @@ if (isset($_POST['submit'])) {
 /* VIEW: LIST REGISTRY */
 if (!isset($SelectedUser) && !isset($_GET['NewUser'])) {
 
-    echo '<div class="db-bottom-layout">';
-
-    echo '<aside class="db-sidebar">';
-    /* Sidebar Card: Registry Actions */
-    echo '<div class="db-card">
-            <div class="db-card-header">
-                <h3 class="db-card-title"><i class="fas fa-tools"></i>' . __('Maintenance') . '</h3>
-            </div>
-            <div style="padding: 24px;">
-                <p style="font-size: 0.85rem; color: #065f46; font-weight: 500; margin-bottom: 24px;">' . __('User accounts define the security perimeters and environmental preferences for each employee.') . '</p>
-                <a href="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?NewUser=Yes" class="architect-btn" style="width: 100%; justify-content: center;">
-                    <i class="fas fa-user-plus"></i> ' . __('Add New Member') . '
-                </a>
-            </div>
-        </div>';
-    echo '</aside>';
-
-    echo '<main class="db-main" style="display: flex; flex-direction: column; gap: 32px; overflow: hidden;">';
-	echo '<div class="db-card">
+	echo '<div class="db-card" style="margin-top: 20px;">
             <div class="db-card-header">
                 <h3 class="db-card-title"><i class="fas fa-list-ul"></i> ' . __('Active User Registry') . '</h3>
             </div>
@@ -595,8 +573,6 @@ if (!isset($SelectedUser) && !isset($_GET['NewUser'])) {
 			</tr>';
 	}
 	echo '</tbody></table></div></div>';
-    echo '</main>';
-    echo '</div>'; // End db-bottom-layout
 
 } else {
     /* VIEW: EDIT/CREATE FORM */
@@ -658,33 +634,7 @@ if (!isset($SelectedUser) && !isset($_GET['NewUser'])) {
         }
         echo '<input type="hidden" name="ModulesAllowed" value="' . ($_POST['ModulesAllowed'] ?? '') . '" />';
 
-        echo '<div class="db-bottom-layout">
-                <aside class="db-sidebar">
-                    <div class="db-card">
-                        <div class="db-card-header">
-                            <h3 class="db-card-title"><i class="fas fa-info-circle"></i> ' . __('Status') . '</h3>
-                        </div>
-                        <div style="padding: 24px;">
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="font-size: 0.75rem; font-weight: 700; color: #6b7280;">' . __('Mode') . '</span>
-                                    <span class="db-badge ' . (isset($SelectedUser) ? 'db-badge-info' : 'db-badge-success') . '">' . (isset($SelectedUser) ? __('Editing') : __('Creating')) . '</span>
-                                </div>';
-        if (isset($SelectedUser)) {
-            echo '              <div style="display: flex; justify-content: space-between;">
-                                    <span style="font-size: 0.75rem; font-weight: 700; color: #6b7280;">' . __('ID') . '</span>
-                                    <span style="font-size: 0.85rem; font-weight: 900; color: #064e3b;">' . $_POST['UserID'] . '</span>
-                                </div>';
-        }
-        echo '              </div>
-                            <hr style="margin: 24px 0; border: 0; border-top: 1px solid #f3f4f6;" />
-                            <button type="submit" name="submit" class="architect-btn" style="width: 100%; justify-content: center;">
-                                <i class="fas fa-save"></i> ' . __('Commit Changes') . '
-                            </button>
-                        </div>
-                    </div>
-                </aside>
-                <main class="db-main" style="display: flex; flex-direction: column; gap: 32px; overflow: hidden;">';
+        echo '<div style="display: flex; flex-direction: column; gap: 32px; overflow: hidden; margin-top: 20px;">';
 
         /* CARD 1: IDENTITY & SECURITY */
         echo '<div class="db-card">
@@ -910,8 +860,13 @@ if (!isset($SelectedUser) && !isset($_GET['NewUser'])) {
                 </div>
               </div>';
 
-        echo '	</main>
-            </div>'; // End db-bottom-layout
+        $BtnText = isset($SelectedUser) ? __('Save') : __('Create User');
+		echo '      <div style="display: flex; justify-content: flex-end;">
+						<button type="submit" name="submit" class="architect-btn" style="padding: 12px 32px; font-size: 1rem;">
+							<i class="fas ' . (isset($SelectedUser) ? 'fa-save' : 'fa-user-plus') . '"></i> ' . $BtnText . '
+						</button>
+					</div>';
+		echo '  </div>'; // End wrapper
         echo '</form>';
     }
 }

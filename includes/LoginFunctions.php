@@ -209,7 +209,7 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 								if ($CurrencyRow[0]!=$_SESSION['CompanyRecord']['currencydefault']){
 									$NewRate = GetCurrencyRate($CurrencyRow[0],$CurrencyRates);
 									if ($NewRate == '') {
-										$NewRate = 1;
+										$NewRate = $CurrencyRow[1]; // Fall back to existing rate if blank
 									}
 									DB_query("UPDATE currencies
 											SET rate='" . $NewRate . "'
@@ -227,6 +227,9 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 									$CurrencyRatesArray = array();
 								}
 								$NewRate = GetCurrencyRate($CurrencyRow[0], $CurrencyRatesArray);
+								if ($NewRate == '') {
+									$NewRate = $CurrencyRow[1]; // Fall back to existing rate if blank
+								}
 								DB_query("UPDATE currencies
 											SET rate='" . $NewRate . "'
 											WHERE currabrev='" . $CurrencyRow[0] . "'");

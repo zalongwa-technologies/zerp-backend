@@ -1,5 +1,10 @@
 <?php
 
+// Ensure all errors are displayed immediately
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // User configurable variables
 //---------------------------------------------------
 
@@ -126,7 +131,7 @@ error_reporting(E_ALL && ~E_NOTICE);
 //error_reporting(-1);
 
 // Debug information
-$Debug = 0; // No debug information will be shown. Recommended for production environments
+$Debug = 1; // Simple debug information will be shown. Recommended for development environments
 // $Debug = 1; // Simple debug information will be shown. Recommended for development environments
 // $Debug = 2; // Detailed debug information will be shown. Recommended for development environments
 

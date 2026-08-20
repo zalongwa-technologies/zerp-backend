@@ -100,33 +100,17 @@ if (isset($_POST['submit'])) {
 	if (isset($_POST['OldTypeAbbrev']) AND isset($_POST['OldCurrAbrev']) AND mb_strlen($Item) > 1 AND $InputError != 1) {
 		$SQL = "UPDATE prices SET typeabbrev='" . $_POST['TypeAbbrev'] . "', currabrev='" . $_POST['CurrAbrev'] . "', price='" . filter_number_format($_POST['Price']) . "', startdate='" . FormatDateForSQL($_POST['StartDate']) . "', enddate='" . $SQLEndDate . "'
 				WHERE prices.stockid='" . $Item . "' AND startdate='" . $_POST['OldStartDate'] . "' AND enddate ='" . $_POST['OldEndDate'] . "' AND prices.typeabbrev='" . $_POST['OldTypeAbbrev'] . "' AND prices.currabrev='" . $_POST['OldCurrAbrev'] . "' AND prices.debtorno=''";
-		$ErrMsg = __('Could not update the existing prices');
-		$Result = DB_query($SQL, $ErrMsg, '', false, false);
-		if (DB_error_no() != 0) { die("<div style=\"background:red;color:white;padding:20px;font-size:24px;\">DB ERROR: " . DB_error_msg() . "</div>"); }
-		if (DB_error_no() != 0) {
-			prnMsg($ErrMsg . '<br>' . DB_error_msg(), 'error');
-			$InputError = 1;
-		} else {
-			ReSequenceEffectiveDates($Item, $_POST['TypeAbbrev'], $_POST['CurrAbrev']);
-			prnMsg(__('The price has been updated'), 'success');
-		}
+		DB_query($SQL, __('Could not update the existing prices'));
+		ReSequenceEffectiveDates($Item, $_POST['TypeAbbrev'], $_POST['CurrAbrev']);
+		prnMsg(__('The price has been updated'), 'success');
 	} elseif ($InputError != 1) {
 		$SQL = "INSERT INTO prices (stockid, typeabbrev, currabrev, startdate, enddate, price)
 				VALUES ('" . $Item . "', '" . $_POST['TypeAbbrev'] . "', '" . $_POST['CurrAbrev'] . "', '" . FormatDateForSQL($_POST['StartDate']) . "', '" . $SQLEndDate . "', '" . filter_number_format($_POST['Price']) . "')";
-		$ErrMsg = __('The new price could not be added');
-		$Result = DB_query($SQL, $ErrMsg, '', false, false);
-		if (DB_error_no() != 0) { die("<div style=\"background:red;color:white;padding:20px;font-size:24px;\">DB ERROR: " . DB_error_msg() . "</div>"); }
-		if (DB_error_no() != 0) {
-			prnMsg($ErrMsg . '<br>' . DB_error_msg(), 'error');
-			$InputError = 1;
-		} else {
-			ReSequenceEffectiveDates($Item, $_POST['TypeAbbrev'], $_POST['CurrAbrev']);
-			prnMsg(__('The new price has been inserted'), 'success');
-		}
+		DB_query($SQL, __('The new price could not be added'));
+		ReSequenceEffectiveDates($Item, $_POST['TypeAbbrev'], $_POST['CurrAbrev']);
+		prnMsg(__('The new price has been inserted'), 'success');
 	}
-	if ($InputError != 1) {
-		unset($_POST['Price'], $_POST['StartDate'], $_POST['EndDate'], $_POST['OldTypeAbbrev'], $_POST['OldCurrAbrev'], $_POST['OldStartDate'], $_POST['OldEndDate']);
-	}
+	unset($_POST['Price'], $_POST['StartDate'], $_POST['EndDate'], $_POST['OldTypeAbbrev'], $_POST['OldCurrAbrev'], $_POST['OldStartDate'], $_POST['OldEndDate']);
 } elseif (isset($_GET['delete'])) {
 	$SQL = "DELETE FROM prices WHERE stockid = '" . $Item . "' AND typeabbrev='" . $_GET['TypeAbbrev'] . "' AND currabrev ='" . $_GET['CurrAbrev'] . "' AND startdate = '" . $_GET['StartDate'] . "' AND enddate = '" . $_GET['EndDate'] . "' AND debtorno=''";
 	DB_query($SQL, __('Could not delete this price'));
@@ -363,21 +347,3 @@ function ReSequenceEffectiveDates($Item, $PriceList, $CurrAbbrev) {
 	}
 }
 ?>
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    var msgs = document.querySelectorAll('.state-indicator, .prnMsg, [style*="background: #fee2e2"]');
-    var container = document.querySelector('.aw-page') || document.body;
-    msgs.forEach(function(msg) {
-        if (msg.parentNode !== container) {
-            msg.style.margin = "20px";
-            msg.style.position = "relative";
-            msg.style.zIndex = "999999";
-            container.insertBefore(msg, container.firstChild);
-            // Also alert the user so they definitely don't miss it!
-            alert(msg.innerText.trim());
-        }
-    });
-});
-</script>

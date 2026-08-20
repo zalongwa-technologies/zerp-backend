@@ -527,21 +527,3 @@ echo '            </main>
     </div> <!-- padding -->';
 
 include(__DIR__ . '/includes/footer.php');
-
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    var msgs = document.querySelectorAll('.state-indicator, .prnMsg, [style*="background: #fee2e2"]');
-    var container = document.querySelector('.aw-page') || document.body;
-    msgs.forEach(function(msg) {
-        if (msg.parentNode !== container) {
-            msg.style.margin = "20px";
-            msg.style.position = "relative";
-            msg.style.zIndex = "999999";
-            container.insertBefore(msg, container.firstChild);
-            // Also alert the user so they definitely don't miss it!
-            alert(msg.innerText.trim());
-        }
-    });
-});
-</script>

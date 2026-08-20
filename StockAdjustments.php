@@ -1,4 +1,7 @@
 <?php
+ini_set("display_errors", 1);
+error_reporting(E_ALL);
+
 
 // NB: these classes are not autoloaded, and their definition has to be included before the session is started (in session.php)
 include(__DIR__ . '/includes/DefineStockAdjustment.php');

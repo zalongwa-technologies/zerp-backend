@@ -93,7 +93,7 @@ if (isset($_POST['StockLocation'])) {
 } else {
 	if (empty($_SESSION['Adjustment' . $identifier]->StockLocation)) {
 		if (empty($_SESSION['UserStockLocation'])) {
-			$_SESSION['Adjustment' . $identifier]->StockLocation = array_key_first($LocationList);
+			$_SESSION['Adjustment' . $identifier]->StockLocation = array_keys($LocationList)[0];
 		} else {
 			$_SESSION['Adjustment' . $identifier]->StockLocation = $_SESSION['UserStockLocation'];
 		}
@@ -426,7 +426,7 @@ if (empty($_SESSION['Adjustment' . $identifier]->StockID)) {
 }
 
 echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post">
-                        <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+                        <input type="hidden" name="modal" value="1" /><input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 
 if (isset($_GET['modal']) || isset($_POST['modal'])) {
     echo '<input type="hidden" name="modal" value="1" />';

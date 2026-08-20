@@ -25,195 +25,215 @@ $ViewTopic = 'Inventory';
 $BookMark = '';
 include(__DIR__ . '/includes/header.php');
 
-echo '<div class="db-bottom-layout">';
+require_once(__DIR__ . '/includes/UIComponents.php');
 
-// SIDEBAR START
-echo '<aside class="db-col-aside">
-		<form action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '" method="post">
-			<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
-			
-			<div class="db-card" style="margin-bottom: 20px;">
-				<div class="db-card-header">
-					<h3 class="db-card-title"><i class="fas fa-search"></i> ' . __('Usage Filters') . '</h3>
-				</div>
-				<div class="db-card-body">
-					<div class="db-form-group">
-						<label class="db-label">' . __('Stock Code') . '</label>
-						<input type="text" name="StockID" class="db-input" value="' . $StockID . '" required="required" placeholder="' . __('e.g. ITEM-001') . '" autofocus />
-					</div>
-					
-					<div class="db-form-group">
-						<label class="db-label">' . __('Location') . '</label>
-						<select name="StockLocation" class="db-select">';
-$SQL_Loc = "SELECT locations.loccode, locationname FROM locations INNER JOIN locationusers ON locationusers.loccode=locations.loccode AND locationusers.userid='" . $_SESSION['UserID'] . "' AND locationusers.canview=1";
-$ResStkLocs = DB_query($SQL_Loc);
-while ($RowLoc = DB_fetch_array($ResStkLocs)) {
-	$selected = (isset($_POST['StockLocation']) AND $_POST['StockLocation'] == $RowLoc['loccode']) ? 'selected="selected"' : '';
-	echo '<option ' . $selected . ' value="' . $RowLoc['loccode'] . '">' . $RowLoc['locationname'] . '</option>';
-}
-$all_selected = (isset($_POST['StockLocation']) AND $_POST['StockLocation'] == 'All') ? 'selected="selected"' : '';
-echo '						<option ' . $all_selected . ' value="All">' . __('All Locations') . '</option>
-						</select>
-					</div>
+echo '<style>
+    .premium-status-container {
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 2rem 2rem 0 2rem;
+        border: 1px solid var(--border-soft);
+        overflow: hidden;
+    }
+    .status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .status-title-area h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary-dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .status-title-area p {
+        margin: 0.25rem 0 0 0;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+    .premium-filter-bar {
+        background: var(--surface-alt);
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+        border: 1px solid var(--border-soft);
+    }
+    .aw-field-group { margin-bottom: 0; flex: 1; min-width: 200px; }
+    .aw-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .aw-input, .aw-select { width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-size: 0.9rem; }
+    .aw-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; border: none; text-decoration: none; }
+    .aw-btn-primary { background: var(--primary); color: #ffffff !important; }
+    .aw-btn-outline { background: transparent; border: 1px solid var(--border-soft); color: var(--text-main); }
+    .metric-card {
+        background: var(--surface-alt);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-soft);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .metric-card-icon {
+        background: var(--primary-soft);
+        color: var(--primary);
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .metric-card-title {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        font-weight: 800;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+    .metric-card-value {
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: var(--primary-dark);
+    }
+</style>';
 
-					<button type="submit" name="ShowUsage" class="db-btn db-btn-primary" style="width: 100%; margin-top: 15px;">
-						<i class="fas fa-list-ul"></i> ' . __('Show Usage') . '
-					</button>
-					<button type="submit" name="ShowGraphUsage" class="db-btn db-input-light" style="width: 100%; margin-top: 10px;">
-						<i class="fas fa-chart-bar"></i> ' . __('Show Graph') . '
-					</button>
-				</div>
-			</div>';
+echo '<div class="aw-page premium-status-container">';
 
-// ITEM CONTEXT CARD
-if ($StockID != '' AND !isset($Its_A_KitSet_Assembly_Or_Dummy)) {
-	$ResMaster = DB_query("SELECT description, units FROM stockmaster WHERE stockid='".$StockID."'");
-	if (DB_num_rows($ResMaster) > 0) {
-		$RowMaster = DB_fetch_array($ResMaster);
-		echo '<div class="db-card" style="margin-bottom: 20px;">
-				<div class="db-card-header">
-					<h3 class="db-card-title"><i class="fas fa-info-circle"></i> ' . __('Item Profile') . '</h3>
-				</div>
-				<div class="db-card-body">
-					<div style="margin-bottom: 8px;">
-						<label class="db-label" style="display:block; font-size: 0.7rem;">' . __('Description') . '</label>
-						<div class="db-font-bold" style="font-size: 0.9rem;">' . $RowMaster['description'] . '</div>
-					</div>
-					<div>
-						<label class="db-label" style="display:block; font-size: 0.7rem;">' . __('UOM') . '</label>
-						<div class="db-badge db-badge-primary">' . $RowMaster['units'] . '</div>
-					</div>
-				</div>
-			  </div>';
-	}
-}
+echo '<div class="status-header">
+        <div class="status-title-area">
+            <h1><i class="fas fa-chart-line"></i> ' . __('Stock Usage Analysis') . '</h1>
+            <p>' . __('View consumption history over time') . '</p>
+        </div>
+      </div>';
 
-// QUICK LINKS CARD
-if ($StockID != '') {
-	echo '<div class="db-card">
-			<div class="db-card-header">
-				<h3 class="db-card-title"><i class="fas fa-external-link-alt"></i> ' . __('Related Actions') . '</h3>
-			</div>
-			<div class="db-card-body" style="padding: 10px;">
-				<a href="' . $RootPath . '/StockStatus.php?StockID=' . $StockID . '" class="db-btn db-input-light" style="width: 100%; justify-content: flex-start; margin-bottom: 8px; font-size: 0.8rem;">
-					<i class="fas fa-info-circle"></i> ' . __('Detailed Status') . '
-				</a>
-				<a href="' . $RootPath . '/StockMovements.php?StockID=' . $StockID . '" class="db-btn db-input-light" style="width: 100%; justify-content: flex-start; margin-bottom: 8px; font-size: 0.8rem;">
-					<i class="fas fa-exchange-alt"></i> ' . __('Stock Movements') . '
-				</a>
-				<a href="' . $RootPath . '/PO_SelectOSPurchOrder.php?SelectedStockItem=' . $StockID . '" class="db-btn db-input-light" style="width: 100%; justify-content: flex-start; font-size: 0.8rem;">
-					<i class="fas fa-truck"></i> ' . __('Outstanding POs') . '
-				</a>
-			</div>
-		  </div>';
-}
-
-echo '		</form>
-	</aside>';
-
-echo '<main class="db-col-main">';
-
-
-
-/*HideMovt ==1 if the movement was only created for the purpose of a transaction but is not a physical movement eg. A price credit will create a movement record for the purposes of display on a credit note
-but there is no physical stock movement - it makes sense honest ??? */
+echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '" method="post" class="premium-filter-bar">
+        <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
+        <div class="aw-field-group">
+            <label class="aw-label">' . __('Stock Code') . '</label>
+            <input type="text" name="StockID" class="aw-input" value="' . htmlspecialchars($StockID) . '" required="required" placeholder="' . __('e.g. ITEM-001') . '" autofocus />
+        </div>
+        <div class="aw-field-group">
+            <label class="aw-label">' . __('Location') . '</label>
+            <select name="StockLocation" class="aw-select">';
+                $SQL_Loc = "SELECT locations.loccode, locationname FROM locations INNER JOIN locationusers ON locationusers.loccode=locations.loccode AND locationusers.userid='" . $_SESSION['UserID'] . "' AND locationusers.canview=1";
+                $ResStkLocs = DB_query($SQL_Loc);
+                while ($RowLoc = DB_fetch_array($ResStkLocs)) {
+                    $selected = (isset($_POST['StockLocation']) AND $_POST['StockLocation'] == $RowLoc['loccode']) ? 'selected="selected"' : '';
+                    echo '<option ' . $selected . ' value="' . $RowLoc['loccode'] . '">' . $RowLoc['locationname'] . '</option>';
+                }
+                $all_selected = (isset($_POST['StockLocation']) AND $_POST['StockLocation'] == 'All') ? 'selected="selected"' : '';
+                echo '<option ' . $all_selected . ' value="All">' . __('All Locations') . '</option>
+            </select>
+        </div>
+        <div class="aw-field-group" style="flex: 0 0 auto; display: flex; gap: 0.5rem;">
+            <button type="submit" name="ShowUsage" class="aw-btn aw-btn-primary" style="padding: 0.6rem 1.5rem;">
+                <i class="fas fa-search"></i> ' . __('Search') . '
+            </button>
+            <button type="submit" name="ShowGraphUsage" class="aw-btn aw-btn-outline" style="padding: 0.6rem 1.5rem;">
+                <i class="fas fa-chart-bar"></i> ' . __('Graph') . '
+            </button>
+        </div>
+      </form>';
 
 $CurrentPeriod = GetPeriod(date($_SESSION['DefaultDateFormat']));
 
 if (isset($_POST['ShowUsage'])){
-	if ($_POST['StockLocation']=='All'){
-		$SQL = "SELECT periods.periodno,
-				periods.lastdate_in_period,
-				canview,
-				SUM(CASE WHEN (stockmoves.type=10 OR stockmoves.type=11 OR stockmoves.type=17 OR stockmoves.type=28 OR stockmoves.type=38)
-							AND stockmoves.hidemovt=0
-							AND stockmoves.stockid = '" . $StockID . "'
-						THEN -stockmoves.qty ELSE 0 END) AS qtyused
-				FROM periods LEFT JOIN stockmoves
-					ON periods.periodno=stockmoves.prd
-				INNER JOIN locationusers ON locationusers.loccode=stockmoves.loccode AND locationusers.userid='" .  $_SESSION['UserID'] . "' AND locationusers.canview=1
-				WHERE periods.periodno <='" . $CurrentPeriod . "'
-				GROUP BY periods.periodno,
-					periods.lastdate_in_period
-				ORDER BY periodno DESC LIMIT " . $_SESSION['NumberOfPeriodsOfStockUsage'];
-	} else {
-		$SQL = "SELECT periods.periodno,
-				periods.lastdate_in_period,
-				SUM(CASE WHEN (stockmoves.type=10 OR stockmoves.type=11 OR stockmoves.type=17 OR stockmoves.type=28 OR stockmoves.type=38)
-								AND stockmoves.hidemovt=0
-								AND stockmoves.stockid = '" . $StockID . "'
-								AND stockmoves.loccode='" . $_POST['StockLocation'] . "'
-							THEN -stockmoves.qty ELSE 0 END) AS qtyused
-				FROM periods LEFT JOIN stockmoves
-					ON periods.periodno=stockmoves.prd
-				WHERE periods.periodno <='" . $CurrentPeriod . "'
-				GROUP BY periods.periodno,
-					periods.lastdate_in_period
-				ORDER BY periodno DESC LIMIT " . $_SESSION['NumberOfPeriodsOfStockUsage'];
+    if ($_POST['StockLocation']=='All'){
+        $SQL = "SELECT periods.periodno,
+                periods.lastdate_in_period,
+                canview,
+                SUM(CASE WHEN (stockmoves.type=10 OR stockmoves.type=11 OR stockmoves.type=17 OR stockmoves.type=28 OR stockmoves.type=38)
+                            AND stockmoves.hidemovt=0
+                            AND stockmoves.stockid = '" . $StockID . "'
+                        THEN -stockmoves.qty ELSE 0 END) AS qtyused
+                FROM periods LEFT JOIN stockmoves
+                    ON periods.periodno=stockmoves.prd
+                INNER JOIN locationusers ON locationusers.loccode=stockmoves.loccode AND locationusers.userid='" .  $_SESSION['UserID'] . "' AND locationusers.canview=1
+                WHERE periods.periodno <='" . $CurrentPeriod . "'
+                GROUP BY periods.periodno,
+                    periods.lastdate_in_period
+                ORDER BY periodno DESC LIMIT " . $_SESSION['NumberOfPeriodsOfStockUsage'];
+    } else {
+        $SQL = "SELECT periods.periodno,
+                periods.lastdate_in_period,
+                SUM(CASE WHEN (stockmoves.type=10 OR stockmoves.type=11 OR stockmoves.type=17 OR stockmoves.type=28 OR stockmoves.type=38)
+                                AND stockmoves.hidemovt=0
+                                AND stockmoves.stockid = '" . $StockID . "'
+                                AND stockmoves.loccode='" . $_POST['StockLocation'] . "'
+                            THEN -stockmoves.qty ELSE 0 END) AS qtyused
+                FROM periods LEFT JOIN stockmoves
+                    ON periods.periodno=stockmoves.prd
+                WHERE periods.periodno <='" . $CurrentPeriod . "'
+                GROUP BY periods.periodno,
+                    periods.lastdate_in_period
+                ORDER BY periodno DESC LIMIT " . $_SESSION['NumberOfPeriodsOfStockUsage'];
+    }
+    $ErrMsg = __('The stock usage for the selected criteria could not be retrieved');
+    $MovtsResult = DB_query($SQL, $ErrMsg);
 
-	}
-	$ErrMsg = __('The stock usage for the selected criteria could not be retrieved');
-	$MovtsResult = DB_query($SQL, $ErrMsg);
+    $TotalUsage = 0;
+    $PeriodsCounter = 0;
+    $data = [];
 
-if (isset($_POST['ShowUsage'])) {
-	echo '<div class="db-card">
-			<div class="db-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-				<h3 class="db-card-title"><i class="fas fa-chart-area"></i> ' . __('Usage Analysis') . '</h3>
-				<span class="db-badge db-badge-primary">' . ($_POST['StockLocation'] == 'All' ? __('All Locations') : $_POST['StockLocation']) . '</span>
-			</div>
-			<div class="db-card-body">
-				<div class="db-table-wrapper" style="border: 1px solid var(--border-soft); border-radius: var(--radius-sm); margin-bottom: 20px;">
-					<table class="db-table">
-						<thead>
-							<tr>
-								<th>' . __('Period / Month') . '</th>
-								<th class="text-right">' . __('Physical Usage') . '</th>
-							</tr>
-						</thead>
-						<tbody>';
+    while ($MyRow = DB_fetch_array($MovtsResult)) {
+        $DisplayDate = MonthAndYearFromSQLDate($MyRow['lastdate_in_period']);
+        $TotalUsage += $MyRow['qtyused'];
+        $PeriodsCounter++;
+        
+        $data[] = [
+            'period' => '<div style="font-weight: 700; color: var(--primary);">' . $DisplayDate . '</div>',
+            'qty' => '<div style="text-align: right; font-weight: 700;">' . locale_number_format($MyRow['qtyused'], $DecimalPlaces) . '</div>'
+        ];
+    }
+    
+    // Calculate Average
+    $AvgUsage = ($PeriodsCounter > 0) ? locale_number_format($TotalUsage/$PeriodsCounter, $DecimalPlaces) : 0;
+    
+    // Display Metric Card
+    if ($TotalUsage > 0 AND $PeriodsCounter > 0) {
+        $ResMaster = DB_query("SELECT units FROM stockmaster WHERE stockid='".$StockID."'");
+        $Units = (DB_num_rows($ResMaster) > 0) ? DB_fetch_array($ResMaster)['units'] : '';
+        
+        echo '<div class="metric-card">
+                <div class="metric-card-icon"><i class="fas fa-calculator"></i></div>
+                <div>
+                    <div class="metric-card-title">' . __('Average Monthly Usage') . '</div>
+                    <div class="metric-card-value">' . $AvgUsage . ' ' . $Units . '</div>
+                </div>
+              </div>';
+    }
 
-	$TotalUsage = 0;
-	$PeriodsCounter = 0;
+    $columns = [
+        'period' => ['label' => __('Period / Month')],
+        'qty' => ['label' => __('Physical Usage'), 'style' => 'text-align: right;']
+    ];
 
-	while ($MyRow=DB_fetch_array($MovtsResult)) {
-		$DisplayDate = MonthAndYearFromSQLDate($MyRow['lastdate_in_period']);
-		$TotalUsage += $MyRow['qtyused'];
-		$PeriodsCounter++;
-		echo '			<tr class="striped_row">
-							<td><div class="db-font-bold text-primary">' . $DisplayDate . '</div></td>
-							<td class="text-right db-font-bold">' . locale_number_format($MyRow['qtyused'], $DecimalPlaces) . '</td>
-						</tr>';
-	}
+    echo render_modern_table($columns, $data);
 
-	echo '				</tbody>
-					</table>
-				</div>';
-
-	if ($TotalUsage > 0 AND $PeriodsCounter > 0) {
-		echo '	<div class="db-status-bar db-status-success" style="border: none; padding: 15px 25px;">
-					<div class="db-status-icon"><i class="fas fa-calculator"></i></div>
-					<div class="db-status-text">
-						<span style="font-size: 0.8rem; opacity: 0.8; display: block;">' . __('Calculated Strategic Metric') . '</span>
-						<span style="font-size: 1.1rem; font-weight: bold;">' . __('Average Usage per month') . ': ' . locale_number_format($TotalUsage/$PeriodsCounter, $DecimalPlaces) . ' ' . $MyRowMaster['units'] . '</span>
-					</div>
-				</div>';
-	}
-	echo '	</div>
-		  </div>';
-} else {
-	if ($StockID == '') {
-		echo '<div class="db-status-bar db-status-info">
-				<div class="db-status-icon"><i class="fas fa-arrow-left"></i></div>
-				<div class="db-status-text">' . __('Please enter a stock code and select a location in the sidebar to view usage trends.') . '</div>
-			  </div>';
-	}
+} else if ($StockID == '') {
+    echo '<div style="background: var(--surface-alt); padding: 2rem; border-radius: 12px; text-align: center; color: var(--text-muted); margin-bottom: 2rem;">
+            <i class="fas fa-arrow-up" style="font-size: 2rem; margin-bottom: 1rem; color: var(--border);"></i>
+            <p>' . __('Please enter a stock code and select a location to view usage trends.') . '</p>
+          </div>';
 }
 
-
-} /* end if Show Usage is clicked */
-
-
-echo '	</main>
-	</div>'; // end db-bottom-layout
+echo '    <!-- Footer Quick Insights -->
+    '; include(__DIR__ . '/includes/ItemQuickActions.php'); echo '
+</div>'; // end db-bottom-layout
 
 include(__DIR__ . '/includes/footer.php');

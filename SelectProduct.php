@@ -62,7 +62,8 @@ $SQL = "SELECT categoryid, categorydescription FROM stockcategory ORDER BY categ
 $Result1 = DB_query($SQL);
 if (DB_num_rows($Result1) == 0) {
 	prnMsg(__('There are no stock categories currently defined'), 'warn');
-	include(__DIR__ . '/includes/footer.php');
+	
+include(__DIR__ . '/includes/footer.php');
 	exit();
 }
 
@@ -84,7 +85,7 @@ if (DB_num_rows($Result1) == 0) {
         --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     }
     body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-sans); overflow-x: hidden; }
-    .aw-page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+    .aw-page { max-width: 100%; margin: 0; padding: 1.5rem 2.5%; }
     .aw-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
     .aw-breadcrumb { font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 0.25rem; }
     .aw-title { font-size: 1.75rem; font-weight: 900; color: var(--primary-dark); margin: 0; line-height: 1; }
@@ -95,7 +96,7 @@ if (DB_num_rows($Result1) == 0) {
     
     @media (max-width: 1024px) { .aw-layout-grid { grid-template-columns: 1fr; } }
     
-    .aw-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-soft); margin-bottom: 1rem; overflow: hidden; }
+    .aw-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-soft); overflow: hidden; margin-bottom: 1rem; overflow: hidden; }
     .aw-card-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-soft); background: var(--white); display: flex; align-items: center; gap: 0.75rem; }
     .aw-card-title { font-size: 0.9rem; font-weight: 700; color: var(--primary-dark); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
     .aw-card-body { padding: 1rem; }
@@ -105,9 +106,10 @@ if (DB_num_rows($Result1) == 0) {
     .aw-input, .aw-select { width: 100%; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--white); font-size: 0.85rem; box-sizing: border-box; }
     
     .aw-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border: none; text-decoration: none; transition: all 0.2s; }
-    .aw-btn-primary { background: var(--primary); color: var(--white); }
+    .aw-btn-primary { background: var(--primary); color: #ffffff !important; }
     .aw-btn-primary:hover { background: var(--primary-hover); }
-    .aw-btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .aw-btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); transition: all 0.2s; }
+    .aw-btn-outline:hover { background: var(--primary); color: var(--white); border-color: var(--primary); }
     .aw-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.75rem; border-radius: 6px; }
     
     .aw-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
@@ -118,11 +120,42 @@ if (DB_num_rows($Result1) == 0) {
     
     .aw-pagination { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 1rem; background: var(--white); border-top: 1px solid var(--border-soft); }
     .aw-page-link { min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--white); border: 1px solid var(--border); color: var(--text-main); font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
-    .aw-page-link:hover { border-color: var(--primary); color: var(--primary); }
+    .aw-page-link:hover { background: var(--primary); color: var(--white); border-color: var(--primary); }
     .aw-page-link.active { background: var(--primary); color: var(--white); border-color: var(--primary); }
     .aw-page-link.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
     
     .aw-badge { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; background: var(--primary-soft); color: var(--primary); }
+
+    /* Premium Revamp Styles */
+    .premium-filter-bar {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .premium-filter-bar .aw-field-group { margin-bottom: 0; flex: 1; min-width: 150px; }
+    .premium-filter-bar .aw-btn { height: 38px; align-self: flex-end; }
+    
+    .premium-table-container {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        border: 1px solid var(--border-soft); overflow: hidden;
+        overflow: hidden;
+    }
+    .aw-table th { background: #f8fafc; color: #475569; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+    .aw-table tr { transition: all 0.2s ease; }
+    .aw-table tr:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.02); z-index: 1; position: relative; }
+    
+    /* Remove old grid layout */
+    .aw-layout-search { display: block; }
 </style>
 
 <div class="aw-page">
@@ -146,61 +179,321 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
 	
 	$Its_A_Kitset_Assembly_Or_Dummy = in_array($MyRow['mbflag'], ['A', 'G', 'K', 'D']);
 ?>
-    <div class="aw-header">
-        <div>
-            <div class="aw-breadcrumb"><?php echo __('Inventory'); ?> / <?php echo __('Dashboard'); ?></div>
-            <h1 class="aw-title"><?php echo $StockID; ?> - <?php echo $MyRow['description']; ?></h1>
-        </div>
-        <a href="<?php echo $_SERVER['PHP_SELF']; ?>?NewSearch=Yes" class="aw-btn aw-btn-outline aw-btn-sm"><i class="fas fa-search"></i> <?php echo __('New Search'); ?></a>
-    </div>
+    <style>
+        .premium-profile-container {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
 
-    <div class="aw-layout-grid aw-layout-dashboard">
-        <!-- LEFT: MAIN CONTENT -->
-        <main>
-            <div class="aw-card">
-                <div class="aw-card-header"><h3 class="aw-card-title"><i class="fas fa-info-circle"></i> <?php echo __('Item Specifications'); ?></h3></div>
-                <div class="aw-card-body">
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                        <div><label class="aw-label"><?php echo __('UOM'); ?></label><div style="font-weight:700;"><?php echo $MyRow['units']; ?></div></div>
-                        <div><label class="aw-label"><?php echo __('Type'); ?></label><div style="font-weight:700;"><?php echo $MyRow['mbflag']; ?></div></div>
-                        <div><label class="aw-label"><?php echo __('Weight'); ?></label><div style="font-weight:700;"><?php echo locale_number_format($MyRow['grossweight'],3); ?></div></div>
-                    </div>
-                </div>
-            </div>
+        .profile-banner {
+            height: 120px;
+            background: linear-gradient(135deg, hsl(145, 63%, 38%) 0%, hsl(145, 63%, 28%) 100%);
+            position: relative;
+        }
 
-            <div class="aw-card">
-                <div class="aw-card-header"><h3 class="aw-card-title"><i class="fas fa-chart-pie"></i> <?php echo __('Stock Levels'); ?></h3></div>
-                <div class="aw-card-body">
+        .profile-content {
+            padding: 0 2.5rem 2.5rem 2.5rem;
+            position: relative;
+        }
+
+        .profile-image-wrapper {
+            position: relative;
+            margin-top: -60px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .profile-image {
+            width: 140px;
+            height: 140px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 4px solid #ffffff;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .profile-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #f8fafc;
+        }
+
+        .profile-header-text {
+            flex: 1;
+            padding-left: 2rem;
+            padding-top: 1rem;
+        }
+
+        .stock-id-badge {
+            display: inline-block;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 0.35rem 0.85rem;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .profile-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 1rem 0;
+            line-height: 1.2;
+            letter-spacing: -0.5px;
+        }
+
+        .profile-badges {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-badges .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            color: #475569;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid #e2e8f0;
+        }
+
+        .profile-badges .badge-success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .profile-badges .badge-danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .metric-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        .metric-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .metric-content {
+            flex: 1;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #64748b;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1;
+        }
+
+        .specs-container {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .specs-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #334155;
+            margin: 0 0 1.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .spec-item {
+            background: #f8fafc;
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .spec-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .spec-value {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .profile-header-text { padding-left: 0; padding-top: 1.5rem; }
+            .profile-image-wrapper { flex-direction: column; align-items: flex-start; }
+            .profile-content { padding: 0 1.5rem 1.5rem 1.5rem; }
+        }
+    </style>
+
+    <?php 
+    $QOH = ($Its_A_Kitset_Assembly_Or_Dummy ? 0 : GetQuantityOnHand($StockID, 'ALL'));
+    $Demand = GetDemand($StockID, 'ALL');
+    ?>
+
+    <div class="premium-profile-container">
+        <div class="profile-banner"></div>
+        <div class="profile-content">
+            
+            <div class="profile-image-wrapper">
+                <div class="profile-image">
                     <?php 
-                    $QOH = ($Its_A_Kitset_Assembly_Or_Dummy ? 0 : GetQuantityOnHand($StockID, 'ALL'));
-                    $Demand = GetDemand($StockID, 'ALL');
+                    $PicDir = isset($_SESSION['part_pics_dir']) ? $_SESSION['part_pics_dir'] : 'companies/' . $_SESSION['DatabaseName'] . '/part_pics';
+                    $PossibleImageFiles = glob($PicDir . '/' . $StockID . '.{png,jpg,jpeg}', GLOB_BRACE);
+                    $ImageFile = (count($PossibleImageFiles) > 0 ? $PossibleImageFiles[0] : '');
+                    if ($ImageFile) {
+                        echo '<img src="' . $ImageFile . '" alt="' . $StockID . '">';
+                    } else {
+                        echo '<i class="fas fa-box-open" style="font-size: 3.5rem; color: #cbd5e1;"></i>';
+                    }
                     ?>
-                    <div style="display: flex; gap: 2rem;">
-                        <div><div class="aw-label"><?php echo __('On Hand'); ?></div><div style="font-size: 1.5rem; font-weight: 900; color: var(--primary);"><?php echo locale_number_format($QOH, $MyRow['decimalplaces']); ?></div></div>
-                        <div><div class="aw-label"><?php echo __('Demand'); ?></div><div style="font-size: 1.5rem; font-weight: 900; color: #ef4444;"><?php echo locale_number_format($Demand, $MyRow['decimalplaces']); ?></div></div>
+                </div>
+
+                <div class="hide-in-modal" style="margin-bottom: 1rem;">
+                    <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>?NewSearch=Yes" class="aw-btn aw-btn-outline"><i class="fas fa-search"></i> <?php echo __('New Search'); ?></a>
+                </div>
+            </div>
+
+            <div class="profile-header-text">
+                <div class="stock-id-badge"><i class="fas fa-fingerprint"></i> <?php echo $StockID; ?></div>
+                <h1 class="profile-title"><?php echo $MyRow['description']; ?></h1>
+                
+                <div class="profile-badges">
+                    <span class="badge"><i class="fas fa-folder-open"></i> <?php echo $MyRow['categorydescription']; ?></span>
+                    <span class="badge"><i class="fas fa-ruler"></i> <?php echo $MyRow['units']; ?></span>
+                    <span class="badge <?php echo $QOH > 0 ? 'badge-success' : 'badge-danger'; ?>">
+                        <i class="fas <?php echo $QOH > 0 ? 'fa-check-circle' : 'fa-times-circle'; ?>"></i> 
+                        <?php echo $QOH > 0 ? __('In Stock') : __('Out of Stock'); ?>
+                    </span>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: #dcfce7; color: #166534;"><i class="fas fa-cubes"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-label"><?php echo __('Quantity On Hand'); ?></div>
+                        <div class="metric-value <?php echo $QOH > 0 ? 'text-success' : 'text-danger'; ?>">
+                            <?php echo locale_number_format($QOH, $MyRow['decimalplaces']); ?>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: #fef3c7; color: #d97706;"><i class="fas fa-chart-line"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-label"><?php echo __('Demand'); ?></div>
+                        <div class="metric-value" style="color: #d97706;">
+                            <?php echo locale_number_format($Demand, $MyRow['decimalplaces']); ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-icon" style="background: #f1f5f9; color: #475569;"><i class="fas fa-weight-hanging"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-label"><?php echo __('Gross Weight'); ?></div>
+                        <div class="metric-value" style="color: #334155;">
+                            <?php echo locale_number_format($MyRow['grossweight'], 3); ?> <span style="font-size: 1rem; color: #94a3b8;">kg</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </main>
-
-        <!-- RIGHT: SIDEBAR -->
-        <aside>
-            <div class="aw-card" style="padding: 1rem; text-align: center;">
-                <?php 
-                $PossibleImageFiles = glob(($_SESSION["part_pics_dir"] ?? "part_pics") . '/' . $StockID . '.{png,jpg,jpeg}', GLOB_BRACE);
-                $ImageFile = (count($PossibleImageFiles) > 0 ? $PossibleImageFiles[0] : '');
-                echo GetImageLink($ImageFile, $StockID, 200, 200, "max-width: 100%; height: auto; border-radius: 8px;");
-                ?>
-            </div>
-            <div class="aw-card">
-                <div class="aw-card-header"><h3 class="aw-card-title"><i class="fas fa-bolt"></i> <?php echo __('Quick Actions'); ?></h3></div>
-                <div class="aw-card-body" style="display: grid; gap: 0.5rem;">
-                    <a href="Stocks.php?StockID=<?php echo urlencode($StockID); ?>" class="aw-btn aw-btn-outline w-100" style="justify-content: flex-start; border: none;"><i class="fas fa-edit"></i> <?php echo __('Edit Item'); ?></a>
-                    <a href="StockStatus.php?StockID=<?php echo urlencode($StockID); ?>" class="aw-btn aw-btn-outline w-100" style="justify-content: flex-start; border: none;"><i class="fas fa-warehouse"></i> <?php echo __('Stock Status'); ?></a>
-                    <a href="StockMovements.php?StockID=<?php echo urlencode($StockID); ?>" class="aw-btn aw-btn-outline w-100" style="justify-content: flex-start; border: none;"><i class="fas fa-exchange-alt"></i> <?php echo __('Movements'); ?></a>
+            
+            <div class="specs-container">
+                <h3 class="specs-title"><i class="fas fa-list-alt"></i> <?php echo __('Item Specifications'); ?></h3>
+                <div class="specs-grid">
+                    <div class="spec-item">
+                        <span class="spec-label"><?php echo __('Item Type'); ?></span>
+                        <span class="spec-value"><?php echo $MyRow['mbflag']; ?></span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label"><?php echo __('Volume'); ?></span>
+                        <span class="spec-value"><?php echo locale_number_format($MyRow['volume'], 3); ?> m³</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label"><?php echo __('Net Weight'); ?></span>
+                        <span class="spec-value"><?php echo locale_number_format($MyRow['netweight'], 3); ?> kg</span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label"><?php echo __('Barcode'); ?></span>
+                        <span class="spec-value"><?php echo !empty($MyRow['barcode']) ? $MyRow['barcode'] : '-'; ?></span>
+                    </div>
+                    <div class="spec-item">
+                        <span class="spec-label"><?php echo __('Pack Size'); ?></span>
+                        <span class="spec-value"><?php echo $MyRow['pansize']; ?></span>
+                    </div>
                 </div>
             </div>
-        </aside>
+
+            <!-- Quick Actions Footer -->
+            <?php include(__DIR__ . '/includes/ItemQuickActions.php'); ?>
+        </div>
     </div>
 
 <?php 
@@ -209,63 +502,63 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
 ?>
     <div class="aw-header">
         <div>
-            <div class="aw-breadcrumb"><?php echo __('Inventory'); ?> / <?php echo __('Listing'); ?></div>
-            <h1 class="aw-title"><?php echo $Title; ?></h1>
+
+            <h1 class="aw-title"><?php echo __('Inventory Hub'); ?></h1>
+        </div>
+        <div>
+            <button type="button" onclick="openModal('Stocks.php', 'Add New Item')" class="aw-btn aw-btn-primary"><i class="fas fa-plus"></i> <?php echo __('Add New Item'); ?></button>
         </div>
     </div>
 
-    <div class="aw-layout-grid aw-layout-search">
-        <!-- LEFT: FILTERS -->
-        <aside>
-            <div class="aw-card">
-                <div class="aw-card-header"><h3 class="aw-card-title"><i class="fas fa-search"></i> <?php echo __('Search Filters'); ?></h3></div>
-                <div class="aw-card-body">
-                    <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" method="post">
-                        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
-                        <div class="aw-field-group">
-                            <label class="aw-label"><?php echo __('Category'); ?></label>
-                            <select name="StockCat" class="aw-select">
-                                <option value="All"><?php echo __('All Categories'); ?></option>
-                                <?php 
-                                DB_data_seek($Result1, 0);
-                                while ($cRow = DB_fetch_array($Result1)) {
-                                    echo '<option ' . (($_POST['StockCat'] ?? '') == $cRow['categoryid'] ? 'selected' : '') . ' value="' . $cRow['categoryid'] . '">' . $cRow['categorydescription'] . '</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="aw-field-group">
-                            <label class="aw-label"><?php echo __('Stock Status'); ?></label>
-                            <select name="StockFilter" class="aw-select">
-                                <option value="All" <?php if ($_POST['StockFilter'] == 'All') echo 'selected'; ?>><?php echo __('All Registered Items'); ?></option>
-                                <option value="InStock" <?php if ($_POST['StockFilter'] == 'InStock') echo 'selected'; ?>><?php echo __('In-Stock Only'); ?></option>
-                                <option value="OutOfStock" <?php if ($_POST['StockFilter'] == 'OutOfStock') echo 'selected'; ?>><?php echo __('Out-of-Stock Only'); ?></option>
-                            </select>
-                        </div>
-                        <div class="aw-field-group">
-                            <label class="aw-label"><?php echo __('Keywords'); ?></label>
-                            <input type="text" name="Keywords" class="aw-input" value="<?php echo $_POST['Keywords'] ?? ''; ?>" />
-                        </div>
-                        <div class="aw-field-group">
-                            <label class="aw-label"><?php echo __('Stock Code'); ?></label>
-                            <input type="text" name="StockCode" class="aw-input" value="<?php echo $_POST['StockCode'] ?? ''; ?>" />
-                        </div>
-                        <button type="submit" name="Search" class="aw-btn aw-btn-primary w-100"><i class="fas fa-sync"></i> <?php echo __('Find Items'); ?></button>
-                    </form>
-                </div>
+    <div class="aw-layout-search">
+        <!-- TOP: PREMIUM HORIZONTAL FILTERS -->
+        <form id="FilterBar" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" method="post" class="premium-filter-bar">
+            <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
+            
+            <div class="aw-field-group">
+                <label class="aw-label"><?php echo __('Category'); ?></label>
+                <select name="StockCat" class="aw-select">
+                    <option value="All"><?php echo __('All Categories'); ?></option>
+                    <?php
+                    DB_data_seek($Result1, 0);
+                    while ($cRow = DB_fetch_array($Result1)) {
+                        echo '<option ' . (($_POST['StockCat'] ?? '') == $cRow['categoryid'] ? 'selected' : '') . ' value="' . $cRow['categoryid'] . '">' . $cRow['categorydescription'] . '</option>';
+                    }
+                    ?>
+                </select>
             </div>
-        </aside>
+            
+            <div class="aw-field-group">
+                <label class="aw-label"><?php echo __('Stock Status'); ?></label>
+                <select name="StockFilter" class="aw-select">
+                    <option value="All" <?php if ($_POST['StockFilter'] == 'All') echo 'selected'; ?>><?php echo __('All Registered Items'); ?></option>
+                    <option value="InStock" <?php if ($_POST['StockFilter'] == 'InStock') echo 'selected'; ?>><?php echo __('In-Stock Only'); ?></option>
+                    <option value="OutOfStock" <?php if ($_POST['StockFilter'] == 'OutOfStock') echo 'selected'; ?>><?php echo __('Out-of-Stock Only'); ?></option>
+                </select>
+            </div>
+            
+            <div class="aw-field-group">
+                <label class="aw-label"><?php echo __('Keywords'); ?></label>
+                <input type="text" name="Keywords" class="aw-input" placeholder="<?php echo __('Search names...'); ?>" value="<?php echo $_POST['Keywords'] ?? ''; ?>" />
+            </div>
+            
+            <div class="aw-field-group">
+                <label class="aw-label"><?php echo __('Stock Code'); ?></label>
+                <input type="text" name="StockCode" class="aw-input" placeholder="<?php echo __('Exact code...'); ?>" value="<?php echo $_POST['StockCode'] ?? ''; ?>" />
+            </div>
+            
+            <button type="submit" name="Search" class="aw-btn aw-btn-primary"><i class="fas fa-search"></i> <?php echo __('Filter'); ?></button>
+        </form>
 
-        <!-- RIGHT: RESULTS WITH RESPONSIVE PAGINATION -->
-        <main>
+        <!-- RESULTS WITH RESPONSIVE PAGINATION -->
+        <main id="SearchResultsMain">
             <?php 
             if (isset($SearchResult)) {
                 $ListCount = DB_num_rows($SearchResult);
-                $DisplayMax = 15; // Set a modern compact limit to avoid scrolling
+                $DisplayMax = 8; // Set a modern compact limit to avoid scrolling
                 $MaxPages = ceil($ListCount / $DisplayMax);
                 $PageOffset = $_POST['PageOffset'] ?? 1;
-
-                if ($ListCount > 0): ?>
+                ?>
                     <div class="aw-card">
                         <div class="aw-card-header" style="justify-content: space-between;">
                             <h3 class="aw-card-title"><i class="fas fa-list"></i> <?php echo __('Inventory Records'); ?></h3>
@@ -278,80 +571,56 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="aw-card-body p-0">
-                            <div style="overflow-x: auto;">
-                                <table class="aw-table">
-                                    <thead>
-                                        <tr>
-                                            <th><?php echo __('Code'); ?></th>
-                                            <th><?php echo __('Description'); ?></th>
-                                            <th class="number"><?php echo __('On Hand'); ?></th>
-                                            <th><?php echo __('Units'); ?></th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php 
-                                        DB_data_seek($SearchResult, ($PageOffset - 1) * $DisplayMax);
-                                        $i = 0;
-                                        while ($row = DB_fetch_array($SearchResult) AND ($i < $DisplayMax)): ?>
-                                            <tr>
-                                                <td style="font-weight: 700; color: var(--primary);"><?php echo $row['stockid']; ?></td>
-                                                <td style="font-weight: 600;"><?php echo $row['description']; ?></td>
-                                                <td class="number" style="color: <?php echo ($row['qoh'] > 0 ? '#166534' : '#ef4444'); ?>;"><?php echo locale_number_format($row['qoh'], $row['decimalplaces']); ?></td>
-                                                <td><?php echo $row['units']; ?></td>
-                                                <td style="text-align: right;">
-                                                    <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
-                                                        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
-                                                        <button type="submit" name="Select" value="<?php echo $row['stockid']; ?>" class="aw-btn aw-btn-outline aw-btn-sm"><?php echo __('Select'); ?></button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                        <?php 
-                                        $i++;
-                                        endwhile; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="aw-card-body p-0" style="padding: 1rem;">
+                            <?php
+                            include_once(__DIR__ . '/includes/UIComponents.php');
                             
-                            <!-- MODERN RESPONSIVE PAGINATION -->
-                            <?php if ($MaxPages > 1): ?>
-                                <div class="aw-pagination">
-                                    <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" style="display: flex; gap: 0.5rem;">
-                                        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
-                                        <input type="hidden" name="StockCat" value="<?php echo $_POST['StockCat']; ?>" />
-                                        <input type="hidden" name="StockFilter" value="<?php echo $_POST['StockFilter']; ?>" />
-                                        <input type="hidden" name="Keywords" value="<?php echo $_POST['Keywords']; ?>" />
-                                        <input type="hidden" name="StockCode" value="<?php echo $_POST['StockCode']; ?>" />
-                                        <input type="hidden" name="Search" value="Search" />
-
-                                        <!-- Prev -->
-                                        <button type="submit" name="PageOffset" value="<?php echo $PageOffset - 1; ?>" class="aw-page-link <?php if ($PageOffset <= 1) echo 'disabled'; ?>"><i class="fas fa-chevron-left"></i></button>
-                                        
-                                        <!-- Page Numbers (Modern Responsive Logic) -->
-                                        <?php 
-                                        $range = 2;
-                                        for ($p = 1; $p <= $MaxPages; $p++): 
-                                            if ($p == 1 || $p == $MaxPages || ($p >= $PageOffset - $range && $p <= $PageOffset + $range)):
-                                        ?>
-                                            <button type="submit" name="PageOffset" value="<?php echo $p; ?>" class="aw-page-link <?php if ($p == $PageOffset) echo 'active'; ?>"><?php echo $p; ?></button>
-                                        <?php 
-                                            elseif ($p == $PageOffset - $range - 1 || $p == $PageOffset + $range + 1):
-                                                echo '<span style="color: var(--text-muted);">...</span>';
-                                            endif;
-                                        endfor; 
-                                        ?>
-
-                                        <!-- Next -->
-                                        <button type="submit" name="PageOffset" value="<?php echo $PageOffset + 1; ?>" class="aw-page-link <?php if ($PageOffset >= $MaxPages) echo 'disabled'; ?>"><i class="fas fa-chevron-right"></i></button>
-                                    </form>
-                                </div>
-                            <?php endif; ?>
+                            $columns = [__('Code'), __('Item Name'), __('Category'), __('Type'), __('On Hand'), __('Units'), __('Actions')];
+                            $rows = [];
+                            
+                            DB_data_seek($SearchResult, ($PageOffset - 1) * $DisplayMax);
+                            $i = 0;
+                            while ($row = DB_fetch_array($SearchResult) AND ($i < $DisplayMax)) {
+                                $qohColor = $row['qoh'] > 0 ? '#166534' : '#ef4444';
+                                $actions = '<div style="display: flex; gap: 4px; justify-content: flex-end;">
+                                                <button type="button" onclick="openModal(\'Stocks.php?StockID='.urlencode($row['stockid']).'\', \'Edit Item\')" class="aw-btn aw-btn-outline aw-btn-sm" title="'.__('Edit Item').'"><i class="fas fa-edit"></i> '.__('Edit').'</button>
+                                                <button type="button" onclick="openModal(\'StockStatus.php?StockID='.urlencode($row['stockid']).'\', \'View Status\')" class="aw-btn aw-btn-outline aw-btn-sm" title="'.__('View Status').'"><i class="fas fa-eye"></i> '.__('View').'</button>
+                                                <button type="button" onclick="openModal(\'SelectProduct.php?StockID='.urlencode($row['stockid']).'\', \'Item Details\')" class="aw-btn aw-btn-outline aw-btn-sm" title="'.__('More Actions').'"><i class="fas fa-ellipsis-v"></i> '.__('Select').'</button>
+                                            </div>';
+                                
+                                $rows[] = [
+                                    '<span style="font-weight: 700; color: var(--primary);">' . $row['stockid'] . '</span>',
+                                    '<div style="font-weight: 600; white-space: normal; min-width: 150px; max-width: 350px;">' . $row['description'] . '</div>',
+                                    $row['categorydescription'],
+                                    $row['stocktype'],
+                                    '<span class="number" style="color: '.$qohColor.';">' . locale_number_format($row['qoh'], $row['decimalplaces']) . '</span>',
+                                    $row['units'],
+                                    $actions
+                                ];
+                                $i++;
+                            }
+                            
+                            render_modern_table($columns, $rows, false, ['emptyMessage' => __('No items found matching your criteria.')]);
+                            
+                            if ($MaxPages > 1) {
+                                echo '<form method="post" action="'.htmlspecialchars($_SERVER['PHP_SELF']).'">';
+                                echo '<input type="hidden" name="FormID" value="'.$_SESSION['FormID'].'" />';
+                                echo '<input type="hidden" name="StockCat" value="'.$_POST['StockCat'].'" />';
+                                echo '<input type="hidden" name="StockFilter" value="'.$_POST['StockFilter'].'" />';
+                                echo '<input type="hidden" name="Keywords" value="'.($_POST['Keywords'] ?? '').'" />';
+                                echo '<input type="hidden" name="StockCode" value="'.($_POST['StockCode'] ?? '').'" />';
+                                echo '<input type="hidden" name="Search" value="Search" />';
+                                
+                                // render_modern_pagination_form expects totalRows, page, perPage
+                                render_modern_pagination_form($ListCount, $PageOffset, $DisplayMax);
+                                
+                                echo '</form>';
+                            }
+                            ?>
                         </div>
                     </div>
-                <?php else: ?>
-                    <div class="aw-card"><div class="aw-card-body text-center" style="padding: 4rem;"><p><?php echo __('No items found matching your criteria.'); ?></p></div></div>
-                <?php endif;
+                
+            <?php
             }
             ?>
         </main>
@@ -360,16 +629,205 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
 
 </div>
 
+
+<!-- GLASS MODAL -->
+<style>
+.glass-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+.glass-modal-content {
+    background: #ffffff;
+    width: 90%;
+    max-width: 1400px;
+    height: 90vh;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.glass-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+.glass-modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+}
+.glass-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 0.5rem;
+    line-height: 1;
+}
+.glass-modal-close:hover {
+    color: #ef4444;
+}
+.glass-modal-body {
+    flex: 1;
+    overflow: hidden;
+    background: #f8fafc;
+}
+.glass-modal-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    flex: 1;
+    display: block;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Premium Revamp Styles */
+    .premium-filter-bar {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: flex-end;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    .premium-filter-bar .aw-field-group { margin-bottom: 0; flex: 1; min-width: 150px; }
+    .premium-filter-bar .aw-btn { height: 38px; align-self: flex-end; }
+    
+    .premium-table-container {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        border: 1px solid var(--border-soft); overflow: hidden;
+        overflow: hidden;
+    }
+    .aw-table th { background: #f8fafc; color: #475569; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+    .aw-table tr { transition: all 0.2s ease; }
+    .aw-table tr:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.02); z-index: 1; position: relative; }
+    
+    /* Remove old grid layout */
+    .aw-layout-search { display: block; }
+</style>
+
+<div class="glass-modal-overlay" id="inventoryModal">
+    <div class="glass-modal-content">
+        <div class="glass-modal-header">
+            <h3 class="glass-modal-title" id="inventoryModalTitle">Item Hub</h3>
+            <button class="glass-modal-close" onclick="closeModal()" style="font-size: 24px; font-weight: bold; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f1f5f9;">&times;</button>
+        </div>
+        <div class="glass-modal-body" style="display: flex; flex-direction: column;">
+            <iframe class="glass-modal-iframe" id="inventoryModalFrame"></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+function openModal(url, title) {
+    document.getElementById('inventoryModalTitle').innerText = title;
+    if (url.includes('?')) {
+        url += '&modal=1&t=' + new Date().getTime();
+    } else {
+        url += '?modal=1&t=' + new Date().getTime();
+    }
+    document.getElementById('inventoryModalFrame').src = url;
+    document.getElementById('inventoryModal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('inventoryModal').style.display = 'none';
+    document.getElementById('inventoryModalFrame').src = '';
+    window.location.reload();
+}
+
+window.addEventListener('message', function(event) {
+    if (event.data === 'closeModalAndRefresh') {
+        closeModal();
+    }
+});
+</script>
+
 <?php 
+
+?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('FilterBar');
+    if (!filterForm) return;
+
+    let debounceTimer;
+
+    function fetchResults() {
+        const mainContainer = document.getElementById('SearchResultsMain');
+        if (mainContainer) mainContainer.style.opacity = '0.5';
+
+        const formData = new FormData(filterForm);
+        formData.append('Search', 'Filter'); 
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newMain = doc.getElementById('SearchResultsMain');
+            if (newMain && mainContainer) {
+                mainContainer.innerHTML = newMain.innerHTML;
+                mainContainer.style.opacity = '1';
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            if (mainContainer) mainContainer.style.opacity = '1';
+        });
+    }
+
+    filterForm.querySelectorAll('select').forEach(el => {
+        el.addEventListener('change', fetchResults);
+    });
+
+    filterForm.querySelectorAll('input[type="text"]').forEach(el => {
+        el.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(fetchResults, 400); 
+        });
+    });
+});
+</script>
+<?php
 include(__DIR__ . '/includes/footer.php');
+
 
 function PrepareSearchString(string $InputString): string {
     return '%' . str_replace(' ', '%', mb_strtoupper($InputString)) . '%';
 }
 
 function GenerateStockmasterQuery(array $post): string {
-    $SQL = "SELECT stockmaster.stockid, stockmaster.description, SUM(locstock.quantity) AS qoh, stockmaster.units, stockmaster.decimalplaces
-            FROM stockmaster LEFT JOIN locstock ON stockmaster.stockid = locstock.stockid ";
+    $SQL = "SELECT stockmaster.stockid, stockmaster.description, SUM(locstock.quantity) AS qoh, stockmaster.units, stockmaster.decimalplaces, stockcategory.categorydescription, stockcategory.stocktype
+            FROM stockmaster 
+            LEFT JOIN stockcategory ON stockmaster.categoryid = stockcategory.categoryid
+            LEFT JOIN locstock ON stockmaster.stockid = locstock.stockid ";
     $WhereSQL = " WHERE 1=1 "; 
     if (isset($post['Keywords']) && mb_strlen($post['Keywords']) > 0) {
         $SearchString = PrepareSearchString($post['Keywords']);
@@ -382,7 +840,7 @@ function GenerateStockmasterQuery(array $post): string {
         $WhereSQL .= "AND stockmaster.categoryid = '" . $post['StockCat'] . "' ";
     }
     
-    $SQL .= $WhereSQL . " GROUP BY stockmaster.stockid, stockmaster.description, stockmaster.units, stockmaster.decimalplaces ";
+    $SQL .= $WhereSQL . " GROUP BY stockmaster.stockid, stockmaster.description, stockmaster.units, stockmaster.decimalplaces, stockcategory.categorydescription, stockcategory.stocktype ";
     
     // Applying the Stock Filter
     if ($post['StockFilter'] == 'InStock') {

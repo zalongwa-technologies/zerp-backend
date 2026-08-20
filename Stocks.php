@@ -64,10 +64,11 @@ if (isset($_POST['New'])) {
 
 // IMAGE HANDLING
 $SupportedImgExt = array('png', 'jpg', 'jpeg');
+$PartPicsDir = (isset($_SESSION['part_pics_dir'])) ? $_SESSION['part_pics_dir'] : 'companies/' . $_SESSION['DatabaseName'] . '/part_pics';
 if (isset($_FILES['ItemPicture']) and $_FILES['ItemPicture']['name'] != '') {
 	$ImgExt = pathinfo($_FILES['ItemPicture']['name'], PATHINFO_EXTENSION);
 	$UploadTheFile = 'Yes';
-	$FileName = $_SESSION['part_pics_dir'] . '/' . $StockID . '.' . $ImgExt;
+	$FileName = $PartPicsDir . '/' . $StockID . '.' . $ImgExt;
 	if (!in_array($ImgExt, $SupportedImgExt)) {
 		prnMsg(__('Only ' . implode(", ", $SupportedImgExt) . ' files are supported'), 'warn');
 		$UploadTheFile = 'No';
@@ -76,8 +77,11 @@ if (isset($_FILES['ItemPicture']) and $_FILES['ItemPicture']['name'] != '') {
 		$UploadTheFile = 'No';
 	}
 	if ($UploadTheFile == 'Yes') {
+		if (!file_exists($PartPicsDir)) {
+			mkdir($PartPicsDir, 0777, true);
+		}
 		foreach ($SupportedImgExt as $Ext) {
-			$File = $_SESSION['part_pics_dir'] . '/' . $StockID . '.' . $Ext;
+			$File = $PartPicsDir . '/' . $StockID . '.' . $Ext;
 			if (file_exists($File)) unlink($File);
 		}
 		move_uploaded_file($_FILES['ItemPicture']['tmp_name'], $FileName);
@@ -160,6 +164,7 @@ if (isset($_POST['submit'])) {
 	}
 }
 
+if (isset($StockID) && $StockID != "" && !isset($_POST["submit"])) { $ResMaster = DB_query("SELECT * FROM stockmaster WHERE stockid='" . $StockID . "'"); $Master = DB_fetch_array($ResMaster); if ($Master) { $_POST = array_merge($_POST, $Master); } }
 ?>
 <style>
     :root {
@@ -471,21 +476,14 @@ if (isset($_POST['submit'])) {
                 <?php endif; ?>
             </h1>
         </div>
-        <div style="display: flex; gap: 10px;">
-            <?php if (isset($StockID) && $StockID != '' && $InputError == 0): ?>
-                <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" style="display:inline-block">
-                    <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
-                    <input type="hidden" name="StockID" value="<?php echo $StockID; ?>" />
-                    <button <?php echo ($HasPrev ? '' : 'disabled'); ?> name="PreviousItem" type="submit" class="aw-btn aw-btn-outline aw-btn-sm" title="<?php echo __('Prev'); ?>"><i class="fas fa-chevron-left"></i></button>
-                    <button <?php echo ($HasNext ? '' : 'disabled'); ?> name="NextItem" type="submit" class="aw-btn aw-btn-outline aw-btn-sm" title="<?php echo __('Next'); ?>"><i class="fas fa-chevron-right"></i></button>
-                </form>
-            <?php endif; ?>
-            <a href="<?php echo $RootPath; ?>/SelectProduct.php" class="aw-btn aw-btn-outline aw-btn-sm"><i class="fas fa-search"></i> <?php echo __('Catalogue'); ?></a>
-        </div>
+        <div></div>
     </div>
 
     <form id="StockForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" enctype="multipart/form-data">
         <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
+        <?php if (isset($_GET['modal']) || isset($_POST['modal'])): ?>
+            <input type="hidden" name="modal" value="1" />
+        <?php endif; ?>
         
         <div class="aw-layout-grid">
             <!-- MAIN COLUMN -->
@@ -499,7 +497,7 @@ if (isset($_POST['submit'])) {
                         <div class="aw-form-grid">
                             <?php if ($New): ?>
                                 <div class="aw-field-group">
-                                    <label class="aw-label"><?php echo __('Item SKU'); ?> *</label>
+                                    <label class="aw-label"><?php echo __('Item Code'); ?> *</label>
                                     <input type="text" name="StockID" class="aw-input" required maxlength="20" autofocus value="<?php echo ($StockID ?? ''); ?>" />
                                 </div>
                             <?php else: ?>
@@ -507,12 +505,12 @@ if (isset($_POST['submit'])) {
                             <?php endif; ?>
 
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('Short Name'); ?> *</label>
+                                <label class="aw-label"><?php echo __('Product Name'); ?> *</label>
                                 <input type="text" name="Description" class="aw-input" required maxlength="50" value="<?php echo ($_POST['description'] ?? $_POST['Description'] ?? ''); ?>" />
                             </div>
                             
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('Classification'); ?></label>
+                                <label class="aw-label"><?php echo __('Category'); ?></label>
                                 <select name="CategoryID" class="aw-select" onchange="document.getElementById('StockForm').submit()">
                                     <?php 
                                     $CatsRes = DB_query("SELECT categoryid, categorydescription FROM stockcategory");
@@ -524,7 +522,7 @@ if (isset($_POST['submit'])) {
                             </div>
                             
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('Make or Buy Flag'); ?></label>
+                                <label class="aw-label"><?php echo __('Item Type'); ?></label>
                                 <select name="MBFlag" class="aw-select">
                                     <option <?php echo (($_POST['mbflag'] ?? $_POST['MBFlag'] ?? 'B') == 'B' ? 'selected' : ''); ?> value="B"><?php echo __('Purchased'); ?></option>
                                     <option <?php echo (($_POST['mbflag'] ?? $_POST['MBFlag'] ?? 'B') == 'M' ? 'selected' : ''); ?> value="M"><?php echo __('Manufactured'); ?></option>
@@ -537,8 +535,13 @@ if (isset($_POST['submit'])) {
                         </div>
 
                         <div class="aw-field-group" style="margin-top: 1.5rem;">
-                            <label class="aw-label"><?php echo __('Technical / Marketing Description'); ?></label>
+                            <label class="aw-label"><?php echo __('Detailed Description'); ?></label>
                             <textarea name="LongDescription" class="aw-textarea" rows="4"><?php echo ($_POST['longdescription'] ?? $_POST['LongDescription'] ?? ''); ?></textarea>
+                        </div>
+                        
+                        <div class="aw-field-group" style="margin-top: 1.5rem;">
+                            <label class="aw-label"><?php echo __('Product Image (Optional)'); ?></label>
+                            <input type="file" name="ItemPicture" class="aw-input" accept="image/*" />
                         </div>
                     </div>
                 </div>
@@ -551,7 +554,7 @@ if (isset($_POST['submit'])) {
                     <div class="aw-card-body">
                         <div class="aw-form-grid-4">
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('UOM'); ?></label>
+                                <label class="aw-label"><?php echo __('Unit of Measure'); ?></label>
                                 <select name="Units" class="aw-select">
                                     <?php 
                                     $UnitsRes = DB_query("SELECT unitname FROM unitsofmeasure");
@@ -562,7 +565,7 @@ if (isset($_POST['submit'])) {
                                 </select>
                             </div>
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('Precision'); ?></label>
+                                <label class="aw-label"><?php echo __('Decimal Places'); ?></label>
                                 <select name="DecimalPlaces" class="aw-select">
                                     <option value="0" <?php echo (($_POST['decimalplaces'] ?? $_POST['DecimalPlaces'] ?? 0) == 0 ? 'selected' : ''); ?>>0</option>
                                     <option value="1" <?php echo (($_POST['decimalplaces'] ?? $_POST['DecimalPlaces'] ?? 0) == 1 ? 'selected' : ''); ?>>1</option>
@@ -576,7 +579,7 @@ if (isset($_POST['submit'])) {
                                 <input type="text" name="BarCode" class="aw-input" maxlength="20" value="<?php echo ($_POST['barcode'] ?? $_POST['BarCode'] ?? ''); ?>" />
                             </div>
                             <div class="aw-field-group">
-                                <label class="aw-label"><?php echo __('Standard EOQ'); ?></label>
+                                <label class="aw-label"><?php echo __('Economic Order Qty (EOQ)'); ?></label>
                                 <input type="number" step="any" name="EOQ" class="aw-input text-right" value="<?php echo filter_number_format($_POST['eoq'] ?? $_POST['EOQ'] ?? 0); ?>" />
                             </div>
                         </div>
@@ -676,39 +679,13 @@ if (isset($_POST['submit'])) {
 
                 <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
                     <button type="submit" name="submit" class="aw-btn aw-btn-primary">
-                        <i class="fas fa-save"></i> <?php echo __('Sync Item Details'); ?>
+                        <i class="fas fa-save"></i> <?php echo ($New == 1 ? __('Add Item') : __('Save Item')); ?>
                     </button>
                 </div>
             </main>
 
             <!-- SIDEBAR COLUMN -->
             <aside>
-                <!-- ASSET IMAGE CARD -->
-                <?php if ($StockID != ''): ?>
-                    <div class="aw-card">
-                        <div class="aw-card-header">
-                            <h3 class="aw-card-title"><i class="fas fa-image"></i> <?php echo __('Asset Visual'); ?></h3>
-                        </div>
-                        <div class="aw-card-body text-center">
-                            <div class="aw-image-container">
-                                <?php 
-                                $PartPicsDir = (isset($_SESSION['part_pics_dir'])) ? $_SESSION['part_pics_dir'] : 'companies/' . $_SESSION['DatabaseName'] . '/part_pics';
-                                $ImgGlob = glob($PartPicsDir . '/' . $StockID . '.{' . implode(",", $SupportedImgExt) . '}', GLOB_BRACE);
-                                $Pic = reset($ImgGlob);
-                                if ($Pic): ?>
-                                    <img src="<?php echo $Pic; ?>" />
-                                <?php else: ?>
-                                    <i class="fas fa-image fa-4x" style="color: var(--border);"></i>
-                                <?php endif; ?>
-                            </div>
-                            <input type="file" name="ItemPicture" id="PicUp" style="display: none;" onchange="this.form.submit()" />
-                            <button type="button" class="aw-btn aw-btn-outline aw-btn-sm w-100" onclick="document.getElementById('PicUp').click()">
-                                <i class="fas fa-upload"></i> <?php echo __('Update Photo'); ?>
-                            </button>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
                 <!-- ATTRIBUTE FLAGS CARD -->
                 <div class="aw-card">
                     <div class="aw-card-header">
@@ -739,31 +716,6 @@ if (isset($_POST['submit'])) {
                     </div>
                 </div>
 
-                <!-- QUICK ACTIONS CARD -->
-                <?php if (isset($StockID) && $StockID != '' && $New == 0): ?>
-                    <div class="aw-card">
-                        <div class="aw-card-header">
-                            <h3 class="aw-card-title"><i class="fas fa-bolt"></i> <?php echo __('Quick Actions'); ?></h3>
-                        </div>
-                        <div class="aw-card-body">
-                            <a href="<?php echo $RootPath; ?>/SelectProduct.php?StockID=<?php echo urlencode($StockID); ?>" class="aw-quick-action-link">
-                                <i class="fas fa-chart-line"></i> <?php echo __('Inventory Dashboard'); ?>
-                            </a>
-                            <a href="<?php echo $RootPath; ?>/Prices.php?Item=<?php echo urlencode($StockID); ?>" class="aw-quick-action-link">
-                                <i class="fas fa-tag"></i> <?php echo __('Maintain Pricing'); ?>
-                            </a>
-                            <a href="<?php echo $RootPath; ?>/PurchData.php?StockID=<?php echo urlencode($StockID); ?>" class="aw-quick-action-link">
-                                <i class="fas fa-truck"></i> <?php echo __('Assign Suppliers'); ?>
-                            </a>
-                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-soft);">
-                                <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" class="aw-btn aw-btn-outline aw-btn-sm w-100">
-                                    <i class="fas fa-plus-circle"></i> <?php echo __('Add Another Item'); ?>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
                 <div class="aw-card" style="background: var(--primary-soft); border-color: var(--primary);">
                     <div class="aw-card-body">
                         <div class="aw-label" style="color: var(--primary); margin-bottom: 0.5rem;">
@@ -783,4 +735,5 @@ if (isset($_POST['submit'])) {
 
 <?php 
 include(__DIR__ . '/includes/footer.php');
+if (isset($StockID) && $StockID != "" && !isset($_POST["submit"])) { $ResMaster = DB_query("SELECT * FROM stockmaster WHERE stockid='" . $StockID . "'"); $Master = DB_fetch_array($ResMaster); if ($Master) { $_POST = array_merge($_POST, $Master); } }
 ?>

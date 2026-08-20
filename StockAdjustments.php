@@ -116,16 +116,16 @@ if (isset($_GET['OldIdentifier'])){
 	$_SESSION['Adjustment'.$identifier]->StockLocation=$_SESSION['Adjustment'.$_GET['OldIdentifier']]->StockLocation;
 }
 
-echo '<div class="db-page">
-		<div class="db-page-header">
-			<div class="db-page-title">
-				<i class="fas fa-edit"></i> ' . $Title . '
-			</div>
-			<div class="db-page-actions">
-				<a href="StockStatus.php" class="db-btn db-btn-outline db-btn-small"><i class="fas fa-list"></i> ' . __('Inventory Status') . '</a>
+echo '<div class="premium-status-container" style="max-width: 1200px; margin: 2rem auto; padding-bottom: 2rem; background: var(--surface-main, #fff); border-radius: 16px; border: 1px solid var(--border-soft, #f1f5f9); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+		<div class="status-header" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border-soft, #f1f5f9); background: var(--surface-alt, #f8fafc); border-radius: 16px 16px 0 0; margin-bottom: 0;">
+			<div class="status-title-area">
+				<div class="hide-in-modal" style="font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 0.5rem;">
+					' . __('Inventory') . ' / ' . __('Stock Adjustments') . '
+				</div>
+				<h1 style="margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-sliders-h" style="color: var(--primary);"></i> ' . $Title . '</h1>
 			</div>
 		</div>
-		<div class="db-page-content">';
+		<div style="padding: 2rem;">';
 
 if (isset($_POST['CheckCode'])) {
 
@@ -380,7 +380,11 @@ if (isset($_POST['EnterAdjustment'])){
 
 		}
 		$StockID = $_SESSION['Adjustment' . $identifier]->StockID;
-		unset ($_SESSION['Adjustment' . $identifier]);
+        $_SESSION['Adjustment' . $identifier]->Quantity = 0;
+        $_SESSION['Adjustment' . $identifier]->Narrative = '';
+        if (isset($_SESSION['Adjustment' . $identifier]->SerialItems)) {
+            $_SESSION['Adjustment' . $identifier]->SerialItems = array();
+        }
 	} /* end if there was no input error */
 
 }/* end if the user hit enter the adjustment */
@@ -414,60 +418,49 @@ if (!isset($_SESSION['Adjustment' . $identifier])) {
 	}
 }
 
-echo '<div class="db-bottom-layout">';
-
-
-echo '<aside class="db-col-aside">
-		<div class="db-card">
-			<div class="db-card-header">
-				<div class="db-card-title"><i class="fas fa-search"></i> ' . __('Search Item') . '</div>
-			</div>
-			<div class="db-card-body">
-				<div class="db-field">
-					<label for="ItemSearch">' . __('Code or Description') . '</label>
-					<div class="db-search-wrapper">
-						<input type="text" id="ItemSearch" class="db-input" autocomplete="off" placeholder="' . __('Start typing...') . '" />
-						<div id="SearchResults" class="db-search-results" style="display:none"></div>
-					</div>
-				</div>';
-
-if (isset($_SESSION['Adjustment' . $identifier]) AND mb_strlen($_SESSION['Adjustment' . $identifier]->ItemDescription)>1){
-	echo '		<div class="db-field" style="margin-top: 20px;">
-					<label>' . __('Currently Selected') . '</label>
-					<div class="db-selected-item-box" style="background: var(--primary-soft); border: 1px solid var(--primary-light); padding: 15px; border-radius: var(--radius-md);">
-						<div class="db-font-bold text-primary" style="font-size: 1rem;">' . $_SESSION['Adjustment' . $identifier]->StockID . '</div>
-						<div style="font-size: 0.85rem; color: var(--text-main); margin: 4px 0;">' . $_SESSION['Adjustment' . $identifier]->ItemDescription . '</div>
-						<div style="font-size: 0.75rem; color: var(--text-muted);">' . __('UOM') . ': ' . $_SESSION['Adjustment' . $identifier]->PartUnit . ' | ' . __('Cost') . ': ' . locale_number_format($_SESSION['Adjustment' . $identifier]->StandardCost, 4) . '</div>
-					</div>
-				</div>';
+if (empty($_SESSION['Adjustment' . $identifier]->StockID)) {
+        prnMsg(__('Select an item to adjust from the') . ' <a href="' . $RootPath . '/SelectProduct.php">' . __('Select Item') . '</a> ' . __('page'), 'info');
+        echo '<br />';
+        include(__DIR__ . '/includes/footer.php');
+        exit;
 }
 
-echo '		</div>
-		</div>
-	  </aside>';
+echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post">
+                        <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 
-echo '<main class="db-col-main">';
-
-
-	echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post">
-			<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+if (isset($_GET['modal']) || isset($_POST['modal'])) {
+    echo '<input type="hidden" name="modal" value="1" />';
+}
 
 if (isset($_SESSION['Adjustment' . $identifier]) AND mb_strlen($_SESSION['Adjustment' . $identifier]->ItemDescription)>1){
-	echo '		<input type="hidden" name="StockID" id="StockID" value="' . $_SESSION['Adjustment' . $identifier]->StockID . '" />';
+        echo '          <input type="hidden" name="StockID" id="StockID" value="' . $_SESSION['Adjustment' . $identifier]->StockID . '" />';
 } else {
-	echo '		<input type="hidden" name="StockID" id="StockID" value="' . $StockID . '" />';
+        echo '          <input type="hidden" name="StockID" id="StockID" value="' . $StockID . '" />';
 }
 
-echo '			
-			<div class="db-card">
-				<div class="db-card-header">
-					<div class="db-card-title"><i class="fas fa-sliders-h"></i> ' . __('Adjustment Details') . '</div>
-				</div>
-				<div class="db-card-body">
 
-			<div class="db-field">
-				<label for="StockLocation">'. __('Location').':</label>
-				<select name="StockLocation" class="db-select" onchange="this.form.submit();"> ';
+echo '
+    <div style="max-width: 800px; margin: 0 auto;">';
+
+if (isset($_SESSION['Adjustment' . $identifier]) AND mb_strlen($_SESSION['Adjustment' . $identifier]->ItemDescription)>1){
+        echo '          <div class="aw-field-group" style="display:flex; flex-direction:column; gap:0.4rem; margin-bottom: 1.5rem;">
+                                        <label class="aw-label" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">' . __('Currently Selected') . '</label>
+                                        <div style="background: var(--primary-soft, #f0fdf4); border: 1px solid var(--primary, #22c55e); padding: 1rem; border-radius: 8px;">
+                                                <div style="font-size: 1rem; font-weight: 800; color: var(--primary);">' . $_SESSION['Adjustment' . $identifier]->StockID . '</div>
+                                                <div style="font-size: 0.85rem; color: var(--text-main); margin: 4px 0;">' . $_SESSION['Adjustment' . $identifier]->ItemDescription . '</div>
+                                                <div style="font-size: 0.75rem; color: var(--text-muted);">' . __('UOM') . ': ' . $_SESSION['Adjustment' . $identifier]->PartUnit . ' | ' . __('Cost') . ': ' . locale_number_format($_SESSION['Adjustment' . $identifier]->StandardCost, 4) . '</div>
+                                        </div>
+                                </div>';
+}
+
+echo '  <main>';
+
+if (isset($_SESSION['Adjustment' . $identifier]) AND mb_strlen($_SESSION['Adjustment' . $identifier]->ItemDescription)>1) {
+    echo '
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: var(--surface-main, #fff); border-radius: 12px; border: 1px solid var(--border-soft, #e2e8f0); padding: 1.5rem;">
+			<div class="aw-field-group" style="display:flex; flex-direction:column; gap:0.4rem;">
+				<label class="aw-label" for="StockLocation" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">'. __('Location').':</label>
+				<select name="StockLocation" class="aw-input" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft);" onchange="this.form.submit();"> ';
 foreach ($LocationList as $Loccode=>$Locationname){
 	if (isset($_SESSION['Adjustment'.$identifier]->StockLocation) AND $Loccode == $_SESSION['Adjustment' . $identifier]->StockLocation){
 		 echo '<option selected="selected" value="' . $Loccode . '">' . $Locationname . '</option>';
@@ -478,32 +471,32 @@ foreach ($LocationList as $Loccode=>$Locationname){
 echo '			</select>
 			</div>
 			
-			<div class="db-field">
-				<label for="Narrative">' .  __('Reference / Narrative').':</label>
-				<input type="text" name="Narrative" class="db-input" maxlength="100" value="' . $Narrative . '" placeholder="' . __('e.g. Breakage, Correction') . '" />
+			<div class="aw-field-group" style="display:flex; flex-direction:column; gap:0.4rem;">
+				<label class="aw-label" for="Narrative" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">' .  __('Reference / Narrative').':</label>
+				<input type="text" name="Narrative" class="aw-input" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft);" maxlength="100" value="' . $Narrative . '" placeholder="' . __('e.g. Breakage, Correction') . '" />
 			</div>
 
-			<div class="db-field">
-				<label for="Quantity">' . __('Quantity to Adjust') . ' (' . ($Quantity > 0 ? '+' : '') . $Quantity . ')</label>';
+			<div class="aw-field-group" style="display:flex; flex-direction:column; gap:0.4rem;">
+				<label class="aw-label" for="Quantity" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">' . __('Quantity to Adjust') . ' (' . ($Quantity > 0 ? '+' : '') . $Quantity . ')</label>';
 
 if ($Controlled == 1) {
     echo '      <div class="db-field-content">
                     <input type="hidden" name="Quantity" value="' . $_SESSION['Adjustment' . $identifier]->Quantity . '" />
                     <b style="font-size:1.2rem;">' . locale_number_format($_SESSION['Adjustment' . $identifier]->Quantity, $DecimalPlaces) . '</b> ' . $_SESSION['Adjustment' . $identifier]->PartUnit . '
                     <div style="margin-top:10px;">
-                        <a href="' . $RootPath . '/StockAdjustmentsControlled.php?AdjType=REMOVE&identifier=' . $identifier . '" class="db-btn db-btn-small db-btn-outline"><i class="fas fa-minus"></i> ' . __('Remove') . '</a>
-                        <a href="' . $RootPath . '/StockAdjustmentsControlled.php?AdjType=ADD&identifier=' . $identifier . '" class="db-btn db-btn-small db-btn-outline"><i class="fas fa-plus"></i> ' . __('Add') . '</a>
+                        <a href="' . $RootPath . '/StockAdjustmentsControlled.php?AdjType=REMOVE&identifier=' . $identifier . '" class="aw-btn aw-btn-outline aw-btn-sm"><i class="fas fa-minus"></i> ' . __('Remove') . '</a>
+                        <a href="' . $RootPath . '/StockAdjustmentsControlled.php?AdjType=ADD&identifier=' . $identifier . '" class="aw-btn aw-btn-outline aw-btn-sm"><i class="fas fa-plus"></i> ' . __('Add') . '</a>
                     </div>
                 </div>';
 } else {
-    echo '      <input type="text" class="db-input number" name="Quantity" maxlength="12" value="' . locale_number_format($Quantity, $DecimalPlaces) . '" />';
+    echo '      <input type="text" class="aw-input text-right" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft);" name="Quantity" maxlength="12" value="' . locale_number_format($Quantity, $DecimalPlaces) . '" />';
 }
 echo '      </div>';
 
 // Tag selection logic remains same, but wrapped in db-field
-echo '      <div class="db-field">
-				<label for="tag">', __('Project Tag'), '</label>
-				<select multiple="multiple" name="tag[]" class="db-select">';
+echo '      <div class="aw-field-group" style="display:flex; flex-direction:column; gap:0.4rem;">
+				<label class="aw-label" for="tag" style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">', __('Project Tag'), '</label>
+				<select multiple="multiple" name="tag[]" class="aw-input" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft);">';
 $SQL = "SELECT tagref, tagdescription FROM tags ORDER BY tagref";
 $ResTags = DB_query($SQL);
 while ($MyRow = DB_fetch_array($ResTags)) {
@@ -513,66 +506,21 @@ while ($MyRow = DB_fetch_array($ResTags)) {
 		echo '<option value="' . $MyRow['tagref'] . '">' . $MyRow['tagref'] . ' - ' . $MyRow['tagdescription'] . '</option>';
 	}
 }
-echo '			</select>
-			</div>
-		</div>
-	</div>';
-	  echo '</div>
-	  <div class=" centre" style="margin-top:20px;">
-		<button type="submit" name="EnterAdjustment" value="1" class="db-btn db-btn-primary"><i class="fas fa-check-circle"></i> ' . __('Process Adjustment') . '</button>
-	  </div>
-	  <div class="db-footer-links centre" style="margin-top:20px;">
-		<a href="StockMovements.php?StockID=' . $StockID . '" class="db-link"><i class="fas fa-history"></i> ' . __('Show History') . '</a> | 
-		<a href="StockStatus.php?StockID=' . $StockID . '" class="db-link"><i class="fas fa-info-circle"></i> ' . __('Stock Status') . '</a>
-	  </div>
-	</form>
-  </main>
-</div> <!-- .db-bottom-layout -->
-</div> <!-- .db-page-content -->
-</div> <!-- .db-page -->';
+echo '			</select></div>
+</div>';
+echo '</div>
+          <div style="margin-top:1.5rem; display:flex; justify-content:flex-end;">
+                <button type="submit" name="EnterAdjustment" value="1" class="aw-btn aw-btn-primary" style="background: hsl(145, 63%, 38%); color:#ffffff; padding: 0.75rem 2rem; border-radius: 8px; border:none; cursor: pointer;"><i class="fas fa-check-circle"></i> ' . __('Process Adjustment') . '</button>
+          </div>
+	  </form>';
+}
 
+        $StockID = isset($_SESSION['Adjustment' . $identifier]->StockID) ? $_SESSION['Adjustment' . $identifier]->StockID : (isset($StockID) ? $StockID : '');
+        if ($StockID != '') {
+            include(__DIR__ . '/includes/ItemQuickActions.php');
+        }
+          
+echo '            </main>
+    </div> <!-- padding -->';
 
-echo '<script>
-const itemSearch = document.getElementById("ItemSearch");
-const searchResults = document.getElementById("SearchResults");
-const stockIdInput = document.getElementById("StockID");
-
-itemSearch.addEventListener("input", function() {
-    const term = this.value;
-    if (term.length < 2) {
-        searchResults.style.display = "none";
-        return;
-    }
-
-    fetch("StockSearch_Ajax.php?term=" + encodeURIComponent(term))
-        .then(response => response.json())
-        .then(data => {
-            searchResults.innerHTML = "";
-            if (data.length > 0) {
-                data.forEach(item => {
-                    const div = document.createElement("div");
-                    div.className = "db-search-result-item";
-                    div.innerHTML = `<strong>${item.id}</strong> - ${item.description}`;
-                    div.onclick = function() {
-                        stockIdInput.value = item.id;
-                        itemSearch.value = item.id;
-                        searchResults.style.display = "none";
-                        // Auto-submit to load item details
-                        itemSearch.form.submit();
-                    };
-                    searchResults.appendChild(div);
-                });
-                searchResults.style.display = "block";
-            } else {
-                searchResults.style.display = "none";
-            }
-        });
-});
-
-document.addEventListener("click", function(e) {
-    if (e.target !== itemSearch) {
-        searchResults.style.display = "none";
-    }
-});
-</script>';
 include(__DIR__ . '/includes/footer.php');

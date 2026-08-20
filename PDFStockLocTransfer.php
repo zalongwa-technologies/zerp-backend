@@ -50,41 +50,94 @@ if (isset($_GET['TransferNo'])) {
 		$transfers[] = $row;
 	}
 
-	// Compose HTML for PDF (can be improved for branding/layout)
+	// Compose HTML for PDF
+
 	$HTML = '
 <style>
-	body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 10pt; }
-	h2 { text-align: center; }
-	table { border-collapse: collapse; width: 100%; }
-	th, td { border: 1px solid #000; padding: 4px; text-align: left; }
-	th { background-color: #eee; }
-</style>';
-	$HTML .= '<link href="css/reports.css" rel="stylesheet" type="text/css" />';
-	$HTML .= '<img class="logo" src="' . $_SESSION['LogoFile'] . '" /><br />';
-$HTML .= '<h2>' . __('Inventory Location Transfer BOL') . ' #' . htmlspecialchars($_GET['TransferNo']) . '</h2>
-<table>
-	<tr>
-		<th>' . __('Stock ID') . '</th>
-		<th>' . __('Description') . '</th>
-		<th>' . __('Ship Qty') . '</th>
-		<th>' . __('Receive Qty') . '</th>
-	</tr>';
+	body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10pt; color: #333; margin: 0; padding: 10px; }
+	.header { border-bottom: 2px solid #239d58; padding-bottom: 20px; margin-bottom: 30px; }
+	.header table { width: 100%; border: none; }
+	.header td { border: none; padding: 0; vertical-align: top; }
+	.logo { max-height: 60px; }
+	h1 { color: #239d58; font-size: 20pt; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
+	.meta-info { text-align: right; font-size: 10pt; color: #555; line-height: 1.6; }
+	.meta-info strong { color: #222; }
+	
+	.locations-wrap { margin-bottom: 30px; width: 100%; }
+	.locations-table { width: 100%; border: none; border-collapse: separate; border-spacing: 20px 0; margin-left: -20px; margin-right: -20px; }
+	.locations-table td { border: none; padding: 0; width: 50%; vertical-align: top; }
+	.loc-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+	.loc-title { font-size: 8pt; text-transform: uppercase; color: #239d58; font-weight: bold; margin-bottom: 5px; letter-spacing: 0.5px; }
+	.loc-name { font-size: 12pt; font-weight: bold; color: #333; }
+	
+	.items-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+	.items-table th { background-color: #239d58; color: #ffffff; text-transform: uppercase; font-size: 9pt; letter-spacing: 0.5px; padding: 12px; text-align: left; border: none; }
+	.items-table td { border-bottom: 1px solid #eee; padding: 12px; color: #444; border-left: none; border-right: none; }
+	.items-table tr:last-child td { border-bottom: 2px solid #239d58; }
+	.items-table tr:nth-child(even) { background-color: #fbfbfb; }
+	.qty-cell { text-align: right; font-weight: bold; color: #239d58; }
+	
+	.footer { margin-top: 50px; text-align: center; font-size: 9pt; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+</style>
+';
+	
+	$HTML .= '<div class="header">
+		<table>
+			<tr>
+				<td style="width: 50%;"><img class="logo" src="' . $_SESSION['LogoFile'] . '" /></td>
+				<td style="width: 50%;">
+					<h1>' . __('Transfer Docket') . '</h1>
+					<div class="meta-info">
+						<strong>' . __('Reference #') . ':</strong> ' . htmlspecialchars($_GET['TransferNo']) . '<br>
+						<strong>' . __('Date') . ':</strong> ' . htmlspecialchars($transfers[0]['shipdate']) . '
+					</div>
+				</td>
+			</tr>
+		</table>
+	</div>';
+	
+	$HTML .= '<div class="locations-wrap">
+		<table class="locations-table">
+			<tr>
+				<td>
+					<div class="loc-box">
+						<div class="loc-title">' . __('Origin Location') . '</div>
+						<div class="loc-name">' . htmlspecialchars($transfers[0]['shiplocname']) . '</div>
+					</div>
+				</td>
+				<td>
+					<div class="loc-box">
+						<div class="loc-title">' . __('Destination Location') . '</div>
+						<div class="loc-name">' . htmlspecialchars($transfers[0]['reclocname']) . '</div>
+					</div>
+				</td>
+			</tr>
+		</table>
+	</div>';
+
+	$HTML .= '<table class="items-table">
+		<thead>
+			<tr>
+				<th>' . __('Stock ID') . '</th>
+				<th>' . __('Description') . '</th>
+				<th style="text-align:right;">' . __('Ship Qty') . '</th>
+				<th style="text-align:right;">' . __('Receive Qty') . '</th>
+			</tr>
+		</thead>
+		<tbody>';
 
 	foreach ($transfers as $item) {
 		$HTML .= '<tr>
-		<td>' . htmlspecialchars($item['stockid']) . '</td>
-		<td>' . htmlspecialchars($item['description']) . '</td>
-		<td style="text-align:right">' . locale_number_format($item['shipqty'], $item['decimalplaces']) . '</td>
-		<td style="text-align:right">' . locale_number_format($item['recqty'], $item['decimalplaces']) . '</td>
-	</tr>';
+			<td><strong>' . htmlspecialchars($item['stockid']) . '</strong></td>
+			<td>' . htmlspecialchars($item['description']) . '</td>
+			<td class="qty-cell">' . locale_number_format($item['shipqty'], $item['decimalplaces']) . '</td>
+			<td class="qty-cell">' . locale_number_format($item['recqty'], $item['decimalplaces']) . '</td>
+		</tr>';
 	}
 
-	$HTML .= '</table>
-<br>
-<p>' . __('Ship Location') . ': ' . htmlspecialchars($transfers[0]['shiplocname']) . '<br>
-' . __('Receive Location') . ': ' . htmlspecialchars($transfers[0]['reclocname']) . '<br>
-' . __('Transfer Reference') . ': ' . htmlspecialchars($transfers[0]['reference']) . '<br>
-' . __('Date') . ': ' . htmlspecialchars($transfers[0]['shipdate']) . '</p>';
+	$HTML .= '</tbody></table>';
+	$HTML .= '<div class="footer">' . __('Generated by ZERP Inventory Management') . '</div>';
+
 
 	// Generate PDF using DomPDF
 	// Setup DomPDF
@@ -97,6 +150,11 @@ $HTML .= '<h2>' . __('Inventory Location Transfer BOL') . ' #' . htmlspecialchar
 
 	// Render the HTML as PDF
 	$DomPDF->render();
+
+	// Clear any accidental output that could corrupt the PDF stream
+	if (ob_get_length()) {
+		ob_end_clean();
+	}
 
 	// Output the generated PDF to Browser
 	$DomPDF->stream($FileName, array("Attachment" => false));

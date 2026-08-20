@@ -128,23 +128,7 @@ if (isset($_GET['Edit'])) {
 
 ?>
 <style>
-    :root {
-        --primary: hsl(145, 63%, 38%);
-        --primary-hover: hsl(145, 63%, 32%);
-        --primary-dark: hsl(145, 45%, 22%);
-        --primary-soft: hsl(145, 40%, 95%);
-        --bg: hsl(210, 20%, 97%);
-        --white: #ffffff;
-        --border: #e2e8f0;
-        --border-soft: #f1f5f9;
-        --text-main: #334155;
-        --text-muted: #64748b;
-        --shadow: 0 1px 3px rgba(0,0,0,0.1);
-        --radius: 12px;
-        --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    }
 
-    body { background-color: var(--bg); color: var(--text-main); font-family: var(--font-sans); }
     .aw-page { max-width: 1400px; margin: 0 auto; padding: 2rem; }
     .aw-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
     .aw-breadcrumb { font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 0.5rem; }
@@ -161,13 +145,10 @@ if (isset($_GET['Edit'])) {
     .aw-input, .aw-select { width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--white); font-size: 0.9rem; transition: all 0.2s; box-sizing: border-box; }
     .aw-input:focus, .aw-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
     .aw-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; border: none; text-decoration: none; }
-    .aw-btn-primary { background: var(--primary); color: var(--white); }
-    .aw-btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .aw-btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .aw-btn-primary { background: hsl(145, 63%, 38%); color: #ffffff !important; }
+    .aw-btn-primary:hover { background: hsl(145, 63%, 32%); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .aw-btn-outline { background: transparent; border: 1px solid #cbd5e1; color: #334155; }
     .aw-btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
-    .aw-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-    .aw-table th { background: var(--primary-soft); color: var(--primary-dark); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 1rem; text-align: left; border-bottom: 2px solid var(--border-soft); }
-    .aw-table td { padding: 1rem; border-bottom: 1px solid var(--border-soft); color: var(--text-main); }
     .aw-table tr:hover { background: var(--bg); }
     .aw-table .number { text-align: right; font-family: 'JetBrains Mono', monospace; }
     .aw-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; background: var(--primary-soft); color: var(--primary); }
@@ -185,9 +166,6 @@ if (isset($_GET['Edit'])) {
             </h1>
             <p style="margin: 10px 0 0; color: var(--text-muted); font-weight: 600;"><?php echo $PartDescription; ?></p>
         </div>
-        <div>
-            <a href="<?php echo $RootPath; ?>/Stocks.php?StockID=<?php echo $Item; ?>" class="aw-btn aw-btn-outline aw-btn-sm"><i class="fas fa-edit"></i> <?php echo __('Back to Item'); ?></a>
-        </div>
     </div>
 
     <div class="aw-layout-grid">
@@ -201,6 +179,9 @@ if (isset($_GET['Edit'])) {
                     <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>">
                         <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
                         <input type="hidden" name="Item" value="<?php echo $Item; ?>" />
+                        <?php if (isset($_GET['modal']) || isset($_POST['modal'])): ?>
+                            <input type="hidden" name="modal" value="1" />
+                        <?php endif; ?>
                         <?php if (isset($_POST['OldTypeAbbrev'])): ?>
                             <input type="hidden" name="OldTypeAbbrev" value="<?php echo $_POST['OldTypeAbbrev']; ?>" />
                             <input type="hidden" name="OldCurrAbrev" value="<?php echo $_POST['OldCurrAbrev']; ?>" />
@@ -276,36 +257,42 @@ if (isset($_GET['Edit'])) {
                     $Result = DB_query($SQL);
                     
                     if (DB_num_rows($Result) > 0): ?>
-                        <div style="overflow-x: auto;">
-                            <table class="aw-table">
-                                <thead>
-                                    <tr>
-                                        <th><?php echo __('Currency'); ?></th>
-                                        <th><?php echo __('Sales Type'); ?></th>
-                                        <th class="number"><?php echo __('Price'); ?></th>
-                                        <th><?php echo __('Start Date'); ?></th>
-                                        <th><?php echo __('End Date'); ?></th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php while ($row = DB_fetch_array($Result)): 
-                                        $EndDateDisplay = ($row['enddate'] == '9999-12-31') ? '<span class="aw-badge aw-badge-success">' . __('Indefinite') . '</span>' : ConvertSQLDate($row['enddate']);
-                                    ?>
-                                        <tr>
-                                            <td><?php echo $CurrencyName[$row['currabrev']] ?? $row['currabrev']; ?></td>
-                                            <td><?php echo $row['sales_type']; ?></td>
-                                            <td class="number"><?php echo locale_number_format($row['price'], $row['currdecimalplaces'] + 2); ?></td>
-                                            <td><?php echo ConvertSQLDate($row['startdate']); ?></td>
-                                            <td><?php echo $EndDateDisplay; ?></td>
-                                            <td style="text-align: right; white-space: nowrap;">
-                                                <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?Item=<?php echo $Item; ?>&TypeAbbrev=<?php echo $row['typeabbrev']; ?>&CurrAbrev=<?php echo $row['currabrev']; ?>&Price=<?php echo locale_number_format($row['price'], $row['currdecimalplaces']); ?>&StartDate=<?php echo $row['startdate']; ?>&EndDate=<?php echo $row['enddate']; ?>&Edit=1" class="aw-btn aw-btn-outline aw-btn-sm" title="<?php echo __('Edit'); ?>"><i class="fas fa-edit"></i></a>
-                                                <a href="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?Item=<?php echo $Item; ?>&TypeAbbrev=<?php echo $row['typeabbrev']; ?>&CurrAbrev=<?php echo $row['currabrev']; ?>&StartDate=<?php echo $row['startdate']; ?>&EndDate=<?php echo $row['enddate']; ?>&delete=yes" class="aw-btn aw-btn-outline aw-btn-sm" style="color: #ef4444;" onclick="return confirm('<?php echo __('Are you sure you wish to delete this price?'); ?>');" title="<?php echo __('Delete'); ?>"><i class="fas fa-trash"></i></a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                </tbody>
-                            </table>
+                        <div style="overflow-x: auto; white-space: nowrap;">
+                            <?php 
+                            include_once(__DIR__ . '/includes/UIComponents.php');
+                            $columns = [
+                                __('Currency'),
+                                __('Sales Type'),
+                                __('Price'),
+                                __('Start Date'),
+                                __('End Date'),
+                                ''
+                            ];
+                            $dataRows = [];
+                            while ($row = DB_fetch_array($Result)) {
+                                $EndDateDisplay = ($row['enddate'] == '9999-12-31') ? '<span class="aw-badge aw-badge-success" style="font-size:inherit;">' . __('Indefinite') . '</span>' : ConvertSQLDate($row['enddate']);
+                                
+                                $editUrl = htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . "?Item={$Item}&TypeAbbrev={$row['typeabbrev']}&CurrAbrev={$row['currabrev']}&Price=" . locale_number_format($row['price'], $row['currdecimalplaces']) . "&StartDate={$row['startdate']}&EndDate={$row['enddate']}&Edit=1";
+                                
+                                $deleteUrl = htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . "?Item={$Item}&TypeAbbrev={$row['typeabbrev']}&CurrAbrev={$row['currabrev']}&StartDate={$row['startdate']}&EndDate={$row['enddate']}&delete=yes";
+                                
+                                $actions = '<div style="text-align: right; white-space: nowrap;">
+                                    <a href="' . $editUrl . '" class="aw-btn aw-btn-outline aw-btn-sm" style="margin-right:4px;" title="' . __('Edit') . '"><i class="fas fa-edit"></i> ' . __('Edit') . '</a>
+                                    <a href="' . $deleteUrl . '" class="aw-btn aw-btn-outline aw-btn-sm" style="color: #ef4444;" onclick="return confirm(\'' . __('Are you sure you wish to delete this price?') . '\');" title="' . __('Delete') . '"><i class="fas fa-trash"></i> ' . __('Delete') . '</a>
+                                </div>';
+
+                                $dataRows[] = [
+                                    $CurrencyName[$row['currabrev']] ?? $row['currabrev'],
+                                    $row['sales_type'],
+                                    locale_number_format($row['price'], $row['currdecimalplaces'] + 2),
+                                    ConvertSQLDate($row['startdate']),
+                                    $EndDateDisplay,
+                                    $actions
+                                ];
+                            }
+                            
+                            render_modern_table($columns, $dataRows, false, ['emptyMessage' => __('There are no prices set up for this part')]);
+                            ?>
                         </div>
                     <?php else: ?>
                         <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
@@ -317,6 +304,11 @@ if (isset($_GET['Edit'])) {
             </div>
         </main>
     </div>
+    
+    <?php 
+    $StockID = $Item;
+    include(__DIR__ . '/includes/ItemQuickActions.php'); 
+    ?>
 </div>
 
 <?php 

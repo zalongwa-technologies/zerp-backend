@@ -116,6 +116,16 @@ if (isset($ExtraHeadContent)) {
 	echo "\n" . $ExtraHeadContent;
 }
 
+if (isset($_GET['modal']) || isset($_POST['modal'])) {
+    echo '<style>
+        .premium-header, header.noPrint, nav.ModuleList, .ScriptTitle, .aw-breadcrumb { display: none !important; }
+        .MainBody { padding: 0 !important; gap: 0 !important; background: transparent !important; }
+        .db-page, .aw-page { padding: var(--space-6) var(--space-4) !important; background: var(--bg-main) !important; min-height: 100vh !important; }
+        body { background: transparent !important; }
+        .hide-in-modal { display: none !important; }
+    </style>' . "\n";
+}
+
 echo "\n</head>\n";
 
 echo '<body onload="initial();' . ($BodyOnLoad ?? '') . '">' . "\n";

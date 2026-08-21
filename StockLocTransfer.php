@@ -294,7 +294,7 @@ if (isset($_POST['Submit']) AND $InputError==false){
 	}
 
 	echo '<form enctype="multipart/form-data" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '" method="post">';
-	echo '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+	echo '<input type="hidden" name="FormID" value="' . ($_SESSION['FormID'] ?? '') . '" />';
 	if ($isModal) {
 		echo '<input type="hidden" name="modal" value="1" />';
 	}

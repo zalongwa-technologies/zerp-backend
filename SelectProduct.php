@@ -35,6 +35,13 @@ if (!isset($_POST['PageOffset'])) {
 		$_POST['PageOffset'] = 1;
 	}
 }
+
+if (isset($_POST['Next'])) {
+	$_POST['PageOffset']++;
+}
+if (isset($_POST['Previous']) && $_POST['PageOffset'] > 1) {
+	$_POST['PageOffset']--;
+}
 if (isset($_POST['StockCode'])) {
 	$_POST['StockCode'] = trim(mb_strtoupper($_POST['StockCode']));
 }
@@ -571,7 +578,7 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <div class="aw-card-body p-0" style="padding: 1rem;">
+                        <div class="aw-card-body p-0">
                             <?php
                             include_once(__DIR__ . '/includes/UIComponents.php');
                             
@@ -603,6 +610,7 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                             render_modern_table($columns, $rows, false, ['emptyMessage' => __('No items found matching your criteria.')]);
                             
                             if ($MaxPages > 1) {
+                                echo '<div style="padding: 0 1.5rem 1rem 1.5rem;">'; // Add padding to prevent overlap with card border
                                 echo '<form method="post" action="'.htmlspecialchars($_SERVER['PHP_SELF']).'">';
                                 echo '<input type="hidden" name="FormID" value="'.($_SESSION['FormID'] ?? '').'" />';
                                 echo '<input type="hidden" name="StockCat" value="'.$_POST['StockCat'].'" />';
@@ -610,11 +618,13 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                                 echo '<input type="hidden" name="Keywords" value="'.($_POST['Keywords'] ?? '').'" />';
                                 echo '<input type="hidden" name="StockCode" value="'.($_POST['StockCode'] ?? '').'" />';
                                 echo '<input type="hidden" name="Search" value="Search" />';
+                                echo '<input type="hidden" name="PageOffset" value="'.$PageOffset.'" />';
                                 
                                 // render_modern_pagination_form expects totalRows, page, perPage
                                 render_modern_pagination_form($ListCount, $PageOffset, $DisplayMax);
                                 
                                 echo '</form>';
+                                echo '</div>';
                             }
                             ?>
                         </div>

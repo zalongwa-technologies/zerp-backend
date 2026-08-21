@@ -513,7 +513,7 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
     <div class="aw-layout-search">
         <!-- TOP: PREMIUM HORIZONTAL FILTERS -->
         <form id="FilterBar" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" method="post" class="premium-filter-bar">
-            <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
+            <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID'] ?? ''; ?>" />
             
             <div class="aw-field-group">
                 <label class="aw-label"><?php echo __('Category'); ?></label>
@@ -604,7 +604,7 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                             
                             if ($MaxPages > 1) {
                                 echo '<form method="post" action="'.htmlspecialchars($_SERVER['PHP_SELF']).'">';
-                                echo '<input type="hidden" name="FormID" value="'.$_SESSION['FormID'].'" />';
+                                echo '<input type="hidden" name="FormID" value="'.($_SESSION['FormID'] ?? '').'" />';
                                 echo '<input type="hidden" name="StockCat" value="'.$_POST['StockCat'].'" />';
                                 echo '<input type="hidden" name="StockFilter" value="'.$_POST['StockFilter'].'" />';
                                 echo '<input type="hidden" name="Keywords" value="'.($_POST['Keywords'] ?? '').'" />';

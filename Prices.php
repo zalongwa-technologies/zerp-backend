@@ -180,7 +180,7 @@ if (isset($_GET['Edit'])) {
                 </div>
                 <div class="aw-card-body">
                     <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>">
-                        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
+                        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID'] ?? ''; ?>" />
                         <input type="hidden" name="Item" value="<?php echo $Item; ?>" />
                         <?php if (isset($_GET['modal']) || isset($_POST['modal'])): ?>
                             <input type="hidden" name="modal" value="1" />

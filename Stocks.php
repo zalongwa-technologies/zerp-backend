@@ -480,7 +480,7 @@ if (isset($StockID) && $StockID != "" && !isset($_POST["submit"])) { $ResMaster 
     </div>
 
     <form id="StockForm" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>" enctype="multipart/form-data">
-        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID']; ?>" />
+        <input type="hidden" name="FormID" value="<?php echo $_SESSION['FormID'] ?? ''; ?>" />
         <?php if (isset($_GET['modal']) || isset($_POST['modal'])): ?>
             <input type="hidden" name="modal" value="1" />
         <?php endif; ?>

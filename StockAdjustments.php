@@ -371,6 +371,7 @@ if (isset($_POST['EnterAdjustment'])){
 		$ConfirmationText = __('A stock adjustment for'). ' ' . $_SESSION['Adjustment' . $identifier]->StockID . ' -  ' . $_SESSION['Adjustment' . $identifier]->ItemDescription . ' '.__('has been created from location').' ' . $_SESSION['Adjustment' . $identifier]->StockLocation .' '. __('for a quantity of') . ' ' . locale_number_format($_SESSION['Adjustment' . $identifier]->Quantity,$_SESSION['Adjustment' . $identifier]->DecimalPlaces) . ' ' . $AdjustReason;
 		prnMsg( $ConfirmationText,'success');
 
+		/*
 		if ($_SESSION['InventoryManagerEmail']!=''){
 			$ConfirmationText = $ConfirmationText . ' ' . __('by user') . ' ' . $_SESSION['UserID'] . ' ' . __('at') . ' ' . date('Y-m-d H:i:s');
 			$EmailSubject = __('Stock adjustment for'). ' ' . $_SESSION['Adjustment' . $identifier]->StockID;
@@ -382,6 +383,7 @@ if (isset($_POST['EnterAdjustment'])){
 								false);
 
 		}
+		*/
 		$StockID = $_SESSION['Adjustment' . $identifier]->StockID;
         $_SESSION['Adjustment' . $identifier]->Quantity = 0;
         $_SESSION['Adjustment' . $identifier]->Narrative = '';
@@ -429,7 +431,7 @@ if (empty($_SESSION['Adjustment' . $identifier]->StockID)) {
 }
 
 echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8') . '?identifier=' . urlencode($identifier) . '" method="post">
-                        <input type="hidden" name="modal" value="1" /><input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
+                        <input type="hidden" name="modal" value="1" /><input type="hidden" name="FormID" value="' . ($_SESSION['FormID'] ?? '') . '" />';
 
 if (isset($_GET['modal']) || isset($_POST['modal'])) {
     echo '<input type="hidden" name="modal" value="1" />';

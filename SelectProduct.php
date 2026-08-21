@@ -35,6 +35,13 @@ if (!isset($_POST['PageOffset'])) {
 		$_POST['PageOffset'] = 1;
 	}
 }
+
+if (isset($_POST['Next'])) {
+	$_POST['PageOffset']++;
+}
+if (isset($_POST['Previous']) && $_POST['PageOffset'] > 1) {
+	$_POST['PageOffset']--;
+}
 if (isset($_POST['StockCode'])) {
 	$_POST['StockCode'] = trim(mb_strtoupper($_POST['StockCode']));
 }
@@ -611,6 +618,7 @@ if (!isset($_POST['Search']) AND (isset($_POST['Select']) OR isset($_SESSION['Se
                                 echo '<input type="hidden" name="Keywords" value="'.($_POST['Keywords'] ?? '').'" />';
                                 echo '<input type="hidden" name="StockCode" value="'.($_POST['StockCode'] ?? '').'" />';
                                 echo '<input type="hidden" name="Search" value="Search" />';
+                                echo '<input type="hidden" name="PageOffset" value="'.$PageOffset.'" />';
                                 
                                 // render_modern_pagination_form expects totalRows, page, perPage
                                 render_modern_pagination_form($ListCount, $PageOffset, $DisplayMax);

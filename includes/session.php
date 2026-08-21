@@ -3,10 +3,16 @@
 register_shutdown_function(function() {
     $error = error_get_last();
     if ($error !== NULL && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR))) {
+        // Write to error_log.txt for live debugging
+        $errorMsg = print_r($error, true);
+        file_put_contents(__DIR__ . '/../error_log.txt', date('Y-m-d H:i:s') . " - PHP FATAL ERROR:\n" . $errorMsg . "\n\n", FILE_APPEND);
+        
+        echo "<script>alert('PHP FATAL ERROR! Please screenshot this:\\n\\n" . addslashes(str_replace("\n", " ", $errorMsg)) . "');</script>";
+        
         echo "<div style='background: #fee2e2; border-left: 4px solid #ef4444; padding: 1.5rem; margin: 1rem; color: #991b1b; font-family: sans-serif; position: fixed; top: 10%; left: 10%; right: 10%; z-index: 999999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px;'>";
         echo "<h3 style='margin-top: 0; color: #991b1b;'>FATAL ERROR CAUGHT (LIVE SERVER DEBUG)</h3>";
         echo "<p>The script crashed unexpectedly. Please copy this error and show it to the developer:</p>";
-        echo "<pre style='background: #fff; padding: 10px; overflow-x: auto;'>" . htmlspecialchars(print_r($error, true)) . "</pre>";
+        echo "<pre style='background: #fff; padding: 10px; overflow-x: auto;'>" . htmlspecialchars($errorMsg) . "</pre>";
         echo "</div>";
     }
 });

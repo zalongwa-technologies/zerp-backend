@@ -33,6 +33,7 @@ if (!$db) {
 // if not set, both mysqli server and mysqli client/library may assume otherwise
 /// @todo log a warning, or maybe even error out, if this fails
 mysqli_set_charset($db, $DBCharset);
+mysqli_query($db, "SET sql_mode = ''");
 
 /* Update to allow RecurringSalesOrdersProcess.php to run via cron */
 /// @todo test if this is in fact necessary, as RecurringSalesOrdersProcess.php also sets $_SESSION['DatabaseName']

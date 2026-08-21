@@ -74,7 +74,14 @@ function DB_query($SQL, $ErrorMessage='', $DebugMessage= '', $Transaction=false,
 				$ErrorMessage = __('An error occurred in retrieving the information');
 			}
 		}
+		
+		// WRITE ERROR TO FILE AND SHOW AS ALERT FOR LIVE DEBUGGING
+		$fullError = date('Y-m-d H:i:s') . ' - DB Error: ' . DB_error_msg() . '\nSQL: ' . $SQL;
+		file_put_contents(__DIR__ . '/../error_log.txt', $fullError . "\n\n", FILE_APPEND);
+		echo "<script>alert('DATABASE ERROR! Please screenshot this:\\n\\n" . addslashes(str_replace("\n", " ", $fullError)) . "');</script>";
+		
 		prnMsg(($ErrorMessage != '' ? $ErrorMessage . '<br />' : ''). DB_error_msg(), 'error', __('Database Error'));
+
 		if ($Debug >= 1) {
 			if ($DebugMessage == '') {
 				$DebugMessage = __('The SQL that failed was');

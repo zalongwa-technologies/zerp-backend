@@ -173,6 +173,41 @@ saris_render_pagination($totalRows, $page, $perPage, $_SERVER['PHP_SELF'], $extr
 echo '</div>';
 
 saris_render_scripts($_SERVER['PHP_SELF']);
+?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const syncForms = document.querySelectorAll('form');
+    syncForms.forEach(form => {
+        const btn = form.querySelector('button[name="SyncStudents"]');
+        if (btn) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const originalText = btn.innerHTML;
+                btn.innerHTML = 'Syncing... Please wait';
+                btn.disabled = true;
+                
+                const formData = new FormData(form);
+                formData.append(btn.name, '1');
+                
+                fetch(form.action, { method: 'POST', body: formData })
+                .then(res => res.text())
+                .then(html => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert('Sync completed! Refreshing data...');
+                    window.location.reload();
+                })
+                .catch(err => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert('An error occurred during sync.');
+                });
+            });
+        }
+    });
+});
+</script>
+<?php
 
 include(__DIR__ . '/includes/footer.php');
 ?>

@@ -158,7 +158,7 @@ $REMOTE_ADDR = '127.0.0.1';
 
 // ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
 $ZERP_SyncEnabled = true; //false;
-$SARIS_AUTO_SYNC_START_DATE = date("d-m-Y", strtotime("-10 days"));
+$SARIS_AUTO_SYNC_START_DATE = date("Y-m-d", strtotime("-10 days"));
 $ZERP_EndPoint = 'https://xxx.xx.co.tz/api/api_xml-rpc.php';
 $ZERP_Username = 'user';
 $ZERP_Password = 'pwd';

@@ -36,6 +36,13 @@ class SARISAPIClient {
 	private $connectTimeout = 15;
 	private $settings = null; // lazy-loaded from saris_api_settings on first use
 
+	// Token is cached in static properties (not $_SESSION) so it is:
+	// 1. Safe under cron — no real HTTP session required
+	// 2. Per-process only — no cross-user token leakage in concurrent web requests
+	// $_SESSION is kept as a secondary warm-start cache for web page reloads.
+	private static $cachedToken = null;
+	private static $cachedTokenExpiresAt = 0;
+
 	private function buildAuthAttempts() {
 		$clientId = $this->cfg('client_id');
 		$clientSecret = $this->cfg('client_secret');
@@ -230,11 +237,18 @@ class SARISAPIClient {
 
 	// Fetch (or return cached) OAuth2 bearer token.
 	public function getToken() {
+		// 1. In-memory static cache (works for both CLI cron and web)
+		if (self::$cachedToken !== null && time() < self::$cachedTokenExpiresAt) {
+			return self::$cachedToken;
+		}
+		// 2. Session warm-start cache (web page reloads only)
 		if (!empty($_SESSION['SARISAPI_TOKEN'])
 			&& !empty($_SESSION['SARISAPI_TOKEN_EXPIRES_AT'])
 			&& time() < (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT']
 		) {
-			return $_SESSION['SARISAPI_TOKEN'];
+			self::$cachedToken = $_SESSION['SARISAPI_TOKEN'];
+			self::$cachedTokenExpiresAt = (int)$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'];
+			return self::$cachedToken;
 		}
 		return $this->authenticate();
 	}
@@ -306,10 +320,14 @@ class SARISAPIClient {
 			throw new Exception('SARIS authentication failed (' . $lastVariant . '): ' . $msg);
 		}
 		$expiresIn = $tokenPayload['expires_in'];
+		$expiresAt = time() + $expiresIn - 30;
+		// Store in both static cache and session
+		self::$cachedToken = $tokenPayload['token'];
+		self::$cachedTokenExpiresAt = $expiresAt;
 		$_SESSION['SARISAPI_TOKEN'] = $tokenPayload['token'];
-		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = time() + $expiresIn - 30;
+		$_SESSION['SARISAPI_TOKEN_EXPIRES_AT'] = $expiresAt;
 		saris_cli_log('Authenticated with SARIS token; expires in ' . $expiresIn . 's');
-		return $_SESSION['SARISAPI_TOKEN'];
+		return self::$cachedToken;
 	}
 
 	// Authenticated GET. On INVALID_TOKEN, refreshes once and retries.
@@ -368,7 +386,9 @@ class SARISAPIClient {
 			$message   = isset($decoded['message'])              ? $decoded['message']              : 'Unknown error';
 
 			if ($errorCode === 'INVALID_TOKEN' && !$isRetry) {
-				// Token expired mid-request — clear cache, re-authenticate, retry once
+				// Token expired mid-request — clear both caches, re-authenticate, retry once
+				self::$cachedToken = null;
+				self::$cachedTokenExpiresAt = 0;
 				unset($_SESSION['SARISAPI_TOKEN'], $_SESSION['SARISAPI_TOKEN_EXPIRES_AT']);
 				$this->authenticate();
 				return $this->get($endpointUrl, $params, true);
@@ -466,16 +486,16 @@ function saris_map_invoice(array $raw) {
 
 // Map IAE v1 /payments record fields to internal column names.
 function saris_map_payment(array $raw) {
-	return [
-		'student_name'             => isset($raw['StudentName'])   ? $raw['StudentName']   : (isset($raw['student_name'])   ? $raw['student_name']   : null),
-		'student_regnumber'        => isset($raw['StudentId'])      ? $raw['StudentId']      : (isset($raw['student_id'])      ? $raw['student_id']      : null),
-		'payment_desciption'       => isset($raw['Description'])   ? $raw['Description']   : (isset($raw['fee_category'])   ? $raw['fee_category']   : null),
-		'payment_amount'           => isset($raw['Amount'])        ? $raw['Amount']        : (isset($raw['amount'])        ? $raw['amount']        : 0),
-		'payment_amount_type'      => isset($raw['AmountType'])    ? $raw['AmountType']    : (isset($raw['amount_type'])    ? $raw['amount_type']    : null),
-		'payment_currency'         => isset($raw['Currency'])      ? $raw['Currency']      : (isset($raw['currency'])      ? $raw['currency']      : null),
-		'payment_receipt_number'   => isset($raw['ReceiptNumber']) ? $raw['ReceiptNumber'] : (isset($raw['receipt_number']) ? $raw['receipt_number'] : null),
-		'payment_transaction_ref'  => isset($raw['ControlNumber']) ? $raw['ControlNumber'] : (isset($raw['control_number']) ? $raw['control_number'] : null),
-		'payment_date'             => isset($raw['PaymentDate'])   ? $raw['PaymentDate']   : (isset($raw['payment_date'])   ? $raw['payment_date']   : (isset($raw['date']) ? $raw['date'] : null)),
+    return [
+            'student_name'             => isset($raw['StudentName'])   ? $raw['StudentName']   : (isset($raw['student_name'])   ? $raw['student_name']   : null),
+            'student_regnumber'        => isset($raw['StudentId'])      ? $raw['StudentId']      : (isset($raw['student_id'])      ? $raw['student_id']      : null),
+            'payment_desciption'       => isset($raw['Description'])   ? $raw['Description']   : (isset($raw['description'])    ? $raw['description']    : null),
+            'payment_amount'           => isset($raw['Amount'])        ? $raw['Amount']        : (isset($raw['amount'])        ? $raw['amount']        : 0),
+            'payment_amount_type'      => isset($raw['AmountType'])    ? $raw['AmountType']    : (isset($raw['amount_type'])    ? $raw['amount_type']    : (isset($raw['fee_category']) ? $raw['fee_category'] : null)),
+            'payment_currency'         => isset($raw['Currency'])      ? $raw['Currency']      : (isset($raw['currency'])      ? $raw['currency']      : null),
+            'payment_receipt_number'   => isset($raw['ReceiptNumber']) ? $raw['ReceiptNumber'] : (isset($raw['receipt_number']) ? $raw['receipt_number'] : null),
+            'payment_transaction_ref'  => isset($raw['ControlNumber']) ? $raw['ControlNumber'] : (isset($raw['control_number']) ? $raw['control_number'] : (isset($raw['transaction_ref']) ? $raw['transaction_ref'] : null)),
+            'payment_date'             => isset($raw['PaymentDate'])   ? $raw['PaymentDate']   : (isset($raw['payment_date'])   ? $raw['payment_date']   : (isset($raw['date']) ? $raw['date'] : null)),
 		'payment_reference_number' => isset($raw['InvoiceNumber']) ? $raw['InvoiceNumber'] : (isset($raw['invoice_number']) ? $raw['invoice_number'] : null),
 		'payment_source'           => isset($raw['Source'])        ? $raw['Source']        : (isset($raw['source'])        ? $raw['source']        : null),
 	];
@@ -508,12 +528,15 @@ function saris_validate_date_range($startDate, $endDate) {
 
 function saris_pdo() {
 	static $pdo = null;
-	if ($pdo instanceof PDO) {
-		return $pdo;
-	}
-
+	static $lastDb = null;
 	global $Host, $DBUser, $DBPassword, $DBPort;
 	$databaseName = isset($_SESSION['DatabaseName']) ? $_SESSION['DatabaseName'] : '';
+
+	if ($pdo instanceof PDO && $lastDb === $databaseName) {
+		return $pdo;
+	}
+	$lastDb = $databaseName;
+
 	if ($databaseName === '') {
 		throw new Exception('No ZERP database is selected.');
 	}
@@ -582,6 +605,13 @@ function saris_default_payment_start_date() {
 }
 
 function saris_upsert_invoice($invoice) {
+	// Fix #10: Reject zero/null amounts at staging time so they never become
+	// permanently-failed ZERP records that pollute the error log.
+	$amount = saris_sql_decimal($invoice['invoice_amount'] ?? 0);
+	if ($amount <= 0) {
+		error_log('SARIS: Skipping invoice ' . ($invoice['invoice_reference_number'] ?? '?') . ' — amount is zero or missing.');
+		return;
+	}
 	saris_execute(
 		"INSERT INTO invoices (
 			student_name, invoice_reference_number, student_regnumber, invoice_amount,
@@ -590,15 +620,30 @@ function saris_upsert_invoice($invoice) {
 		ON DUPLICATE KEY UPDATE
 			student_name = VALUES(student_name),
 			student_regnumber = VALUES(student_regnumber),
-			invoice_amount = VALUES(invoice_amount),
 			invoice_amount_type = VALUES(invoice_amount_type),
 			invoice_desciption = VALUES(invoice_desciption),
-			invoice_date = VALUES(invoice_date)",
+			invoice_date = VALUES(invoice_date),
+			-- Fix #8: If the amount changed on a record already in ZERP, reset it
+			-- to pending so the corrected value gets re-posted. Safe because the
+			-- idempotency guard in ZERPSync checks ZERP directly before re-posting.
+			invoice_amount = VALUES(invoice_amount),
+			sync_status = IF(
+				sync_status = 'synced' AND invoice_amount != VALUES(invoice_amount),
+				'pending',
+				sync_status
+			),
+			-- Fix #9: Reset attempt counter alongside status so re-queued records
+			-- are never blocked by the old attempt ceiling.
+			sync_attempts = IF(
+				sync_status = 'synced' AND invoice_amount != VALUES(invoice_amount),
+				0,
+				sync_attempts
+			)",
 		[
 			$invoice['student_name'] ?? null,
 			$invoice['invoice_reference_number'] ?? null,
 			$invoice['student_regnumber'] ?? null,
-			saris_sql_decimal($invoice['invoice_amount'] ?? 0),
+			$amount,
 			$invoice['invoice_amount_type'] ?? null,
 			$invoice['invoice_desciption'] ?? null,
 			saris_normalize_datetime($invoice['invoice_date'] ?? null)
@@ -634,6 +679,23 @@ function saris_upsert_student($student) {
 }
 
 function saris_upsert_payment($payment) {
+	// Fix #10: Reject zero/null amounts before staging.
+	$amount = saris_sql_decimal($payment['payment_amount'] ?? 0);
+	if ($amount <= 0) {
+		error_log('SARIS: Skipping payment ' . ($payment['payment_receipt_number'] ?? '?') . ' — amount is zero or missing.');
+		return;
+	}
+	// Fix #3: Ensure receipt_number is never NULL — fall back to transaction_ref
+	// or a deterministic hash so the unique key always fires and prevents duplicates.
+	$receiptNumber = !empty($payment['payment_receipt_number'])
+		? $payment['payment_receipt_number']
+		: (!empty($payment['payment_transaction_ref'])
+			? 'TXN-' . $payment['payment_transaction_ref']
+			: 'SARIS-' . substr(hash('sha256',
+				($payment['student_regnumber'] ?? '') . '|' .
+				($payment['payment_date'] ?? '') . '|' .
+				$amount
+			), 0, 16));
 	saris_execute(
 		"INSERT INTO payments (
 			student_name, student_regnumber, payment_desciption, payment_amount,
@@ -644,21 +706,33 @@ function saris_upsert_payment($payment) {
 			student_name = VALUES(student_name),
 			student_regnumber = VALUES(student_regnumber),
 			payment_desciption = VALUES(payment_desciption),
-			payment_amount = VALUES(payment_amount),
 			payment_amount_type = VALUES(payment_amount_type),
 			payment_currency = VALUES(payment_currency),
 			payment_transaction_ref = VALUES(payment_transaction_ref),
 			payment_date = VALUES(payment_date),
 			payment_reference_number = VALUES(payment_reference_number),
-			payment_source = VALUES(payment_source)",
+			payment_source = VALUES(payment_source),
+			-- Fix #8: Re-queue if the amount was corrected in SARIS
+			payment_amount = VALUES(payment_amount),
+			sync_status = IF(
+				sync_status = 'synced' AND payment_amount != VALUES(payment_amount),
+				'pending',
+				sync_status
+			),
+			-- Fix #9: Reset attempt counter when re-queuing
+			sync_attempts = IF(
+				sync_status = 'synced' AND payment_amount != VALUES(payment_amount),
+				0,
+				sync_attempts
+			)",
 		[
 			$payment['student_name'] ?? null,
 			$payment['student_regnumber'] ?? null,
 			$payment['payment_desciption'] ?? null,
-			saris_sql_decimal($payment['payment_amount'] ?? 0),
+			$amount,
 			$payment['payment_amount_type'] ?? null,
 			$payment['payment_currency'] ?? null,
-			$payment['payment_receipt_number'] ?? null,
+			$receiptNumber,
 			$payment['payment_transaction_ref'] ?? null,
 			saris_normalize_datetime($payment['payment_date'] ?? null),
 			$payment['payment_reference_number'] ?? null,

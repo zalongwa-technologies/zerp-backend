@@ -126,7 +126,7 @@ $ReturnValue = __('This function returns an array of integers. ')
 	. __('If the first element is zero then the function was successful. ')
 	. __('Otherwise an array of error codes is returned and no insertion takes place. ');
 
-$_sig = array(
+$InsertCustomer_sig = array(
 	array(Value::$xmlrpcArray, Value::$xmlrpcStruct),
 	array(Value::$xmlrpcArray, Value::$xmlrpcStruct, Value::$xmlrpcString, Value::$xmlrpcString));
 $InsertCustomer_doc = apiBuildDocHTML($Description, $Parameter, $ReturnValue);
@@ -4665,9 +4665,9 @@ return array(
 		"signature" => $GetDebtorInvoiceDetails_sig,
 		"docstring" => $GetDebtorInvoiceDetails_doc),
 	"weberp.xmlrpc_SearchInvoices" => array(
-		"function" => "xmlrpc_Searchinvoices",
-		"signature" => $Searchinvoices_sig,
-		"docstring" => $Searchinvoices_doc),
+		"function" => "xmlrpc_SearchInvoices",
+		"signature" => $SearchInvoices_sig,
+		"docstring" => $SearchInvoices_doc),
 	"weberp.xmlrpc_InsertSupplierInvoice" => array(
 		"function" => "xmlrpc_InsertSupplierInvoice",
 		"signature" => $InsertSupplierInvoice_sig,

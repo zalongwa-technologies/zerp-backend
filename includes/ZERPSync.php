@@ -9,6 +9,7 @@ class ZERPSync {
 	private $runId;
 	private $stats;
 	private $currentMethod = '';
+	private $bankMappings = [];
 
 	public function __construct(PDO $pdo, ZERPXMLRPCClient $client, array $config) {
 		$this->pdo = $pdo;
@@ -26,6 +27,18 @@ class ZERPSync {
 			'locked' => false,
 			'error_summary' => [],
 		];
+
+		try {
+			$stmt = $this->pdo->query("SELECT match_keyword, bank_account_code FROM saris_bank_mappings");
+			if ($stmt) {
+				while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+					$keyword = strtolower(trim($row['match_keyword']));
+					$this->bankMappings[$keyword] = trim($row['bank_account_code']);
+				}
+			}
+		} catch (PDOException $e) {
+			// Table might not exist, proceed with empty mappings
+		}
 	}
 
 	public function run() {
@@ -99,7 +112,7 @@ class ZERPSync {
 					if ($this->limit($row['student_fullname'], 40) === '') {
 						throw new InvalidArgumentException('Student name is empty.');
 					}
-					if (empty($row['customer_synced_at'])) {
+					if (empty($row['customer_synced_at']) || empty($row['zerp_customer_code'])) {
 						$this->currentMethod = 'weberp.xmlrpc_GetCustomer';
 						$existing = $this->client->getCustomer($code);
 						if ($existing !== null) {
@@ -157,6 +170,7 @@ class ZERPSync {
 				FROM invoices i
 				INNER JOIN students s ON s.student_regnumber = i.student_regnumber
 				WHERE s.sync_status = 'synced'
+				  AND s.zerp_customer_code IS NOT NULL
 				  AND i.sync_status IN ('pending', 'failed', 'partial')
 				  AND i.sync_attempts < ?
 				  AND i.id > ?
@@ -259,9 +273,20 @@ class ZERPSync {
 					}
 
 					if (empty($row['zerp_receipt_no'])) {
-						$this->currentMethod = 'weberp.xmlrpc_InsertDebtorReceipt';
-						$result = $this->client->insertDebtorReceipt($this->receiptPayload($row, $student));
-						$receiptNo = $this->remoteNumber($result, 'receipt');
+						// Idempotency guard — check if a receipt with this reference already
+						// exists in ZERP (protects against crash-between-insert-and-commit).
+						$existingReceiptNo = $this->findExistingReceipt(
+							$student['zerp_customer_code'],
+							$row['payment_receipt_number']
+						);
+						if ($existingReceiptNo !== null) {
+							saris_cli_log('    receipt already in ZERP (transno=' . $existingReceiptNo . '), reusing');
+							$receiptNo = $existingReceiptNo;
+						} else {
+							$this->currentMethod = 'weberp.xmlrpc_InsertDebtorReceipt';
+							$result = $this->client->insertDebtorReceipt($this->receiptPayload($row, $student));
+							$receiptNo = $this->remoteNumber($result, 'receipt');
+						}
 						$stmtReceipt = $this->pdo->prepare(
 							"UPDATE payments
 							SET zerp_receipt_no = ?, sync_status = 'partial', sync_error = NULL,
@@ -365,13 +390,21 @@ class ZERPSync {
 	private function receiptPayload(array $payment, array $student) {
 		$reference = $payment['payment_receipt_number']
 			?: ($payment['payment_transaction_ref'] ?: ('SARIS-PAY-' . $payment['id']));
+
+		$paymentSource = strtolower(trim((string)$payment['payment_source']));
+		if ($paymentSource === '' || !isset($this->bankMappings[$paymentSource])) {
+			throw new LogicException("Bank mapping not found for payment source: '{$payment['payment_source']}'. Please map this source to a ZERP bank account in the Bank Mappings settings.");
+		}
+		
+		$bankAccount = $this->bankMappings[$paymentSource];
+
 		return [
 			'debtorno' => $student['zerp_customer_code'],
 			'branchcode' => (string)$this->config['branch_code'],
-			'trandate' => $this->dateOnly($payment['payment_date']),
+			'trandate' => date('Y-m-d', strtotime($payment['payment_date'])),
 			'amountfx' => (float)$payment['payment_amount'],
 			'paymentmethod' => (string)$this->config['payment_method'],
-			'bankaccount' => (string)$this->config['bank_account'],
+			'bankaccount' => $bankAccount,
 			'reference' => self::remoteReference($reference),
 			'discountfx' => 0,
 		];
@@ -428,7 +461,8 @@ class ZERPSync {
 	private function markSynced($table, $id) {
 		$stmt = $this->pdo->prepare(
 			"UPDATE `" . $table . "`
-			SET sync_status = 'synced', sync_error = NULL, sync_locked_at = NULL, synced_at = NOW()
+			SET sync_status = 'synced', sync_error = NULL, sync_locked_at = NULL,
+				synced_at = NOW(), sync_attempts = 0
 			WHERE id = ?"
 		);
 		$stmt->execute([(int)$id]);
@@ -511,6 +545,32 @@ class ZERPSync {
 	private function releaseLock() {
 		$stmt = $this->pdo->prepare("SELECT RELEASE_LOCK(?)");
 		$stmt->execute(['saris_to_zerp_sync']);
+	}
+
+	/**
+	 * Check if a receipt (debtortrans type=12) with the given reference already
+	 * exists in ZERP for this customer. Uses the shared PDO connection which
+	 * points to the ZERP database, so no extra connection is needed.
+	 *
+	 * @param  string   $debtorno  Customer code in ZERP
+	 * @param  string   $reference The receipt reference (payment_receipt_number)
+	 * @return int|null            The transno if found, null if not found
+	 */
+	private function findExistingReceipt($debtorno, $reference) {
+		if (empty($debtorno) || empty($reference)) {
+			return null;
+		}
+		$stmt = $this->pdo->prepare(
+			"SELECT transno FROM debtortrans
+			 WHERE type = 12
+			   AND debtorno = ?
+			   AND reference = ?
+			 ORDER BY id DESC
+			 LIMIT 1"
+		);
+		$stmt->execute([(string)$debtorno, (string)$reference]);
+		$row = $stmt->fetch();
+		return $row ? (int)$row['transno'] : null;
 	}
 
 	private function resetStaleClaims() {
@@ -624,7 +684,8 @@ class ZERPSync {
 		if ($timestamp === false) {
 			throw new InvalidArgumentException('Invalid transaction date.');
 		}
-		return date('Y-m-d', $timestamp);
+		// ZERP API expects the date in the format configured by DefaultDateFormat (d/m/Y).
+		return date('d/m/Y', $timestamp);
 	}
 
 	private function limit($value, $length) {

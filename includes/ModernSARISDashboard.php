@@ -41,7 +41,10 @@ if (DB_num_rows($chk) > 0) {
         $row = DB_fetch_assoc($res);
         $totalPayments = (int)$row['count'];
     }
-    $res = DB_query("SELECT payment_receipt_number, student_name, payment_amount, payment_date FROM payments ORDER BY payment_date DESC LIMIT 5");
+    $res = DB_query("SELECT p.payment_receipt_number, COALESCE(s.student_fullname, p.student_name, p.student_regnumber) as student_name, p.payment_amount, p.payment_date 
+                     FROM payments p
+                     LEFT JOIN students s ON p.student_regnumber = s.student_regnumber
+                     ORDER BY p.payment_date DESC LIMIT 5");
     if (DB_error_no() == 0 && $res) {
         while ($row = DB_fetch_assoc($res)) {
             $recentPayments[] = $row;
@@ -68,10 +71,10 @@ if (DB_num_rows($chk) > 0) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 <?= __('Settings') ?>
             </a>
-            <a href="<?= $RootPath ?>/saris_cron.php" class="db-btn db-btn-secondary" target="_blank">
+            <button type="button" class="db-btn db-btn-secondary" id="dashManualSyncBtn" onclick="runManualSync(event, this)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.13 15.57a9 9 0 1 0 3.1-10.15L2.5 8"></path></svg>
                 <?= __('Manual Sync') ?>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -180,8 +183,8 @@ if (DB_num_rows($chk) > 0) {
                         <?php else: ?>
                             <?php foreach ($recentPayments as $payment): ?>
                             <tr>
-                                <td style="font-weight: 700; color: var(--primary);"><?= htmlspecialchars($payment['payment_receipt_number']) ?></td>
-                                <td style="font-weight: 600;"><?= htmlspecialchars($payment['student_name']) ?></td>
+                                <td style="font-weight: 700; color: var(--primary);"><?= htmlspecialchars((string)$payment['payment_receipt_number']) ?></td>
+                                <td style="font-weight: 600;"><?= htmlspecialchars((string)$payment['student_name']) ?></td>
                                 <td style="font-weight: 700;">TZS <?= number_format($payment['payment_amount'], 2) ?></td>
                                 <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($payment['payment_date'])) ?></td>
                             </tr>
@@ -197,3 +200,65 @@ if (DB_num_rows($chk) > 0) {
     </div>
 </div>
 
+<!-- Modern Modal for Sync Results -->
+<div id="syncResultModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--surface-color, #fff); width: 90%; max-width: 500px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); overflow: hidden; animation: modalPop 0.3s ease-out forwards;">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border-color, #e5e7eb); display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--text-color, #111827); display: flex; align-items: center; gap: 8px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <?= __('Sync Completed') ?>
+            </h3>
+        </div>
+        <div style="padding: 24px; color: var(--text-muted, #4b5563); font-size: 0.95rem; line-height: 1.6;" id="syncResultBody">
+            <!-- Content injected via JS -->
+        </div>
+        <div style="padding: 16px 24px; background: var(--bg-color, #f9fafb); border-top: 1px solid var(--border-color, #e5e7eb); text-align: right;">
+            <button type="button" class="db-btn db-btn-primary" onclick="closeSyncModal()">
+                <?= __('Close & Refresh') ?>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+</style>
+
+<script>
+function runManualSync(event, btn) {
+    if (event) event.preventDefault();
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="4.93" x2="19.07" y2="7.76"></line></svg> Syncing...';
+    btn.disabled = true;
+    
+    fetch('<?= $RootPath ?>/saris_cron.php')
+    .then(res => res.text())
+    .then(text => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Show modern modal
+        document.getElementById('syncResultBody').innerText = text.trim();
+        document.getElementById('syncResultModal').style.display = 'flex';
+    })
+    .catch(err => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        document.getElementById('syncResultBody').innerText = 'An error occurred during sync. Please try again.';
+        document.getElementById('syncResultBody').style.color = '#ef4444';
+        document.getElementById('syncResultModal').style.display = 'flex';
+    });
+}
+
+function closeSyncModal() {
+    document.getElementById('syncResultModal').style.display = 'none';
+    window.location.reload();
+}
+</script>
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+</style>

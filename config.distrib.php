@@ -156,6 +156,14 @@ if ($RootPath === '/' or $RootPath === '\\') {
 //$SARIS_API_CLIENT_SECRET = 'K7@xP4!mZ9qT2#vB6&cR1$eY8uW0hF3d';
 $REMOTE_ADDR = '127.0.0.1';
 
+// Read-only ZERP-to-Odoo supplier payables API. Copy these settings to config.php.
+// Use a long random secret and serve the endpoint over HTTPS only.
+//$ODOO_PAYABLES_API_TOKEN = 'replace-with-a-long-random-secret';
+// Optional; defaults to $DefaultDatabase when omitted.
+//$ODOO_PAYABLES_API_DATABASE = 'weberpdemo';
+// Keep enabled in production. Set to false only for isolated local development.
+//$ODOO_PAYABLES_API_REQUIRE_HTTPS = true;
+
 // ZALONGWA ERP Database Configurations for Posting both Invoices and Receipts
 $ZERP_SyncEnabled = true; //false;
 $SARIS_AUTO_SYNC_START_DATE = date("d-m-Y", strtotime("-10 days"));

@@ -18,7 +18,7 @@ the SuppTrans class contains an array of GRNs objects - containing details of GR
 an array of GLCodes objects - only used if the AP - GL link is effective */
 
 // NB: these classes are not autoloaded, and their definition has to be included before the session is started (in session.php)
-include_once(__DIR__ . '/includes/DefineSuppTransClass.php');
+include(__DIR__ . '/includes/DefineSuppTransClass.php');
 
 require(__DIR__ . '/includes/session.php');
 
@@ -69,24 +69,6 @@ echo '<div class="db-page">';
 		.db-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
 	</style>';
 
-if (isset($_POST['TranDate'])){$_POST['TranDate'] = ConvertSQLDate($_POST['TranDate']);}
-
-if (isset($_GET['New'])) {
-	unset($_SESSION['SuppTrans']);
-}
-
-$SupplierName = '';
-if (isset($_SESSION['SuppTrans']->SupplierName)) {
-	$SupplierName = $_SESSION['SuppTrans']->SupplierName;
-} elseif (isset($_GET['SupplierID']) && $_GET['SupplierID'] != '') {
-	$SQL = "SELECT suppname FROM suppliers WHERE supplierid='" . DB_escape_string($_GET['SupplierID']) . "'";
-	$Result = DB_query($SQL);
-	if (DB_num_rows($Result) > 0) {
-		$MyRow = DB_fetch_row($Result);
-		$SupplierName = $MyRow[0];
-	}
-}
-
 	echo '<div class="db-page-header">
 		<div>
 			<h2 class="db-page-title"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="db-title-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> ' . $Title . '</h2>
@@ -99,6 +81,21 @@ if (isset($_SESSION['SuppTrans']->SupplierName)) {
 			</a>
 		</div>
 	</div>';
+
+if (isset($_POST['TranDate'])){$_POST['TranDate'] = ConvertSQLDate($_POST['TranDate']);}
+
+if (isset($_GET['New'])) {
+	unset($_SESSION['SuppTrans']);
+}
+
+if (!isset($_SESSION['SuppTrans']->SupplierName)) {
+	$SQL="SELECT suppname FROM suppliers WHERE supplierid='" . $_GET['SupplierID']."'";
+	$Result = DB_query($SQL);
+	$MyRow = DB_fetch_row($Result);
+	$SupplierName=$MyRow[0];
+} else {
+	$SupplierName=$_SESSION['SuppTrans']->SupplierName;
+}
 
 // Header handled at top
 if (isset($_GET['SupplierID']) and $_GET['SupplierID']!=''){
@@ -310,9 +307,6 @@ if (isset($_POST['FixedAssets'])
 }
 /* Everything below here only do if a Supplier is selected */
 
-echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '" method="post" id="form1">';
-echo '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
-
 echo '<div class="db-bottom-layout">';
 
 // SIDEBAR: Credit Note Summary
@@ -354,19 +348,22 @@ echo '<aside class="db-col-aside">';
 				<h4 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700;">' . __('Add Charges From') . '</h4>
 			</div>
 			<div class="db-card-body" style="padding: 8px;">
-				<button type="submit" formnovalidate="formnovalidate" name="GRNS" value="' . __('Purchase Orders') . '" class="db-aside-btn"><i class="fas fa-shopping-cart"></i> ' . __('Purchase Orders') . '</button>
-				<button type="submit" formnovalidate="formnovalidate" name="Shipts" value="' . __('Shipments') . '" class="db-aside-btn"><i class="fas fa-ship"></i> ' . __('Shipments') . '</button>
-				<button type="submit" formnovalidate="formnovalidate" name="Contracts" value="' . __('Contracts') . '" class="db-aside-btn"><i class="fas fa-file-contract"></i> ' . __('Contracts') . '</button>';
+				<button type="submit" name="GRNS" value="' . __('Purchase Orders') . '" class="db-aside-btn"><i class="fas fa-shopping-cart"></i> ' . __('Purchase Orders') . '</button>
+				<button type="submit" name="Shipts" value="' . __('Shipments') . '" class="db-aside-btn"><i class="fas fa-ship"></i> ' . __('Shipments') . '</button>
+				<button type="submit" name="Contracts" value="' . __('Contracts') . '" class="db-aside-btn"><i class="fas fa-file-contract"></i> ' . __('Contracts') . '</button>';
 				if ($_SESSION['SuppTrans']->GLLink_Creditors == 1) {
-					echo '<button type="submit" formnovalidate="formnovalidate" name="GL" value="' . __('General Ledger') . '" class="db-aside-btn"><i class="fas fa-book"></i> ' . __('General Ledger') . '</button>';
+					echo '<button type="submit" name="GL" value="' . __('General Ledger') . '" class="db-aside-btn"><i class="fas fa-book"></i> ' . __('General Ledger') . '</button>';
 				}
-				echo '<button type="submit" formnovalidate="formnovalidate" name="FixedAssets" value="' . __('Fixed Assets') . '" class="db-aside-btn"><i class="fas fa-monument"></i> ' . __('Fixed Assets') . '</button>
+				echo '<button type="submit" name="FixedAssets" value="' . __('Fixed Assets') . '" class="db-aside-btn"><i class="fas fa-monument"></i> ' . __('Fixed Assets') . '</button>
 			</div>
 		</div>';
 echo '</aside>';
 
 // MAIN CONTENT
 echo '<main class="db-col-main" style="flex: 1; min-width: 0;">';
+
+echo '<form action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '" method="post" id="form1">';
+echo '<input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />';
 
 // HEADER DATA CARD
 echo '<div class="db-card">
@@ -645,12 +642,12 @@ echo '<div class="db-card" style="margin-top: var(--space-6);">
 					<label class="db-label">' . $Tax->TaxAuthDescription . '</label>
 					<div style="display: flex; align-items: center; gap: 8px;">';
 			if (!isset($_POST['OverRideTax']) OR $_POST['OverRideTax']=='Auto') {
-				echo '<input type="text" class="number" name="TaxRate' . $Tax->TaxCalculationOrder . '" style="width: 80px;" value="' . locale_number_format((float)($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxRate ?? 0.0) * 100,2) . '" /> <span class="db-muted">%</span>';
-				echo '<input type="hidden" name="TaxAmount' . $Tax->TaxCalculationOrder . '" value="' . round((float)($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount ?? 0.0),$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
-				echo '<div style="margin-left: auto; font-weight: 600;">' . locale_number_format((float)($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount ?? 0.0),$_SESSION['SuppTrans']->CurrDecimalPlaces) . '</div>';
+				echo '<input type="text" class="number" name="TaxRate' . $Tax->TaxCalculationOrder . '" style="width: 80px;" value="' . locale_number_format($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxRate * 100,2) . '" /> <span class="db-muted">%</span>';
+				echo '<input type="hidden" name="TaxAmount' . $Tax->TaxCalculationOrder . '" value="' . round($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount,$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
+				echo '<div style="margin-left: auto; font-weight: 600;">' . locale_number_format($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount,$_SESSION['SuppTrans']->CurrDecimalPlaces) . '</div>';
 			} else {
-				echo '<input type="hidden" name="TaxRate' . $Tax->TaxCalculationOrder . '" value="' . locale_number_format((float)($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxRate ?? 0.0) * 100,$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
-				echo '<input type="text" class="number" name="TaxAmount' . $Tax->TaxCalculationOrder . '" value="' . locale_number_format(round((float)($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount ?? 0.0),$_SESSION['SuppTrans']->CurrDecimalPlaces),$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
+				echo '<input type="hidden" name="TaxRate' . $Tax->TaxCalculationOrder . '" value="' . locale_number_format($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxRate * 100,$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
+				echo '<input type="text" class="number" name="TaxAmount' . $Tax->TaxCalculationOrder . '" value="' . locale_number_format(round($_SESSION['SuppTrans']->Taxes[$Tax->TaxCalculationOrder]->TaxOvAmount,$_SESSION['SuppTrans']->CurrDecimalPlaces),$_SESSION['SuppTrans']->CurrDecimalPlaces) . '" />';
 			}
 			echo '	</div>
 				  </div>';

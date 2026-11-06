@@ -96,34 +96,23 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent Work Orders -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Latest Work Orders') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('WO #') ?></th>
-                        <th><?= __('Product') ?></th>
-                        <th><?= __('Qty Reqd') ?></th>
-                        <th><?= __('Start Date') ?></th>
-                        <th><?= __('Due Date') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentWO)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent work orders found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentWO as $wo): ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);">#<?= $wo['wo'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($wo['description']) ?></td>
-                            <td style="font-weight: 700;"><?= number_format($wo['qtyreqd'], 0) ?></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($wo['startdate'])) ?></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($wo['requiredby'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('WO #'), __('Product'), __('Qty Reqd'), __('Start Date'), __('Due Date')];
+        $dataRows = [];
+        if (!empty($recentWO)) {
+            foreach ($recentWO as $wo) {
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">#' . htmlspecialchars($wo['wo'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($wo['description'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 700;">' . number_format($wo['qtyreqd'], 0) . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($wo['startdate'])) . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($wo['requiredby'])) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent work orders found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

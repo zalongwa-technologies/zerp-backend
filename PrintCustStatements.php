@@ -97,14 +97,16 @@ if (isset($_POST['PrintPDF']) and isset($_POST['FromCust']) and $_POST['FromCust
 	$HTML = '<!DOCTYPE html><html><head>';
 	$HTML .= '<link href="css/reports.css" rel="stylesheet" type="text/css" />';
 	$HTML .= '<style>
-		body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 11px; }
-		.header { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
-		.company { font-size: 13px; font-weight: bold;}
-		.small { font-size: 10px; }
-		table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-		th, td { border: 1px solid #333; padding: 4px; vertical-align: top; }
-		.section-title { font-size: 13px; font-weight: bold; margin: 18px 0 7px 0; }
-		.footer { margin-top: 18px; font-size: 10px;}
+		body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 11px; color: #334155; }
+		.header { font-size: 22px; font-weight: bold; margin-bottom: 15px; color: #059669; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+		.company { font-size: 16px; font-weight: bold; color: #0f172a; margin-bottom: 5px; text-align: center; }
+		.small { font-size: 11px; color: #475569; line-height: 1.5; }
+		table { border-collapse: collapse; width: 100%; margin-bottom: 25px; }
+		th { background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 8px; vertical-align: middle; text-align: left; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+		td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; font-size: 11px; }
+		tr:nth-child(even) td { background-color: #f8fafc; }
+		.section-title { font-size: 14px; font-weight: bold; margin: 25px 0 10px 0; color: #0f172a; border-bottom: 2px solid #10b981; padding-bottom: 4px; }
+		.footer { margin-top: 30px; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; }
 		.right { text-align: right; }
 		.left { text-align: left; }
 		.center { text-align: center; }
@@ -142,10 +144,10 @@ if (isset($_POST['PrintPDF']) and isset($_POST['FromCust']) and $_POST['FromCust
 		if (($_POST['EmailOrPrint'] == 'print' and (count($RecipientArray) == 0 or $_POST['FromCust'] == $_POST['ToCust'])) or ($_POST['EmailOrPrint'] == 'email' and count($RecipientArray) > 0)) {
 
 			// Header
-			if (isset($_SESSION['LogoFile']) and $_SESSION['LogoFile'] != '') {
-				$HTML .= '<div class="company"><img class="logo" src="' . $_SESSION['LogoFile'] . '" /></div>';
-			}
 			$HTML .= '<div class="company">' . $_SESSION['CompanyRecord']['coyname'] . '</div>';
+			if (isset($_SESSION['LogoFile']) and $_SESSION['LogoFile'] != '') {
+				$HTML .= '<div class="company"><img class="logo" src="' . $_SESSION['LogoFile'] . '" style="max-height: 80px; margin-top: 8px; margin-bottom: 12px;" /></div>';
+			}
 			$HTML .= '<div class="header">' . __('Customer Statement') . '</div>';
 			$HTML .= '<div class="small">' . __('For customer') . ': ' . $StmtHeader['name'] . ' (' . $StmtHeader['debtorno'] . ')</div>';
 			$HTML .= '<div class="small">' . implode(', ', array_filter([$StmtHeader['address1'], $StmtHeader['address2'], $StmtHeader['address3'], $StmtHeader['address4'], $StmtHeader['address5'], $StmtHeader['address6']])) . '</div>';

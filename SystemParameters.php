@@ -12,55 +12,21 @@ $BookMark = 'SystemParameters';
 $ExtraHeadContent = '
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    :root {
-        --primary: hsl(145, 63%, 38%);
-        --primary-hover: hsl(145, 63%, 32%);
-        --primary-dark: hsl(145, 45%, 22%);
-        --primary-light: hsl(145, 40%, 95%);
-        --primary-alpha: hsla(145, 63%, 38%, 0.1);
-        
-        --bg-main: hsl(210, 20%, 98%);
-        --bg-card: hsl(0, 0%, 100%);
-        --bg-input: hsl(0, 0%, 100%);
-        --bg-input-hover: hsl(210, 20%, 98%);
-        
-        --text-main: hsl(220, 39%, 11%);
-        --text-muted: hsl(215, 16%, 47%);
-        
-        --border-light: hsl(214, 32%, 91%);
-        --border-focus: hsl(145, 63%, 38%);
-        
-        --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
-        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-        
-        --radius-sm: 8px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        
-        --space-1: 0.25rem;
-        --space-2: 0.5rem;
-        --space-3: 0.75rem;
-        --space-4: 1rem;
-        --space-6: 1.5rem;
-        --space-8: 2rem;
-        
-        --page-padding: 40px;
-    }
 	.ScriptTitle { display: none !important; }
 	.MainBody { padding: 0 !important; gap: 0 !important; background: transparent !important; }
-	.db-page { padding: var(--page-padding); background: var(--bg-main); min-height: 100vh; font-family: "Inter", sans-serif; }
+	.db-page { padding: var(--space-8) var(--space-6); background: var(--bg-main); min-height: 100vh; font-family: "Inter", sans-serif; }
 	
 	.premium-header { 
         margin-bottom: 30px; 
         padding: 20px; 
         background: rgba(255, 255, 255, 0.8);
         backdrop-filter: blur(10px);
-        border-bottom: 1px solid var(--border-light);
+        border-bottom: 1px solid #e5e7eb;
         position: sticky;
         top: 0;
         z-index: 1000;
         margin: 0 0 30px 0;
-        border-radius: var(--radius-md);
+        border-radius: 12px;
     }
     .premium-header-inner {
         display: flex; 
@@ -69,39 +35,24 @@ $ExtraHeadContent = '
         max-width: 1400px;
         margin: 0 auto;
     }
-    .premium-header-title h1 {
-        font-size: 1.75rem; 
-        font-weight: 800; 
-        color: var(--text-main); 
-        margin: 0; 
-        letter-spacing: -0.5px;
-        line-height: 1.2;
-        background: transparent !important;
-        text-shadow: none !important;
-        padding: 0 !important;
-    }
 	
 	.db-card { 
-		background: var(--bg-card); 
-		border-radius: var(--radius-lg); 
-		border: 1px solid var(--border-light); 
+		background: #ffffff; 
+		border-radius: 16px; 
+		border: 1px solid #e5e7eb; 
 		box-shadow: var(--shadow-sm);
 		overflow: hidden;
         margin-bottom: 30px;
-        max-width: 1400px;
-        margin-left: auto;
-        margin-right: auto;
-        width: 100%;
 	}
 	.db-card-header { 
 		background: #f9fafb; 
-		border-bottom: 1px solid var(--border-light); 
+		border-bottom: 1px solid #f3f4f6; 
 		padding: 24px 30px;
 	}
 	.db-card-title {
 		font-size: 1rem;
 		font-weight: 850;
-		color: var(--primary-dark);
+		color: #064e3b;
 		margin: 0;
 		display: flex;
 		align-items: center;
@@ -109,32 +60,28 @@ $ExtraHeadContent = '
 		text-transform: uppercase;
 		letter-spacing: 1px;
 	}
-    .db-card-body { 
-        padding: 40px; 
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 30px 40px;
-    }
+    .db-card-body { padding: 40px; }
 	
     /* Target legacy webERP field structure */
     fieldset { border: none; padding: 0; margin: 0; }
     legend { display: none; }
     
     field {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        min-width: 0;
+        display: block;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #f9fafb;
     }
+    field:last-child { border-bottom: none; }
     
     field label {
         font-size: 0.75rem; 
         text-transform: uppercase; 
         font-weight: 900; 
         letter-spacing: 1.2px; 
-        color: var(--primary-dark); 
+        color: #064e3b; 
         display: block; 
-        margin-bottom: 0;
+        margin-bottom: 10px;
         line-height: 1.4;
         overflow-wrap: break-word;
         white-space: normal;
@@ -144,31 +91,70 @@ $ExtraHeadContent = '
     field input[type="number"], 
     field select, 
     field textarea {
-        width: 100%; border-radius: var(--radius-sm); height: 50px; font-weight: 600; border: 1px solid var(--primary-light);
-        padding: 0 20px; box-sizing: border-box; background: var(--bg-input); font-family: inherit; font-size: 0.95rem;
+        width: 100%; border-radius: 8px; height: 50px; font-weight: 600; border: 1px solid #d1fae5;
+        padding: 0 20px; box-sizing: border-box; background: #ffffff; font-family: inherit; font-size: 0.95rem;
     }
     field textarea { height: 100px; padding: 15px 20px; }
     field input:focus, field select:focus, field textarea:focus { 
-        border-color: var(--primary); outline: none; box-shadow: 0 0 0 4px var(--primary-alpha); 
+        border-color: #059669; outline: none; box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1); 
     }
     
-    fieldhelp { font-size: 0.8rem; color: var(--text-muted); margin-top: 8px; font-weight: 500; display: block; line-height: 1.5; }
+    fieldhelp { font-size: 0.8rem; color: #6b7280; margin-top: 8px; font-weight: 500; display: block; line-height: 1.5; }
 
 	.architect-btn {
 		display: inline-flex; align-items: center; gap: 10px;
-		padding: 12px 28px; border-radius: var(--radius-sm);
-		background: var(--primary); color: #ffffff; border: none;
+		padding: 12px 28px; border-radius: 8px;
+		background: #059669; color: #ffffff; border: none;
 		font-weight: 700; font-size: 0.85rem; text-decoration: none;
 		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		box-shadow: 0 4px 12px var(--primary-alpha);
+		box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
 		cursor: pointer;
 	}
-	.architect-btn:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
+	.architect-btn:hover { background: #065f46; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3); }
+	
+    .db-bottom-layout { 
+        display: grid; 
+        grid-template-columns: 280px 1fr; 
+        gap: 40px; 
+        align-items: start; 
+    }
 
-    .db-main-content {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+    .tab-menu { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 20px; }
+    .tab-item {
+        display: flex; align-items: center; gap: 16px; padding: 18px 24px;
+        background: transparent; border-radius: 10px; border: none;
+        color: #4b5563; font-weight: 700; font-size: 0.9rem; text-align: left;
+        cursor: pointer; transition: all 0.25s ease;
+    }
+    .tab-item:hover { background: #f0fdf4; color: #059669; }
+    .tab-item.active { background: #059669; color: #ffffff; box-shadow: 0 10px 20px rgba(5, 150, 105, 0.15); }
+    .tab-item i:not(.status-icon) { font-size: 1.1rem; width: 24px; text-align: center; }
+    
+    .tab-item.locked { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+    .tab-item.completed i.status-icon { color: #059669; }
+    .tab-item .status-icon { margin-left: auto; font-size: 0.8rem; opacity: 0.6; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: slideUp 0.4s ease-out; }
+
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .next-btn {
+        margin-top: 40px; display: flex; justify-content: flex-end; gap: 16px;
+        padding-top: 30px; border-top: 1px solid #f3f4f6;
+    }
+
+    @media (max-width: 992px) {
+        .db-bottom-layout { grid-template-columns: 1fr; gap: 20px; }
+        .tab-menu { 
+            flex-direction: column; 
+            padding: 0; 
+            position: static; 
+            background: transparent;
+            margin: 0 0 20px 0;
+            gap: 12px;
+        }
+        .tab-item { width: 100%; white-space: normal; padding: 18px 24px; }
     }
 
     @media (max-width: 768px) {
@@ -176,10 +162,112 @@ $ExtraHeadContent = '
         .db-card-body { padding: 25px 20px; }
         .premium-header { padding: 15px; margin-bottom: 20px; }
         .premium-header-inner { flex-direction: column; align-items: flex-start; gap: 15px; }
-        .premium-header-title h1 { font-size: 1.4rem; }
+        .premium-header h1 { font-size: 1.4rem; }
         .architect-btn { padding: 12px 20px; font-size: 0.85rem; width: 100%; justify-content: center; }
+        field label { font-size: 0.7rem; }
+        field input, field select { height: 45px; font-size: 0.9rem; }
+        .next-btn { flex-direction: column; gap: 12px; }
     }
-</style>';
+
+    @media (max-width: 480px) {
+        .premium-header h1 { font-size: 1.2rem; }
+        .tab-item { padding: 10px 15px; font-size: 0.8rem; }
+        .tab-item i:not(.status-icon) { font-size: 0.9rem; width: 18px; }
+    }
+</style>
+<script>
+    const tabRequirements = {
+        \'general\': [\'X_DefaultDateFormat\', \'X_PageLength\'],
+        \'accounting\': [\'X_YearEnd\', \'X_PastDueDays1\', \'X_DefaultCreditLimit\'],
+        \'sales\': [\'X_QuickEntries\', \'X_DefaultPriceList\'],
+        \'purchasing\': [\'X_AutoAuthorisePO\'],
+        \'inventory\': [\'X_WeightedAverageCosting\', \'X_ProhibitNegativeStock\']
+    };
+
+    const tabOrder = [\'general\', \'accounting\', \'sales\', \'purchasing\', \'inventory\', \'system\'];
+
+    function isTabComplete(tabId) {
+        const fields = tabRequirements[tabId];
+        if (!fields) return true;
+        return fields.every(fieldName => {
+            const el = document.querySelector(\'[name="\' + fieldName + \'"]\');
+            return el && el.value.trim() !== \'\';
+        });
+    }
+
+    function updateWizardState() {
+        let allPreviousCompleted = true;
+        let completedCount = 0;
+        tabOrder.forEach((tabId, index) => {
+            const tabItem = document.getElementById(\'tab-\' + tabId);
+            if (!tabItem) return;
+            const statusIcon = tabItem.querySelector(\'.status-icon\');
+            const complete = isTabComplete(tabId);
+            
+            if (complete) {
+                tabItem.classList.add(\'completed\');
+                statusIcon.className = \'fas fa-check-circle status-icon\';
+                completedCount++;
+            } else {
+                tabItem.classList.remove(\'completed\');
+                statusIcon.className = \'far fa-circle status-icon\';
+            }
+
+            if (index === 0 || allPreviousCompleted) {
+                tabItem.classList.remove(\'locked\');
+                tabItem.style.display = \'flex\';
+            } else {
+                tabItem.classList.add(\'locked\');
+                statusIcon.className = \'fas fa-lock status-icon\';
+                tabItem.style.display = \'none\';
+            }
+
+            if (!complete) {
+                allPreviousCompleted = false;
+            }
+        });
+
+        // Update Progress Bar
+        const progress = Math.round((completedCount / tabOrder.length) * 100);
+        const progressBar = document.getElementById(\'progress-bar\');
+        const progressPercent = document.getElementById(\'progress-percent\');
+        if (progressBar) progressBar.style.width = progress + \'%\';
+        if (progressPercent) progressPercent.innerText = progress + \'%\';
+    }
+
+    function switchTab(tabId) {
+        const tabIdx = tabOrder.indexOf(tabId);
+        
+        // Find the index of the first incomplete tab
+        let firstIncompleteIdx = -1;
+        for (let i = 0; i < tabOrder.length; i++) {
+            if (!isTabComplete(tabOrder[i])) {
+                firstIncompleteIdx = i;
+                break;
+            }
+        }
+
+        // Allow clicking current, previous, or the very next step (if current is complete)
+        if (firstIncompleteIdx !== -1 && tabIdx > firstIncompleteIdx) {
+            alert("Please complete " + tabOrder[firstIncompleteIdx].charAt(0).toUpperCase() + tabOrder[firstIncompleteIdx].slice(1) + " section first.");
+            return;
+        }
+
+        document.querySelectorAll(\'.tab-panel\').forEach(el => el.classList.remove(\'active\'));
+        document.querySelectorAll(\'.tab-item\').forEach(el => el.classList.remove(\'active\'));
+        document.getElementById(\'panel-\' + tabId).classList.add(\'active\');
+        document.getElementById(\'tab-\' + tabId).classList.add(\'active\');
+        window.scrollTo({ top: 0, behavior: \'smooth\' });
+    }
+
+    document.addEventListener(\'DOMContentLoaded\', () => {
+        updateWizardState();
+        document.querySelectorAll(\'input, select, textarea\').forEach(input => {
+            input.addEventListener(\'input\', updateWizardState);
+            input.addEventListener(\'change\', updateWizardState);
+        });
+    });
+</script>';
 
 include(__DIR__ . '/includes/header.php');
 
@@ -192,35 +280,6 @@ if (isset($_POST['submit'])) {
 
 	//initialise no input errors assumed initially before we test
 	$InputError = 0;
-
-    // Ensure all config keys that are expected in POST are initialized to avoid PHP 8 warnings
-    $expected_keys = [
-        'X_PastDueDays1', 'X_PastDueDays2', 'X_DefaultCreditLimit', 'X_RomalpaClause',
-        'X_QuickEntries', 'X_MaxSerialItemsIssued', 'X_FreightChargeAppliesIfLessThan',
-        'X_StandardCostDecimalPlaces', 'X_TaxAuthorityReferenceName', 'X_CountryOfOperation',
-        'X_NumberOfPeriodsOfStockUsage', 'X_Check_Price_Charged_vs_Order_Price',
-        'X_Check_Qty_Charged_vs_Del_Qty', 'X_OverChargeProportion', 'X_OverReceiveProportion',
-        'X_PO_AllowSameItemMultipleTimes', 'X_So_AllowSameItemMultipleTimes', 'X_YearEnd',
-        'X_PageLength', 'X_DefaultTheme', 'X_DefaultBlindPackNote', 'X_Show_Settlement_Discount',
-        'X_Show_Value_On_GRN', 'X_PackNoteFormat', 'X_DispatchCutOffTime', 'X_AllowSalesOfZeroCostItems',
-        'X_CreditingControlledItems_MustExist', 'X_DefaultPriceList', 'X_Default_Shipper',
-        'X_DoFreightCalc', 'X_FreightTaxCategory', 'X_ExchangeRateFeed', 'X_CurrencyUpdatedDaily',
-        'X_UpdateCurrencyRatesDaily', 'X_FactoryManagerEmail', 'X_PurchasingManagerEmail',
-        'X_InventoryManagerEmail', 'X_AutoCreateWOs', 'X_DefaultFactoryLocation', 'X_WikiApp',
-        'X_WikiPath', 'X_ProhibitPostingsBefore', 'X_ProhibitJournalsToControlAccounts',
-        'X_InvoicePortraitFormat', 'X_AllowOrderLineItemNarrative', 'X_RequireSelectingASalesman',
-        'X_UpdateCSVs', 'X_ProhibitNegativeStock', 'X_PO_AuthorisationEnable',
-        'X_WeightedAverageCosting', 'X_AutoDebtorNo', 'X_AutoSupplierNo', 'X_DB_Maintenance',
-        'X_RadBeaconFTP', 'X_RadBeaconUserName', 'X_RadBeaconPassword', 'X_RadBeaconSystemIP',
-        'X_part_pics_dir', 'X_reports_dir', 'X_VersionNumber', 'X_SmtpSetting', 'X_LogPath', 'X_LogSeverity',
-        'X_NumberOfMonthMustBeShown', 'X_MaxImageSize', 'X_ShowStockidOnImages'
-    ];
-    foreach ($expected_keys as $key) {
-        if (!isset($_POST[$key])) {
-            $sess_key = str_replace('X_', '', $key);
-            $_POST[$key] = $_SESSION[$sess_key] ?? '';
-        }
-    }
 
 	/* actions to take once the user has clicked the submit button
 	ie the page has called itself with some user input */
@@ -437,10 +496,10 @@ if (isset($_POST['submit'])) {
 		if ($_SESSION['NumberOfMonthMustBeShown'] != $_POST['X_NumberOfMonthMustBeShown'] ) {
 			$SQL[] = "UPDATE config SET confvalue = '".$_POST['X_NumberOfMonthMustBeShown']."' WHERE confname = 'NumberOfMonthMustBeShown'";
 		}
-		if (($_SESSION['part_pics_dir'] ?? '') != $_POST['X_part_pics_dir'] ) {
+		if ($_SESSION['part_pics_dir'] != $_POST['X_part_pics_dir'] ) {
 			$SQL[] = "UPDATE config SET confvalue = 'companies/" . $_SESSION['DatabaseName'] . '/' . $_POST['X_part_pics_dir']."' WHERE confname = 'part_pics_dir'";
 		}
-		if (($_SESSION['reports_dir'] ?? '') != $_POST['X_reports_dir'] ) {
+		if ($_SESSION['reports_dir'] != $_POST['X_reports_dir'] ) {
 			$SQL[] = "UPDATE config SET confvalue = 'companies/" . $_SESSION['DatabaseName'] . '/' . $_POST['X_reports_dir']."' WHERE confname = 'reports_dir'";
 		}
 		if ($_SESSION['AutoDebtorNo'] != $_POST['X_AutoDebtorNo'] ) {
@@ -606,28 +665,68 @@ if (isset($_POST['submit'])) {
 
 } /* end of if submit */
 
-echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '">
-        <input type="hidden" name="FormID" value="' . (isset($_SESSION['FormID']) ? $_SESSION['FormID'] : '') . '" />
-        <div class="db-page">
+echo '<div class="db-page">
 		<div class="premium-header">
 			<div class="premium-header-inner">
 				<div>
 					<div style="font-size: 0.75rem; font-weight: 800; color: #6b7280; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.6;">
 						<i class="fas fa-tools"></i> ' . __('Setup') . ' <i class="fas fa-chevron-right" style="font-size: 0.6rem;"></i> ' . __('Core Configuration') . '
 					</div>
-					<div class="premium-header-title"><h1>' . $Title . '</h1></div>
+					<h1 style="font-size: 2.2rem; font-weight: 950; letter-spacing: -1.5px; color: #064e3b; margin: 0; line-height: 1;">' . $Title . '</h1>
 				</div>
                 <div>
-                     <button type="submit" name="submit" class="architect-btn">
+                     <button type="submit" form="main-form" name="submit" class="architect-btn">
                         <i class="fas fa-cloud-upload-alt"></i> ' . __('Update System Parameters') . '
                     </button>
                 </div>
 			</div>
-		</div>
+		</div>';
 
-        <div class="db-main-content">
+echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8') . '">
+        <input type="hidden" name="FormID" value="' . $_SESSION['FormID'] . '" />
+        
+        <div class="db-bottom-layout">
+            <aside class="db-sidebar">
+                <div class="progress-guide" style="margin-bottom: 25px; padding: 20px; background: #f0fdf4; border-radius: 12px; border: 1px solid #d1fae5;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 850; color: #065f46; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                        <span>Progress</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div style="height: 6px; background: #ffffff; border-radius: 10px; overflow: hidden;">
+                        <div id="progress-bar" style="height: 100%; background: #059669; width: 0%; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                    </div>
+                </div>
+                <nav class="tab-menu">
+                    <button type="button" id="tab-general" class="tab-item active" onclick="switchTab(\'general\')">
+                        <i class="fas fa-desktop"></i> ' . __('1. General & Display') . '
+                        <i class="far fa-circle status-icon"></i>
+                    </button>
+                    <button type="button" id="tab-accounting" class="tab-item locked" onclick="switchTab(\'accounting\')">
+                        <i class="fas fa-calculator"></i> ' . __('2. Accounting') . '
+                        <i class="fas fa-lock status-icon"></i>
+                    </button>
+                    <button type="button" id="tab-sales" class="tab-item locked" onclick="switchTab(\'sales\')">
+                        <i class="fas fa-shopping-cart"></i> ' . __('3. Sales & Invoicing') . '
+                        <i class="fas fa-lock status-icon"></i>
+                    </button>
+                    <button type="button" id="tab-purchasing" class="tab-item locked" onclick="switchTab(\'purchasing\')">
+                        <i class="fas fa-truck-loading"></i> ' . __('4. Purchasing & QMS') . '
+                        <i class="fas fa-lock status-icon"></i>
+                    </button>
+                    <button type="button" id="tab-inventory" class="tab-item locked" onclick="switchTab(\'inventory\')">
+                        <i class="fas fa-boxes"></i> ' . __('5. Inventory & WO') . '
+                        <i class="fas fa-lock status-icon"></i>
+                    </button>
+                    <button type="button" id="tab-system" class="tab-item locked" onclick="switchTab(\'system\')">
+                        <i class="fas fa-server"></i> ' . __('6. System & Integration') . '
+                        <i class="fas fa-lock status-icon"></i>
+                    </button>
+                </nav>
+            </aside>
+
+            <main class="db-main">
                 <!-- Panel 1: General -->
-                
+                <div id="panel-general" class="tab-panel active">
                     <div class="db-card">
                         <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-eye"></i> ' . __('Display & Formatting') . '</h3></div>
                         <div class="db-card-body">';
@@ -734,12 +833,16 @@ echo '<form id="main-form" method="post" action="' . htmlspecialchars($_SERVER['
                         </field>
                     </div>';
 
-echo '      </div>
-        </div>';
+echo '          <div class="next-btn">
+                    <button type="button" class="architect-btn" onclick="switchTab(\'accounting\')">' . __('Next: Accounting') . ' <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>';
 
 /* Panel 2: Accounting */
 echo '<!-- Panel 2: Accounting -->
-      
+      <div id="panel-accounting" class="tab-panel">
         <div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-calculator"></i> ' . __('Accounting & Finance Rules') . '</h3></div>
             <div class="db-card-body">';
@@ -824,12 +927,17 @@ echo '<!-- Panel 2: Accounting -->
                 }
                 echo '</select><fieldhelp>' . __('Lock historical periods from further postings.') . '</fieldhelp></field>';
 
-echo '      </div>
-        </div>';
+echo '          <div class="next-btn">
+                    <button type="button" style="background: #f3f4f6; color: #4b5563;" class="architect-btn" onclick="switchTab(\'general\')"><i class="fas fa-arrow-left"></i> ' . __('Back') . '</button>
+                    <button type="button" class="architect-btn" onclick="switchTab(\'sales\')">' . __('Next: Sales & Invoicing') . ' <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>';
 
 /* Panel 3: Sales */
 echo '<!-- Panel 3: Sales -->
-      
+      <div id="panel-sales" class="tab-panel">
         <div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-shopping-cart"></i> ' . __('Sales & Invoicing Defaults') . '</h3></div>
             <div class="db-card-body">';
@@ -986,12 +1094,17 @@ echo '<!-- Panel 3: Sales -->
                 }
                 echo '</select></field>';
 
-echo '      </div>
-        </div>';
+echo '          <div class="next-btn">
+                    <button type="button" style="background: #f3f4f6; color: #4b5563;" class="architect-btn" onclick="switchTab(\'accounting\')"><i class="fas fa-arrow-left"></i> ' . __('Back') . '</button>
+                    <button type="button" class="architect-btn" onclick="switchTab(\'purchasing\')">' . __('Next: Purchasing & QMS') . ' <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>';
 
 /* Panel 4: Purchasing */
 echo '<!-- Panel 4: Purchasing -->
-      
+      <div id="panel-purchasing" class="tab-panel">
         <div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-truck-loading"></i> ' . __('Purchasing & Quality Systems') . '</h3></div>
             <div class="db-card-body">';
@@ -1071,12 +1184,17 @@ echo '<!-- Panel 4: Purchasing -->
                     echo '<field><label for="X_InventoryManagerEmail">' . __('Inventory Manager Email') . ':</label><input type="email" name="X_InventoryManagerEmail" value="' . $_SESSION['InventoryManagerEmail'] . '" /></field>';
                 echo '</div>';
 
-echo '      </div>
-        </div>';
+echo '          <div class="next-btn">
+                    <button type="button" style="background: #f3f4f6; color: #4b5563;" class="architect-btn" onclick="switchTab(\'sales\')"><i class="fas fa-arrow-left"></i> ' . __('Back') . '</button>
+                    <button type="button" class="architect-btn" onclick="switchTab(\'inventory\')">' . __('Next: Inventory & WO') . ' <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>';
 
 /* Panel 5: Inventory */
 echo '<!-- Panel 5: Inventory -->
-      
+      <div id="panel-inventory" class="tab-panel">
         <div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-boxes"></i> ' . __('Inventory Control & Manufacturing') . '</h3></div>
             <div class="db-card-body">';
@@ -1165,17 +1283,22 @@ echo '<!-- Panel 5: Inventory -->
                 // Storage
                 echo '<div style="margin-top: 40px; border-top: 2px solid #f3f4f6; padding-top: 30px;">
                         <h4 style="font-size: 0.8rem; text-transform: uppercase; font-weight: 850; color: #065f46; margin-bottom: 25px;">' . __('Asset & Storage Paths') . '</h4>';
-                    echo '<field><label for="X_part_pics_dir">' . __('Product Images Directory') . ':</label><input type="text" name="X_part_pics_dir" placeholder="e.g. part_pics" value="' . basename(($_SESSION['part_pics_dir'] ?? '')) . '" /><fieldhelp>' . __('Folder name inside your company directory.') . '</fieldhelp></field>';
-                    echo '<field><label for="X_reports_dir">' . __('Report PDF Directory') . ':</label><input type="text" name="X_reports_dir" placeholder="e.g. reports" value="' . basename(($_SESSION['reports_dir'] ?? '')) . '" /><fieldhelp>' . __('Folder name for generated PDF files.') . '</fieldhelp></field>';
+                    echo '<field><label for="X_part_pics_dir">' . __('Product Images Directory') . ':</label><input type="text" name="X_part_pics_dir" placeholder="e.g. part_pics" value="' . basename($_SESSION['part_pics_dir']) . '" /><fieldhelp>' . __('Folder name inside your company directory.') . '</fieldhelp></field>';
+                    echo '<field><label for="X_reports_dir">' . __('Report PDF Directory') . ':</label><input type="text" name="X_reports_dir" placeholder="e.g. reports" value="' . basename($_SESSION['reports_dir']) . '" /><fieldhelp>' . __('Folder name for generated PDF files.') . '</fieldhelp></field>';
                     echo '<field><label for="X_MaxImageSize">' . __('Max Image Size (KB)') . ':</label><input type="text" name="X_MaxImageSize" value="' . $_SESSION['MaxImageSize'] . '" /></field>';
                 echo '</div>';
 
-echo '      </div>
-        </div>';
+echo '          <div class="next-btn">
+                    <button type="button" style="background: #f3f4f6; color: #4b5563;" class="architect-btn" onclick="switchTab(\'purchasing\')"><i class="fas fa-arrow-left"></i> ' . __('Back') . '</button>
+                    <button type="button" class="architect-btn" onclick="switchTab(\'system\')">' . __('Next: System & Integration') . ' <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>';
 
 /* Panel 6: System */
 echo '<!-- Panel 6: System -->
-      
+      <div id="panel-system" class="tab-panel">
         <div class="db-card">
             <div class="db-card-header"><h3 class="db-card-title"><i class="fas fa-server"></i> ' . __('System Connectivity & Integration') . '</h3></div>
             <div class="db-card-body">';
@@ -1261,9 +1384,8 @@ echo '<!-- Panel 6: System -->
                         </field>
                     </div>
 
-                    </div>
-
-                    <div style="margin-top: 30px; text-align: right;">
+                    <div class="next-btn">
+                        <button type="button" style="background: #f3f4f6; color: #4b5563;" class="architect-btn" onclick="switchTab('inventory')"><i class="fas fa-arrow-left"></i> <?php echo __('Back'); ?></button>
                         <button type="submit" name="submit" class="architect-btn">
                             <i class="fas fa-save"></i> <?php echo __('Complete Core Setup'); ?>
                         </button>
@@ -1271,8 +1393,10 @@ echo '<!-- Panel 6: System -->
                 </div>
             </div>
         </div>
-    </div>
+    </main>
+</div>
 </form>
+</div>
 <?php
 include(__DIR__ . '/includes/footer.php');
 ?>

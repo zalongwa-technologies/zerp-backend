@@ -209,13 +209,11 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 								if ($CurrencyRow[0]!=$_SESSION['CompanyRecord']['currencydefault']){
 									$NewRate = GetCurrencyRate($CurrencyRow[0],$CurrencyRates);
 									if ($NewRate == '') {
-										$NewRate = 1;
+										$NewRate = $CurrencyRow[1]; // Fall back to existing rate if blank
 									}
-									if ($NewRate != '' && is_numeric($NewRate) && $NewRate > 0) {
-										DB_query("UPDATE currencies
-												SET rate='" . $NewRate . "'
-												WHERE currabrev='" . $CurrencyRow[0] . "'");
-									}
+									DB_query("UPDATE currencies
+											SET rate='" . $NewRate . "'
+											WHERE currabrev='" . $CurrencyRow[0] . "'");
 								}
 							}
 						}
@@ -230,13 +228,11 @@ function userLogin($Name, $Password, $SysAdminEmail = '') {
 								}
 								$NewRate = GetCurrencyRate($CurrencyRow[0], $CurrencyRatesArray);
 								if ($NewRate == '') {
-									$NewRate = 1;
+									$NewRate = $CurrencyRow[1]; // Fall back to existing rate if blank
 								}
-								if ($NewRate != '' && is_numeric($NewRate) && $NewRate > 0) {
-									DB_query("UPDATE currencies
-												SET rate='" . $NewRate . "'
-												WHERE currabrev='" . $CurrencyRow[0] . "'");
-								}
+								DB_query("UPDATE currencies
+											SET rate='" . $NewRate . "'
+											WHERE currabrev='" . $CurrencyRow[0] . "'");
 							}
 						}
 					}

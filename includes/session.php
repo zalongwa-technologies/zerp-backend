@@ -1,5 +1,22 @@
 <?php
 
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== NULL && in_array($error['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR))) {
+        // Write to error_log.txt for live debugging
+        $errorMsg = print_r($error, true);
+        file_put_contents(__DIR__ . '/../error_log.txt', date('Y-m-d H:i:s') . " - PHP FATAL ERROR:\n" . $errorMsg . "\n\n", FILE_APPEND);
+        
+        echo "<script>alert('PHP FATAL ERROR! Please screenshot this:\\n\\n" . addslashes(str_replace("\n", " ", $errorMsg)) . "');</script>";
+        
+        echo "<div style='background: #fee2e2; border-left: 4px solid #ef4444; padding: 1.5rem; margin: 1rem; color: #991b1b; font-family: sans-serif; position: fixed; top: 10%; left: 10%; right: 10%; z-index: 999999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px;'>";
+        echo "<h3 style='margin-top: 0; color: #991b1b;'>FATAL ERROR CAUGHT (LIVE SERVER DEBUG)</h3>";
+        echo "<p>The script crashed unexpectedly. Please copy this error and show it to the developer:</p>";
+        echo "<pre style='background: #fff; padding: 10px; overflow-x: auto;'>" . htmlspecialchars($errorMsg) . "</pre>";
+        echo "</div>";
+    }
+});
+
 /* webERP Session handling and general bootstrapping.
  *
  * This file is included at the start of every script in webERP.
@@ -406,7 +423,7 @@ if (in_array(1, $_SESSION['AllowedPageSecurityTokens']) and count($_SESSION['All
 }
 
 if ($FirstLogin) {
-	if (!$SupplierLogin and !$CustomerLogin) {
+	if (!$SupplierLogin and !$CustomerLogin and $_SESSION['ShowDashboard'] == 1) {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/Dashboard.php');
 	} else {
 		header('Location: ' . htmlspecialchars_decode($RootPath) . '/index.php');
@@ -421,8 +438,22 @@ if (!isset($_POST['CompanyNameField']) and sizeof($_POST) > 0 and !isset($AllowA
 	/* Security check to ensure that the form submitted is originally sourced from webERP with the FormID = $_SESSION['FormID'] - which is set before the first login */
 	if (!isset($_POST['FormID']) or ($_POST['FormID'] != ($_SESSION['FormID'] ?? ''))) {
 		$Title = __('Error in form verification');
+		
+		$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
+		
+		if ($isAjax) {
+		    echo '<script>alert("' . __('Security Error: This form was not submitted with a correct ID. Your session may have expired. Please refresh the page.') . '");</script>';
+		    exit();
+		}
+
 		include('includes/header.php');
 		prnMsg(__('This form was not submitted with a correct ID'), 'error');
+		
+		echo '<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 1.5rem; margin: 1rem; color: #991b1b; font-family: sans-serif; position: fixed; top: 20%; left: 50%; transform: translate(-50%, 0); z-index: 999999; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; min-width: 300px; text-align: center;">';
+		echo '<h3 style="margin-top: 0; color: #991b1b; font-size: 1.25rem; margin-bottom: 0.75rem;">' . __('Security Error') . '</h3>';
+		echo '<p style="margin: 0; font-size: 1rem; line-height: 1.5;">' . __('This form was not submitted with a correct ID. Your session may have expired.') . '<br><br><a href="#" onclick="window.location.reload(); return false;" style="display: inline-block; background: #ef4444; color: white; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-weight: bold;">' . __('Refresh Page') . '</a></p>';
+		echo '</div>';
+		
 		include('includes/footer.php');
 		exit();
 	}

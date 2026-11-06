@@ -91,34 +91,22 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent Expenses -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Petty Cash Claims') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Date') ?></th>
-                        <th><?= __('Tab') ?></th>
-                        <th><?= __('Notes') ?></th>
-                        <th style="text-align: right;"><?= __('Amount') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentExp)): ?>
-                        <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent expenses found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentExp as $exp): ?>
-                        <tr>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($exp['date'])) ?></td>
-                            <td><span class="db-badge db-badge-info"><?= $exp['tabcode'] ?></span></td>
-                            <td style="font-size: 0.85rem; max-width: 300px;"><?= htmlspecialchars($exp['notes']) ?></td>
-                            <td style="font-weight: 700; text-align: right; color: var(--danger);">
-                                TZS <?= number_format($exp['amount'], 2) ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Date'), __('Tab'), __('Notes'), __('Amount')];
+        $dataRows = [];
+        if (!empty($recentExp)) {
+            foreach ($recentExp as $exp) {
+                $dataRows[] = [
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($exp['date'])) . '</span>',
+                    '<span class="db-badge db-badge-info">' . htmlspecialchars($exp['tabcode'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-size: 0.85rem; max-width: 300px;">' . htmlspecialchars($exp['notes'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 700; text-align: right; color: var(--danger);">TZS ' . number_format($exp['amount'], 2) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent expenses found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

@@ -137,32 +137,22 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent User Activity -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Login Activity') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('User ID') ?></th>
-                        <th><?= __('Name') ?></th>
-                        <th><?= __('Last Visit') ?></th>
-                        <th style="text-align: right;"><?= __('Status') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentUsers)): ?>
-                        <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No user activity found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentUsers as $user): ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);"><?= $user['userid'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($user['realname']) ?></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y H:i', strtotime($user['lastvisitdate'])) ?></td>
-                            <td style="text-align: right;"><span class="db-badge db-badge-success"><?= __('Active') ?></span></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('User ID'), __('Name'), __('Last Visit'), __('Status')];
+        $dataRows = [];
+        if (!empty($recentUsers)) {
+            foreach ($recentUsers as $user) {
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">' . htmlspecialchars($user['userid'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($user['realname'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y H:i', strtotime($user['lastvisitdate'])) . '</span>',
+                    '<span class="db-badge db-badge-success">' . __('Active') . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No user activity found')]);
+        ?>
     </div>
     </div> <!-- Close db-row-2col -->
 

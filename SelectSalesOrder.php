@@ -927,8 +927,14 @@ if (DB_num_rows($SalesOrdersResult) > 0) {
 echo '		</div> <!-- End MainBody -->
 		</div> <!-- End db-page-content -->
 	</div> <!-- End db-page -->
-	  </form>
-	</div> <!-- End dashboard-shell-container -->';
+	  </form>';
+          
+        $StockID = isset($SelectedStockItem) ? $SelectedStockItem : '';
+        if ($StockID != '') {
+            include(__DIR__ . '/includes/ItemQuickActions.php');
+        }
+
+echo '        </div> <!-- End dashboard-shell-container -->';
 
 
 

@@ -177,36 +177,24 @@ while ($row = DB_fetch_assoc($resPOs)) {
     <!-- Recent Orders -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent Purchase Orders') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('Order #') ?></th>
-                        <th><?= __('Supplier') ?></th>
-                        <th><?= __('Date') ?></th>
-                        <th><?= __('Status') ?></th>
-                        <th><?= __('Delivery') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentPOs)): ?>
-                        <tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent purchase orders found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentPOs as $po): 
-                            $statusClass = strtolower($po['status']) == 'pending' ? 'db-badge-pending' : (strtolower($po['status']) == 'completed' ? 'db-badge-received' : 'db-badge-info');
-                        ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);">#<?= $po['orderno'] ?></td>
-                            <td style="font-weight: 600;"><?= htmlspecialchars($po['suppname']) ?></td>
-                            <td style="color: var(--text-muted);"><?= date('d M Y', strtotime($po['orddate'])) ?></td>
-                            <td><span class="db-badge <?= $statusClass ?>"><?= __($po['status']) ?></span></td>
-                            <td style="font-weight: 700; color: var(--text-main);"><?= date('d M Y', strtotime($po['deliverydate'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('Order #'), __('Supplier'), __('Order Date'), __('Status'), __('Delivery')];
+        $dataRows = [];
+        if (!empty($recentPOs)) {
+            foreach ($recentPOs as $po) {
+                $statusClass = strtolower($po['status']) == 'pending' ? 'db-badge-pending' : (strtolower($po['status']) == 'completed' ? 'db-badge-received' : 'db-badge-info');
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">#' . htmlspecialchars($po['orderno'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-weight: 600;">' . htmlspecialchars($po['suppname'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="color: var(--text-muted);">' . date('d M Y', strtotime($po['orddate'])) . '</span>',
+                    '<span class="db-badge ' . $statusClass . '">' . __($po['status']) . '</span>',
+                    '<span style="font-weight: 700; color: var(--text-main);">' . date('d M Y', strtotime($po['deliverydate'])) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent purchase orders found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

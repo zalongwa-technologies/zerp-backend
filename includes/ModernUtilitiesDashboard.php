@@ -82,32 +82,21 @@ while ($row = DB_fetch_assoc($resRecent)) {
     <!-- Recent Audit Activity -->
     <div class="db-card">
         <h3 class="db-card-title"><?= __('Recent System Logs') ?></h3>
-        <div class="db-table-wrapper">
-            <table class="db-table">
-                <thead>
-                    <tr>
-                        <th><?= __('User') ?></th>
-                        <th><?= __('Action Summary') ?></th>
-                        <th style="text-align: right;"><?= __('Timestamp') ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($recentAudit)): ?>
-                        <tr><td colspan="3" style="text-align: center; padding: 40px; color: var(--text-muted);"><?= __('No recent logs found') ?></td></tr>
-                    <?php else: ?>
-                        <?php foreach ($recentAudit as $audit): ?>
-                        <tr>
-                            <td style="font-weight: 700; color: var(--primary);"><?= $audit['userid'] ?></td>
-                            <td style="font-size: 0.75rem; max-width: 400px; font-family: monospace; color: var(--text-muted);">
-                                <?= htmlspecialchars(mb_strimwidth($audit['querystring'], 0, 80, '…')) ?>
-                            </td>
-                            <td style="color: var(--text-muted); text-align: right;"><?= date('d M H:i:s', strtotime($audit['transactiondate'])) ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+        <?php
+        include_once(__DIR__ . '/UIComponents.php');
+        $columns = [__('User'), __('Action Summary'), __('Timestamp')];
+        $dataRows = [];
+        if (!empty($recentAudit)) {
+            foreach ($recentAudit as $audit) {
+                $dataRows[] = [
+                    '<span style="font-weight: 700; color: var(--primary);">' . htmlspecialchars($audit['userid'], ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="font-size: 0.75rem; max-width: 400px; font-family: monospace; color: var(--text-muted);">' . htmlspecialchars(mb_strimwidth($audit['querystring'], 0, 80, '…'), ENT_QUOTES, 'UTF-8') . '</span>',
+                    '<span style="color: var(--text-muted); text-align: right;">' . date('d M H:i:s', strtotime($audit['transactiondate'])) . '</span>'
+                ];
+            }
+        }
+        render_modern_table($columns, $dataRows, ['emptyMessage' => __('No recent logs found')]);
+        ?>
     </div>
 
     <!-- Extended Menu -->

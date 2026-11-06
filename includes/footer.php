@@ -5,9 +5,7 @@ include_once (__DIR__ . '/AuditScriptsFunctions.php');
 global $Title;
 RecordRunningTime($Title, $_SESSION['UserID']);
 
-echo '<div id="mask">
-		<div id="dialog"></div>
-	</div>';
+
 
 if (isset($Messages) and count($Messages) > 0) {
 	$LogFile = false;
@@ -85,5 +83,7 @@ if (!isset($NoMenu) || $NoMenu != 1) {
 } else {
 	echo '</div>'; // dashboard-container-standalone
 }
-echo '</body>';
-echo '</html>';
+echo '<script async src="' . $RootPath . '/javascripts/dialogs.js?version=1.0"></script>' . "\n";
+echo '</body>' . "\n";
+echo '</html>' . "\n";
+?>

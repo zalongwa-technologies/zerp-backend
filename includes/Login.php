@@ -69,11 +69,11 @@ echo '<body>
 				<form action="' . $RootPath . '/index.php" name="LogIn" method="post" class="noPrint">
 				<input type="hidden" name="FormID" value="', $_SESSION['FormID'], '" />
 				<input type="hidden" name="NewLogin" value="Yes" />
-				
-				<!-- Force Default Company (Hiding choice as requested) -->
-				<input type="hidden" name="CompanyNameField" value="', $DefaultCompany, '" />
+';
 
-				<div class="login-branding">
+// Company logic moved down
+
+echo '			<div class="login-branding">
 					<div class="login-brand-mark">
 						<img src="' . htmlspecialchars($LoginLogoFile, ENT_QUOTES, 'UTF-8') . '" alt="Company Logo" />
 					</div>
@@ -91,6 +91,43 @@ if (isset($_POST['UserNameEntryField'])) {
 	</div>';
 } elseif (isset($AllowDemoMode) && $AllowDemoMode == true) {
 	echo '<div id="demo_text">' . $DemoText . '</div>';
+}
+
+if (isset($AllowCompanySelectionBox) && $AllowCompanySelectionBox == 'ShowSelectionBox') {
+	echo '<div class="field-group">
+			<label for="CompanyNameField">', __('Company'), '</label>
+			<div class="input-shell">
+				<select name="CompanyNameField" id="CompanyNameField">';
+	$DirHandle = dir('companies/');
+	while (false !== ($CompanyEntry = $DirHandle->read())) {
+		if (is_dir('companies/' . $CompanyEntry) && $CompanyEntry != '..' && $CompanyEntry != '.' && $CompanyEntry != '.svn' && $CompanyEntry != '.git') {
+			$CompanyNameText = $CompanyEntry; // Default to folder name
+			if (file_exists('companies/' . $CompanyEntry . '/Companies.php')) {
+				include('companies/' . $CompanyEntry . '/Companies.php');
+				if (isset($CompanyName[$CompanyEntry])) {
+					$CompanyNameText = $CompanyName[$CompanyEntry];
+				}
+			}
+			if ($CompanyEntry == $DefaultCompany) {
+				echo '<option selected="selected" value="' . $CompanyEntry . '">' . $CompanyNameText . '</option>';
+			} else {
+				echo '<option value="' . $CompanyEntry . '">' . $CompanyNameText . '</option>';
+			}
+		}
+	}
+	echo '</select>
+			</div>
+		</div>';
+} elseif (isset($AllowCompanySelectionBox) && $AllowCompanySelectionBox == 'ShowInputBox') {
+	echo '<div class="field-group">
+			<label for="CompanyNameField">', __('Company'), '</label>
+			<div class="input-shell">
+				<input type="text" name="CompanyNameField" id="CompanyNameField" value="', $DefaultCompany, '" required="required" placeholder="', __('Enter company code'), '" />
+			</div>
+		</div>';
+} else {
+	echo '<!-- Force Default Company (Hiding choice as requested) -->
+		<input type="hidden" name="CompanyNameField" value="', $DefaultCompany, '" />';
 }
 
 echo '<div class="field-group">

@@ -103,7 +103,7 @@ function api_DB_query( $SQL, $EMsg= '', $DMsg= '', $Transaction='', $TrapErrors=
 
     $Result = DB_query($SQL, $EMsg, $DMsg, $Transaction, $TrapErrors);
     if (DB_error_no() != 0) {
-		$_SESSION['db_err_msg'] = "SQL: " . $SQL . "\nDB error message: " . DB_error_msg() . "\n";
+		$_SESSION['db_err_msg'] = "SQL: " . $SQL . "\nDB error message: " . DB_error_msg() . "\n"; file_put_contents("/tmp/zerp_sql_errors.log", $_SESSION['db_err_msg'], FILE_APPEND);
     } else {
 		$_SESSION['db_err_msg'] = '';
 	}

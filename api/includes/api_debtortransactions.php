@@ -404,8 +404,9 @@ function InsertDebtorReceipt($Receipt, $User, $Password) {
 						WHERE debtorno = '" . $Receipt['debtorno'] . "'";
 
 	$CurrResult = api_DB_query($CustCurrencySQL);
-	if (DB_error_no() != 0) {
+	if (DB_error_no() != 0 || DB_num_rows($CurrResult) == 0) {
 		$Errors[] = DebtorDoesntExist;
+		return $Errors;
 	}
 
 	$CustCurrRow = DB_fetch_array($CurrResult);
@@ -417,8 +418,9 @@ function InsertDebtorReceipt($Receipt, $User, $Password) {
 				ON bankaccounts.currcode = currencies.currabrev
 				WHERE accountcode='" . $Receipt['bankaccount'] ."'";
 	$BankActResult = api_DB_query($SQL);
-	if (DB_error_no() != 0) {
+	if (DB_error_no() != 0 || DB_num_rows($BankActResult) == 0) {
 		$Errors[] = InvalidBankAccount;
+		return $Errors;
 	}
 
 	$BankActRow = DB_fetch_array($BankActResult);

@@ -253,7 +253,12 @@ final class PayablesRepository
 			WHERE tx.supptransid IN ($in) ORDER BY tx.supptransid, tx.taxauthid", $types, $ids);
 		$out = [];
 		foreach ($rows as $row) {
-			$out[(int)$row['supptransid']][] = ['tax_authority_id' => (int)$row['taxauthid'], 'description' => $row['description'], 'amount' => (float)$row['taxamount']];
+			$out[(int)$row['supptransid']][] = [
+				'external_id' => 'zerp-supptrans-tax-' . $row['supptransid'] . '-' . $row['taxauthid'],
+				'tax_authority_id' => (int)$row['taxauthid'],
+				'description' => $row['description'],
+				'amount' => (float)$row['taxamount'],
+			];
 		}
 		return $out;
 	}

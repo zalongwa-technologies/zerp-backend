@@ -61,6 +61,7 @@ final class PayablesRepositoryIntegrationTest extends TestCase
 		$this->assertSame(63.0, $invoice['outstanding_amount']);
 		$this->assertIsFloat($invoice['gross_amount']);
 		$this->assertCount(1, $invoice['taxes']);
+		$this->assertSame('zerp-supptrans-tax-' . $this->fixture['invoice'] . '-' . $this->fixture['tax'], $invoice['taxes'][0]['external_id']);
 		$this->assertSame(18.0, $invoice['taxes'][0]['amount']);
 		$this->assertCount(1, $invoice['accounting_lines']);
 		$this->assertSame($this->fixture['account'], $invoice['accounting_lines'][0]['account_code']);
@@ -120,7 +121,7 @@ final class PayablesRepositoryIntegrationTest extends TestCase
 		$period = (int)$gl[0]['periodno']; $account = $gl[0]['accountcode'];
 		$stmt->bind_param('iis', $base, $period, $account); $stmt->execute(); $stmt->close();
 
-		return ['supplier' => $supplierId, 'account' => $account, 'invoice' => $invoice, 'settled_invoice' => $settledInvoice, 'unpaid_invoice' => $unpaidInvoice, 'payment' => $payment, 'payment2' => $payment2, 'debit' => $debit, 'allocation' => $allocation];
+		return ['supplier' => $supplierId, 'tax' => $taxId, 'account' => $account, 'invoice' => $invoice, 'settled_invoice' => $settledInvoice, 'unpaid_invoice' => $unpaidInvoice, 'payment' => $payment, 'payment2' => $payment2, 'debit' => $debit, 'allocation' => $allocation];
 	}
 
 	private function insertTransaction(int $number, int $type, string $supplier, string $reference, float $net, float $tax, float $allocated, int $settled, int $void): int

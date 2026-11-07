@@ -2,6 +2,8 @@
 
 This read-only API exports supplier accounts-payable records from ZERP for import into Odoo Accounting. It includes suppliers, purchase invoices, debit notes, creditor payments, creditor journals, taxes, general-ledger entries, and payment allocations.
 
+Each payable transaction includes a `taxes` array sourced from `supptranstaxes`, containing a stable `external_id`, tax-authority ID, description, and posted tax amount. Import these records together with the transaction; `tax_amount` is the authoritative transaction-level tax total. Tax IDs use `zerp-supptrans-tax-<transaction_id>-<tax_authority_id>`.
+
 ## Endpoint
 
 ```text

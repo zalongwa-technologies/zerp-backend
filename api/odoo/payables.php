@@ -41,7 +41,11 @@ try {
 		throw new PayablesApiException(500, 'API_NOT_CONFIGURED', 'The payables API database is not configured');
 	}
 	mysqli_report(MYSQLI_REPORT_OFF);
-	$db = @new mysqli($Host, $DBUser, $DBPassword, $database, $DBPort ?? 3306);
+	$port = filter_var($DBPort ?? 3306, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+	if ($port === false) {
+		throw new PayablesApiException(500, 'API_NOT_CONFIGURED', 'The payables API database port is not configured correctly');
+	}
+	$db = @new mysqli($Host, $DBUser, $DBPassword, $database, $port);
 	if ($db->connect_errno !== 0) throw new RuntimeException('Database connection failed');
 	if (!$db->set_charset($DBCharset ?? 'utf8mb4')) throw new RuntimeException('Database character set configuration failed');
 
